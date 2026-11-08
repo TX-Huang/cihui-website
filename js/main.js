@@ -11,8 +11,8 @@ const CURTAIN_X = D.x0;
 const CURTAIN_Y = D.y0;
 const CURTAIN_W = D.x1 - D.x0;
 const CURTAIN_H = D.y1 - D.y0;
-const COLS = 16;
-const ROWS = 21;
+const COLS = 30;
+const ROWS = 43;
 const PAD = 160;
 const CANVAS_W = CURTAIN_W + PAD * 2;
 const CANVAS_H = CURTAIN_H + PAD * 2;
@@ -51,8 +51,8 @@ function layout() {
   const vh = window.innerHeight;
   const mobile = vw <= 720;
   scale = mobile
-    ? Math.min((vh * 0.72) / GATE.h, (vw * 1.35) / GATE.w)
-    : Math.min(1.3, (vh - 64) / GATE.h, (vw * 0.96) / GATE.w);
+    ? Math.min((vh * 0.75) / GATE.h, (vw * 1.3) / GATE.w)
+    : Math.min(1.3, (vh - 24) / GATE.h, (vw * 0.96) / GATE.w);
   scale = Math.max(0.3, scale);
   document.documentElement.style.setProperty("--s", scale.toFixed(4));
 
@@ -63,6 +63,10 @@ function layout() {
   canvas.style.height = `${CANVAS_H}px`;
   canvas.style.left = `${CURTAIN_X - PAD}px`;
   canvas.style.top = `${CURTAIN_Y - PAD}px`;
+
+  const wrap = $("gateWrap").style;
+  wrap.width = `${GATE.w}px`;
+  wrap.height = `${GATE.h}px`;
 
   const glow = $("doorGlow").style;
   glow.left = `${D.x0}px`;
@@ -82,7 +86,7 @@ function layout() {
   glyphs.clear();
 }
 
-// ── 每個字先畫成發光的小圖（珠子），之後每格只要貼圖 ──
+// ── 每個字先畫成小圖，之後每格只要貼圖（快很多） ──
 function glyph(ch, color) {
   const key = ch + color;
   let g = glyphs.get(key);
@@ -96,22 +100,16 @@ function glyph(ch, color) {
   c.font = FONT;
   c.textAlign = "center";
   c.textBaseline = "middle";
-  c.shadowColor = color;
-  c.shadowBlur = 6;
   c.fillStyle = color;
-  c.fillText(ch, size / 2, size / 2 + 0.5);
-  c.shadowBlur = 0;
-  c.globalAlpha = 0.6;
-  c.fillStyle = "#fff";
   c.fillText(ch, size / 2, size / 2 + 0.5);
   glyphs.set(key, g);
   return g;
 }
 
-// 紅、綠珠子交錯成花紋
+// 大部分是墨色字，少數幾處淡金色，像珠簾上點綴的金珠
 function beadColor(col, row, t) {
   const v = Math.sin(col * 0.9 + row * 0.35) + Math.sin(row * 0.21 - col * 0.4);
-  return v > 0.2 ? t.beadA : t.beadB;
+  return v > 1.35 ? t.gold : t.ink;
 }
 
 function buildCloth(d, { rolled }) {
@@ -234,9 +232,8 @@ document.addEventListener("pointercancel", release);
 // ── 文字與顏色 ──
 function applyTheme(t) {
   const s = document.documentElement.style;
-  s.setProperty("--hue", `${t.hue}deg`);
-  s.setProperty("--sat", String(t.sat));
-  s.setProperty("--bri", String(t.bri));
+  s.setProperty("--tint", t.tint);
+  s.setProperty("--tint-a", String(t.tintA));
   s.setProperty("--mist", t.mist);
   petals.color = t.petal;
 }
@@ -387,7 +384,7 @@ async function start() {
   applyDeity(DEITIES[ORDER[first]], { rolled: !reduceMotion });
   requestAnimationFrame(loop);
 
-  const sprites = await loadImages(["assets/koi-kohaku.webp", "assets/koi-gold.webp", "assets/koi-showa.webp"]);
+  const sprites = await loadImages(["assets/koi-tancho.webp", "assets/koi-asagi.webp", "assets/koi-platinum.webp"]);
   if (sprites.length) koi = new KoiPond(koiCanvas, sprites, reduceMotion ? 3 : 5);
 }
 

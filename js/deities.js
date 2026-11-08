@@ -1,6 +1,9 @@
 // 四位神明的資料。改文字、顏色都在這裡。
 // ⚠️ cloth（珠簾上的字）目前是暫用的聖號與祝福語，請換成道場正式的經文或寶誥。
-// theme.hue / sat / bri：把同一張瑤池背景調成不同色調（hue 是色相旋轉角度）。
+// 風格 A「月白素雅」：同一張黎明背景，每位神明換一層不同的晨光色調（tint）。
+
+const INK = "#2f2a25";
+const GOLD = "#a8844a";
 
 export const DEITIES = {
   jinmu: {
@@ -13,7 +16,7 @@ export const DEITIES = {
     aside: "金母慈光照耀，願來到這裡的每一個人，心有所安。",
     cloth: "無極瑤池金母大天尊慈悲護佑眾生平安吉祥",
     note: 0,
-    theme: { hue: 0, sat: 1, bri: 1, mist: "rgba(170, 235, 215, 0.18)", beadA: "#ff6a5a", beadB: "#9ff5d8", petal: "#ffb7c5" }
+    theme: { tint: "#ffffff", tintA: 0, mist: "rgba(255, 255, 255, 0.45)", ink: INK, gold: GOLD, petal: "#ead3cc" }
   },
   xuannu: {
     id: "xuannu",
@@ -25,7 +28,7 @@ export const DEITIES = {
     aside: "傳說玄女授黃帝兵書，助其平定天下。",
     cloth: "九天玄女娘娘慈悲賜福智慧光明指引道路",
     note: 2,
-    theme: { hue: 70, sat: 0.9, bri: 0.95, mist: "rgba(200, 200, 255, 0.16)", beadA: "#d2c2ff", beadB: "#8fe9ff", petal: "#ddd6ff" }
+    theme: { tint: "#8c84c8", tintA: 0.32, mist: "rgba(240, 238, 255, 0.45)", ink: "#2c2a3a", gold: "#8e86b8", petal: "#d9d4ea" }
   },
   nezha: {
     id: "nezha",
@@ -37,7 +40,7 @@ export const DEITIES = {
     aside: "俗稱太子爺、哪吒三太子，護法除煞，守護一方。",
     cloth: "中壇元帥太子爺護法除煞鎮守中壇合境平安",
     note: 4,
-    theme: { hue: -150, sat: 1.1, bri: 0.95, mist: "rgba(255, 180, 130, 0.15)", beadA: "#ffbe5c", beadB: "#ff7a4d", petal: "#ffc98a" }
+    theme: { tint: "#e4a072", tintA: 0.3, mist: "rgba(255, 244, 236, 0.45)", ink: "#3a2a22", gold: "#b9794a", petal: "#efd2bd" }
   },
   tudi: {
     id: "tudi",
@@ -49,7 +52,7 @@ export const DEITIES = {
     aside: "俗稱土地公，守護土地與家宅，保佑五穀豐收、生意興隆。",
     cloth: "福德正神土地公保佑家宅平安五穀豐收財源廣進",
     note: 7,
-    theme: { hue: -115, sat: 0.75, bri: 1.05, mist: "rgba(245, 225, 160, 0.15)", beadA: "#ffd96e", beadB: "#c2e889", petal: "#ffe8a8" }
+    theme: { tint: "#d6bb78", tintA: 0.3, mist: "rgba(255, 250, 236, 0.45)", ink: "#33301f", gold: "#a8914a", petal: "#ebdfba" }
   }
 };
 

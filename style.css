@@ -1,13 +1,13 @@
 :root {
-  /* 這些顏色由 JS 依神明切換 */
-  --sky-top: #06120f;
-  --sky-glow: #2f8a74;
-  --mountain: #0d2a24;
-  --mist: rgba(160, 230, 210, 0.16);
+  /* 風格 A「月白素雅」。--tint / --mist 由 JS 依神明切換 */
+  --tint: #ffffff;
+  --tint-a: 0;
+  --mist: rgba(255, 255, 255, 0.45);
+  --paper: #ece8e3;
 
-  --text: #f3ece0;
-  --text-soft: rgba(243, 236, 224, 0.68);
-  --gold: #e9c66a;
+  --text: #2f2a25;
+  --text-soft: rgba(47, 42, 37, 0.62);
+  --gold: #a8844a;
   --serif: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
   --sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
   --ease: cubic-bezier(0.65, 0, 0.2, 1);
@@ -20,14 +20,14 @@
 
 html {
   scroll-snap-type: y mandatory;
-  background: #050807;
+  background: var(--paper);
 }
 
 body {
   margin: 0;
   color: var(--text);
   font-family: var(--sans);
-  background: #050807;
+  background: var(--paper);
   overflow-x: hidden;
 }
 
@@ -37,23 +37,32 @@ body {
   inset: 0;
   z-index: 0;
   overflow: hidden;
-  background: #06120f;
+  background: var(--paper);
 }
 .sky-img {
   position: absolute;
   inset: -4%;
   background: url("assets/bg-yaochi.webp") center 60% / cover no-repeat;
-  filter: hue-rotate(var(--hue, 0deg)) saturate(var(--sat, 1)) brightness(var(--bri, 1));
   transform: translate3d(calc(var(--mx, 0) * -14px), calc(var(--my, 0) * -8px), 0) scale(var(--zoom, 1));
-  transition: filter 1.4s var(--ease), transform 1.2s var(--ease);
+  transition: transform 1.2s var(--ease);
+}
+/* 每位神明一層不同的晨光色調 */
+.sky-img::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--tint);
+  mix-blend-mode: color;
+  opacity: var(--tint-a);
+  transition: opacity 1.4s var(--ease), background-color 1.4s var(--ease);
 }
 /* 讓下方文字讀得清楚 */
 .sky::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(3, 10, 8, 0.75), transparent 45%),
-    radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.5));
+  background: linear-gradient(to top, rgba(240, 236, 230, 0.85), transparent 42%),
+    linear-gradient(to bottom, rgba(236, 232, 226, 0.55), transparent 30%);
 }
 .koi {
   position: fixed;
@@ -70,7 +79,7 @@ body {
   width: 200%;
   height: 40vh;
   background: radial-gradient(50% 50% at 50% 50%, var(--mist), transparent 70%);
-  filter: blur(20px);
+  filter: blur(30px);
   animation: drift 40s linear infinite;
 }
 .mist.m1 {
@@ -117,8 +126,9 @@ body {
   gap: 4px;
   padding: 6px;
   border-radius: 999px;
-  background: rgba(10, 16, 14, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(47, 42, 37, 0.08);
+  box-shadow: 0 6px 24px rgba(60, 50, 40, 0.08);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   font-size: 13px;
@@ -137,7 +147,7 @@ body {
 }
 .pill a:hover {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(47, 42, 37, 0.06);
 }
 .pill .brand {
   font-family: var(--serif);
@@ -150,11 +160,11 @@ body {
   cursor: default;
 }
 .pill .sound-btn {
-  background: rgba(255, 255, 255, 0.9);
-  color: #111;
+  background: var(--text);
+  color: #f7f4ef;
 }
 .pill .sound-btn[aria-pressed="false"] {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(47, 42, 37, 0.08);
   color: var(--text-soft);
 }
 
@@ -175,7 +185,7 @@ body {
   left: 50%;
   bottom: -1vh;
   width: 1000px;
-  height: 995px;
+  height: 1335px; /* JS 會依 GATE.h 覆寫 */
   transform: translateX(-50%) scale(var(--s));
   transform-origin: 50% 100%;
 }
@@ -193,19 +203,19 @@ body {
   width: 100%;
   height: 100%;
   user-select: none;
-  filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.55));
+  filter: drop-shadow(0 24px 36px rgba(90, 70, 50, 0.16));
 }
 /* 門洞裡面：看得到後面的瑤池，但暗一點，珠簾才顯眼 */
 .door-glow {
   position: absolute;
   z-index: 1;
-  background: radial-gradient(70% 60% at 50% 70%, rgba(120, 255, 210, 0.18), rgba(0, 0, 0, 0.55) 70%);
+  background: radial-gradient(80% 70% at 50% 60%, rgba(255, 255, 255, 0.55), rgba(236, 232, 226, 0.35) 75%);
 }
 #cloth {
   position: absolute;
   z-index: 2;
 }
-/* 匾額上的字 */
+/* 匾額上的字：低調的深色刻字 */
 .plaque {
   position: absolute;
   z-index: 4;
@@ -214,14 +224,11 @@ body {
   justify-content: center;
   font-family: var(--serif);
   font-weight: 900;
-  letter-spacing: 0.32em;
-  padding-left: 0.32em;
-  color: #c79a3a;
-  background: linear-gradient(180deg, #f6dc8e, #b9862c 60%, #8a5d14);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.35)) drop-shadow(0 -1px 0 rgba(60, 35, 5, 0.6));
+  letter-spacing: 0.4em;
+  padding-left: 0.4em;
+  color: #4a3622;
+  text-shadow: 0 1px 0 rgba(255, 240, 220, 0.45), 0 -1px 0 rgba(40, 25, 10, 0.35);
+  opacity: 0.88;
 }
 
 /* ── 文字 ── */
@@ -247,7 +254,8 @@ body {
   font-size: clamp(44px, 7vw, 96px);
   line-height: 1.05;
   letter-spacing: 0.08em;
-  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7);
+  font-weight: 600;
+  text-shadow: 0 2px 30px rgba(255, 255, 255, 0.9);
 }
 .subtitle {
   margin: 12px 0 0;
@@ -255,14 +263,14 @@ body {
   font-size: clamp(16px, 1.8vw, 22px);
   letter-spacing: 0.25em;
   color: var(--text-soft);
-  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.8);
+  text-shadow: 0 1px 16px rgba(255, 255, 255, 0.9);
 }
 .aside {
   max-width: 16em;
   font-size: 14px;
   line-height: 1.9;
   color: var(--text-soft);
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9);
+  text-shadow: 0 1px 12px rgba(255, 255, 255, 0.9);
 }
 .aside p {
   margin: 0;
