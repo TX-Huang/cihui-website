@@ -1,0 +1,459 @@
+:root {
+  /* 這些顏色由 JS 依神明切換 */
+  --sky-top: #06120f;
+  --sky-glow: #2f8a74;
+  --mountain: #0d2a24;
+  --mist: rgba(160, 230, 210, 0.16);
+
+  --text: #f3ece0;
+  --text-soft: rgba(243, 236, 224, 0.68);
+  --gold: #e9c66a;
+  --serif: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --ease: cubic-bezier(0.65, 0, 0.2, 1);
+  --s: 1; /* 拱門縮放，由 JS 設定 */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-snap-type: y mandatory;
+  background: #050807;
+}
+
+body {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--sans);
+  background: #050807;
+  overflow-x: hidden;
+}
+
+/* ── 背景：瑤池畫 ── */
+.sky {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: #06120f;
+}
+.sky-img {
+  position: absolute;
+  inset: -4%;
+  background: url("assets/bg-yaochi.webp") center 60% / cover no-repeat;
+  filter: hue-rotate(var(--hue, 0deg)) saturate(var(--sat, 1)) brightness(var(--bri, 1));
+  transform: translate3d(calc(var(--mx, 0) * -14px), calc(var(--my, 0) * -8px), 0) scale(var(--zoom, 1));
+  transition: filter 1.4s var(--ease), transform 1.2s var(--ease);
+}
+/* 讓下方文字讀得清楚 */
+.sky::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(3, 10, 8, 0.75), transparent 45%),
+    radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.5));
+}
+.koi {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.mist {
+  position: absolute;
+  left: -50%;
+  width: 200%;
+  height: 40vh;
+  background: radial-gradient(50% 50% at 50% 50%, var(--mist), transparent 70%);
+  filter: blur(20px);
+  animation: drift 40s linear infinite;
+}
+.mist.m1 {
+  bottom: 18vh;
+}
+.mist.m2 {
+  bottom: -6vh;
+  height: 30vh;
+  animation-duration: 60s;
+  animation-direction: reverse;
+  opacity: 0.8;
+}
+@keyframes drift {
+  from {
+    transform: translateX(-12%);
+  }
+  to {
+    transform: translateX(12%);
+  }
+}
+
+.petals {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* ── 頂部玻璃膠囊選單 ── */
+.topbar {
+  position: fixed;
+  inset: 18px 0 auto 0;
+  z-index: 30;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.pill {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(10, 16, 14, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  font-size: 13px;
+}
+.pill a,
+.pill .soon,
+.pill button {
+  padding: 7px 14px;
+  border-radius: 999px;
+  color: var(--text-soft);
+  text-decoration: none;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.pill a:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+}
+.pill .brand {
+  font-family: var(--serif);
+  font-weight: 900;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+}
+.pill .soon {
+  opacity: 0.45;
+  cursor: default;
+}
+.pill .sound-btn {
+  background: rgba(255, 255, 255, 0.9);
+  color: #111;
+}
+.pill .sound-btn[aria-pressed="false"] {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-soft);
+}
+
+/* ── 固定舞台 ── */
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+.stage .rail,
+.stage .rail * {
+  pointer-events: auto;
+}
+
+.gate-wrap {
+  position: absolute;
+  left: 50%;
+  bottom: -1vh;
+  width: 1000px;
+  height: 995px;
+  transform: translateX(-50%) scale(var(--s));
+  transform-origin: 50% 100%;
+}
+.gate {
+  position: absolute;
+  inset: 0;
+  will-change: transform, opacity, filter;
+  /* 走進門時，以門洞中央為中心放大（由 JS 設定） */
+  transform-origin: 50% 74%;
+}
+.gate-img {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.55));
+}
+/* 門洞裡面：看得到後面的瑤池，但暗一點，珠簾才顯眼 */
+.door-glow {
+  position: absolute;
+  z-index: 1;
+  background: radial-gradient(70% 60% at 50% 70%, rgba(120, 255, 210, 0.18), rgba(0, 0, 0, 0.55) 70%);
+}
+#cloth {
+  position: absolute;
+  z-index: 2;
+}
+/* 匾額上的字 */
+.plaque {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif);
+  font-weight: 900;
+  letter-spacing: 0.32em;
+  padding-left: 0.32em;
+  color: #c79a3a;
+  background: linear-gradient(180deg, #f6dc8e, #b9862c 60%, #8a5d14);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.35)) drop-shadow(0 -1px 0 rgba(60, 35, 5, 0.6));
+}
+
+/* ── 文字 ── */
+.copy {
+  position: absolute;
+  z-index: 20;
+  inset: auto clamp(16px, 4vw, 56px) clamp(24px, 7vh, 72px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+}
+.eyebrow {
+  margin: 0 0 10px;
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+}
+.title {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: clamp(44px, 7vw, 96px);
+  line-height: 1.05;
+  letter-spacing: 0.08em;
+  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7);
+}
+.subtitle {
+  margin: 12px 0 0;
+  font-family: var(--serif);
+  font-size: clamp(16px, 1.8vw, 22px);
+  letter-spacing: 0.25em;
+  color: var(--text-soft);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.8);
+}
+.aside {
+  max-width: 16em;
+  font-size: 14px;
+  line-height: 1.9;
+  color: var(--text-soft);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9);
+}
+.aside p {
+  margin: 0;
+}
+.aside .hint {
+  margin-top: 10px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  opacity: 0.7;
+}
+
+/* 標題一個字一個字浮上來 */
+.title .c {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.4em);
+  filter: blur(8px);
+  animation: rise 700ms var(--ease) forwards;
+  animation-delay: calc(200ms + var(--i) * 90ms);
+}
+@keyframes rise {
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+.copy .eyebrow,
+.copy .subtitle,
+.copy .aside {
+  transition: opacity 500ms var(--ease), transform 500ms var(--ease);
+}
+.copy.is-leaving .title .c {
+  animation: fade-up 400ms var(--ease) forwards;
+  animation-delay: calc(var(--i) * 30ms);
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+@keyframes fade-up {
+  to {
+    opacity: 0;
+    transform: translateY(-0.3em);
+    filter: blur(8px);
+  }
+}
+.copy.is-leaving .eyebrow,
+.copy.is-leaving .subtitle,
+.copy.is-leaving .aside {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+.copy.is-entering .eyebrow,
+.copy.is-entering .subtitle,
+.copy.is-entering .aside {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+/* ── 右側進度 ── */
+.rail {
+  position: absolute;
+  z-index: 20;
+  right: clamp(12px, 3vw, 40px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.rail button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: var(--serif);
+  font-size: 13px;
+  letter-spacing: 0.15em;
+  color: var(--text-soft);
+}
+.rail .name {
+  opacity: 0;
+  transform: translateX(6px);
+  transition: opacity 300ms var(--ease), transform 300ms var(--ease);
+}
+.rail .bar {
+  width: 14px;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.45;
+  transition: width 400ms var(--ease), opacity 400ms var(--ease);
+}
+.rail button:hover .name,
+.rail button.is-active .name {
+  opacity: 1;
+  transform: none;
+}
+.rail button.is-active {
+  color: var(--text);
+}
+.rail button.is-active .bar {
+  width: 34px;
+  opacity: 1;
+  background: var(--gold);
+}
+
+.scroll-cue {
+  position: absolute;
+  z-index: 20;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: var(--text-soft);
+  transition: opacity 500ms;
+}
+.scroll-cue i {
+  width: 1px;
+  height: 26px;
+  background: linear-gradient(var(--text-soft), transparent);
+  animation: cue 1.8s var(--ease) infinite;
+  transform-origin: top;
+}
+@keyframes cue {
+  0% {
+    transform: scaleY(0);
+  }
+  60% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 0;
+  }
+}
+.scroll-cue.is-hidden {
+  opacity: 0;
+}
+
+/* 捲動區：每格一個畫面高 */
+.scroller {
+  position: relative;
+  z-index: 1;
+}
+.scroller section {
+  height: 100vh;
+  height: 100svh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+/* ── 手機 ── */
+@media (max-width: 720px) {
+  .pill a:not(.brand),
+  .pill .soon {
+    display: none;
+  }
+  .copy {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    bottom: 20px;
+  }
+  .aside {
+    display: none;
+  }
+  .rail .name {
+    display: none;
+  }
+  .scroll-cue {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title .c,
+  .copy.is-leaving .title .c {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+  .mist,
+  .scroll-cue i {
+    animation: none;
+  }
+}

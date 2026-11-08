@@ -1,0 +1,7 @@
+# AI 生成的原始大圖（29MB），只留在本機；網站用的是 assets/ 裡壓縮過的版本
+assets/raw/
+
+node_modules/
+.DS_Store
+Thumbs.db
+.claude/settings.local.json

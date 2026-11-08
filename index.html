@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>慈惠道場 — 瑤池金母</title>
+    <meta name="description" content="慈惠道場，主祀瑤池金母，陪祀九天玄女、中壇元帥、福德正神。" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=Noto+Sans+TC:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- 背景：瑤池與崑崙山（AI 畫的），加上飄動的霧 -->
+    <div class="sky" aria-hidden="true">
+      <div class="sky-img" id="skyImg"></div>
+      <div class="mist m1"></div>
+      <div class="mist m2"></div>
+    </div>
+
+    <!-- 鯉魚在拱門後面游 -->
+    <canvas id="koi" class="koi" aria-hidden="true"></canvas>
+
+    <canvas id="petals" class="petals" aria-hidden="true"></canvas>
+
+    <header class="topbar">
+      <nav class="pill" aria-label="主選單">
+        <a class="brand" href="#jinmu">慈惠道場</a>
+        <a href="#jinmu">金母</a>
+        <a href="#xuannu">神明</a>
+        <span class="soon" title="即將推出">瑤池</span>
+        <button type="button" class="sound-btn" id="soundBtn" aria-pressed="true">風鈴 開</button>
+      </nav>
+    </header>
+
+    <div class="stage" id="stage">
+      <div class="gate-wrap" id="gateWrap">
+        <div class="gate" id="gate">
+          <div class="door-glow" id="doorGlow"></div>
+          <canvas id="cloth" aria-hidden="true"></canvas>
+          <img class="gate-img" id="gateImg" src="assets/gate.webp" alt="" draggable="false" />
+          <div class="plaque" id="plaque"></div>
+        </div>
+      </div>
+
+      <div class="copy" id="copy">
+        <div class="heading">
+          <p class="eyebrow" id="eyebrow"></p>
+          <h1 class="title" id="title"></h1>
+          <p class="subtitle" id="subtitle"></p>
+        </div>
+        <div class="aside">
+          <p id="aside"></p>
+          <p class="hint">滑過珠簾聽風鈴 · 按住可以拉動</p>
+        </div>
+      </div>
+
+      <nav class="rail" id="rail" aria-label="神明"></nav>
+
+      <div class="scroll-cue" id="scrollCue" aria-hidden="true">
+        <span>往下滑 · 走進門</span>
+        <i></i>
+      </div>
+    </div>
+
+    <!-- 看不見的捲動區：每一格 = 一位神明 -->
+    <main class="scroller" id="scroller"></main>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
