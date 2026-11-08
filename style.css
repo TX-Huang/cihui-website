@@ -79,7 +79,6 @@ body {
   width: 200%;
   height: 40vh;
   background: radial-gradient(50% 50% at 50% 50%, var(--mist), transparent 70%);
-  filter: blur(30px);
   animation: drift 40s linear infinite;
 }
 .mist.m1 {
@@ -192,7 +191,7 @@ body {
 .gate {
   position: absolute;
   inset: 0;
-  will-change: transform, opacity, filter;
+  will-change: transform, opacity;
   /* 走進門時，以門洞中央為中心放大（由 JS 設定） */
   transform-origin: 50% 74%;
 }

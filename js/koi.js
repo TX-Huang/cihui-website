@@ -9,11 +9,14 @@ export class KoiPond {
   constructor(canvas, sprites, count = 5) {
     this.c = canvas;
     this.ctx = canvas.getContext("2d");
-    this.sprites = sprites;
+    this.rawSprites = sprites;
     this.mouse = { x: -9999, y: -9999, speed: 0, still: 0 };
     this.ripples = [];
     this.fish = [];
     this.resize();
+    // 效能：每隻魚的圖先縮成顯示大小，影子先模糊好，之後每格只貼圖、不再即時模糊
+    const maxLen = Math.min(this.w, this.h) * 0.24;
+    this.sprites = sprites.map((img) => prepareSprite(img, Math.ceil(maxLen * this.dpr)));
     for (let i = 0; i < count; i++) this.fish.push(this.spawn(i));
     window.addEventListener("resize", () => this.resize());
     window.addEventListener("pointermove", (e) => this.onMove(e));
@@ -21,7 +24,7 @@ export class KoiPond {
   }
 
   resize() {
-    this.dpr = Math.min(2, window.devicePixelRatio || 1);
+    this.dpr = Math.min(1.5, window.devicePixelRatio || 1);
     this.w = window.innerWidth;
     this.h = window.innerHeight;
     this.c.width = this.w * this.dpr;
@@ -120,35 +123,34 @@ export class KoiPond {
 
   drawFish(f) {
     const { ctx } = this;
-    const img = f.sprite;
-    const iw = img.width;
-    const ih = img.height;
-    const k = f.len / iw;
+    const sp = f.sprite;
     const L = f.len;
-    const H = ih * k;
+    const k = L / sp.w; // 圖上 1px = 畫面上 k px
     const amp = L * (0.05 + Math.min(0.06, f.speed * 0.012));
-    const sw = iw / SLICES;
 
     ctx.save();
     ctx.translate(f.x, f.y);
     ctx.rotate(f.angle);
-    // 水下的影子
-    ctx.globalAlpha = 0.25;
-    ctx.filter = "blur(6px) brightness(0)";
-    this.slices(img, sw, ih, k, L, H, amp, f.phase, 10, 14);
-    ctx.filter = "none";
+    // 水下的影子（已經模糊好的圖），往右下偏一點
+    ctx.globalAlpha = 0.22;
+    this.slices(sp, sp.shadow, k, L, amp, f.phase, 10, 14);
     ctx.globalAlpha = 0.95;
-    this.slices(img, sw, ih, k, L, H, amp, f.phase, 0, 0);
+    this.slices(sp, sp.body, k, L, amp, f.phase, 0, 0);
     ctx.restore();
   }
 
-  slices(img, sw, ih, k, L, H, amp, phase, ox, oy) {
+  slices(sp, src, k, L, amp, phase, ox, oy) {
     const { ctx } = this;
+    const tw = src.width;
+    const th = src.height;
+    const sw = tw / SLICES;
+    const H = th * k;
     for (let i = 0; i < SLICES; i++) {
       const sx = i * sw;
-      const u = 1 - (sx + sw / 2) / img.width; // 0 = 頭, 1 = 尾
+      // u：0 = 頭（右邊）, 1 = 尾（左邊）
+      const u = Math.min(1, Math.max(0, 1 - (sx + sw / 2 - sp.pad) / sp.w));
       const off = Math.sin(phase - u * 3.4) * amp * Math.pow(u, 1.5);
-      ctx.drawImage(img, sx, 0, sw + 1, ih, -L / 2 + sx * k + ox, -H / 2 + off + oy, sw * k + 1, H);
+      ctx.drawImage(src, sx, 0, sw + 1, th, -L / 2 + (sx - sp.pad) * k + ox, -H / 2 + off + oy, sw * k + 1, H);
     }
   }
 
@@ -162,13 +164,33 @@ export class KoiPond {
       for (let j = 0; j < 3; j++) {
         const rr = r.r - j * 18;
         if (rr <= 0) continue;
-        ctx.strokeStyle = `rgba(220, 255, 240, ${r.life * (0.5 - j * 0.14)})`;
+        ctx.strokeStyle = `rgba(110, 100, 90, ${r.life * (0.35 - j * 0.1)})`;
         ctx.beginPath();
         ctx.ellipse(r.x, r.y, rr, rr * 0.45, 0, 0, Math.PI * 2);
         ctx.stroke();
       }
     }
   }
+}
+
+// 把鯉魚圖縮成需要的大小，並先做好一張模糊的黑色影子
+function prepareSprite(img, w) {
+  const s = w / img.width;
+  const h = Math.ceil(img.height * s);
+  const pad = Math.ceil(w * 0.06);
+  const make = () => {
+    const c = document.createElement("canvas");
+    c.width = w + pad * 2;
+    c.height = h + pad * 2;
+    return c;
+  };
+  const body = make();
+  body.getContext("2d").drawImage(img, pad, pad, w, h);
+  const shadow = make();
+  const sc = shadow.getContext("2d");
+  sc.filter = `blur(${Math.max(2, pad * 0.4)}px) brightness(0)`;
+  sc.drawImage(img, pad, pad, w, h);
+  return { body, shadow, w, h, pad };
 }
 
 export function loadImages(urls) {

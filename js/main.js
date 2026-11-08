@@ -83,25 +83,42 @@ function layout() {
   pl.height = `${P.h}px`;
   pl.fontSize = `${Math.round(P.h * 0.56)}px`;
   $("gate").style.transformOrigin = `50% ${(((D.y0 + D.y1) / 2) / GATE.h) * 100}%`;
+  atlas = null;
   glyphs.clear();
+  needDraw = true;
 }
 
-// ── 每個字先畫成小圖，之後每格只要貼圖（快很多） ──
+// ── 字圖集：所有字先畫在「同一張」大圖上，每格只要從大圖剪貼 ──
+// （每個字一張小圖的話，顯示卡要切換上千次，很慢）
+const GLYPH = 22; // 每個字的格子大小（設計座標）
+const ATLAS_COLS = 16;
+let atlas = null;
+let atlasCtx = null;
+let atlasCell = 0;
+
+function resetAtlas() {
+  glyphs.clear();
+  atlasCell = Math.ceil(GLYPH * dpr);
+  atlas = document.createElement("canvas");
+  atlas.width = atlas.height = atlasCell * ATLAS_COLS;
+  atlasCtx = atlas.getContext("2d");
+  atlasCtx.font = FONT;
+  atlasCtx.textAlign = "center";
+  atlasCtx.textBaseline = "middle";
+}
+
 function glyph(ch, color) {
   const key = ch + color;
   let g = glyphs.get(key);
   if (g) return g;
-  const size = 22;
-  g = document.createElement("canvas");
-  g.width = g.height = Math.ceil(size * dpr);
-  g._size = size;
-  const c = g.getContext("2d");
-  c.scale(dpr, dpr);
-  c.font = FONT;
-  c.textAlign = "center";
-  c.textBaseline = "middle";
-  c.fillStyle = color;
-  c.fillText(ch, size / 2, size / 2 + 0.5);
+  if (!atlas || glyphs.size >= ATLAS_COLS * ATLAS_COLS) resetAtlas();
+  const i = glyphs.size;
+  const sx = (i % ATLAS_COLS) * atlasCell;
+  const sy = Math.floor(i / ATLAS_COLS) * atlasCell;
+  atlasCtx.setTransform(dpr, 0, 0, dpr, sx, sy);
+  atlasCtx.fillStyle = color;
+  atlasCtx.fillText(ch, GLYPH / 2, GLYPH / 2 + 0.5);
+  g = { sx, sy };
   glyphs.set(key, g);
   return g;
 }
@@ -128,25 +145,39 @@ function buildCloth(d, { rolled }) {
 function draw() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+  const h = GLYPH / 2;
   for (const p of cloth.particles) {
     if (!p.ch || p.ch === " " || p.ch === "　") continue;
+    // 字跟著往下那條線轉：用向量直接算 cos/sin，不用三角函數
     let cos = 1;
     let sin = 0;
     if (p.down) {
-      const a = Math.atan2(p.down.b.y - p.down.a.y, p.down.b.x - p.down.a.x) - Math.PI / 2;
-      cos = Math.cos(a);
-      sin = Math.sin(a);
+      const dx = p.down.b.x - p.down.a.x;
+      const dy = p.down.b.y - p.down.a.y;
+      const len = Math.hypot(dx, dy) || 1;
+      cos = dy / len;
+      sin = -dx / len;
     }
     const g = glyph(p.ch, p.color);
-    const h = g._size / 2;
     const x = p.x + PAD;
     const y = p.y + PAD;
     ctx.setTransform(cos * dpr, sin * dpr, -sin * dpr, cos * dpr, x * dpr, y * dpr);
-    ctx.drawImage(g, -h, -h, g._size, g._size);
+    ctx.drawImage(atlas, g.sx, g.sy, atlasCell, atlasCell, -h, -h, GLYPH, GLYPH);
   }
 }
 
+// 珠簾幾乎沒在動時就不重畫（畫面會保留上一格）
+function clothMoved() {
+  let max = 0;
+  for (const p of cloth.particles) {
+    const m = Math.abs(p.x - p.ox) + Math.abs(p.y - p.oy);
+    if (m > max) max = m;
+  }
+  return max > 0.02;
+}
+
 let t = 0;
+let needDraw = true;
 function loop() {
   requestAnimationFrame(loop);
   t += 0.016;
@@ -160,13 +191,17 @@ function loop() {
     }
     wind *= 0.9;
     step(cloth, SIM);
-    draw();
+    if (needDraw || clothMoved()) {
+      draw();
+      needDraw = false;
+    }
   }
   if (koi) koi.tick();
   petals.tick(wind);
 }
 
 // ── 滑鼠 / 手指 ──
+const parallax = { x: 0, y: 0, queued: false };
 function local(e) {
   const r = canvas.getBoundingClientRect();
   return {
@@ -191,10 +226,18 @@ function ringNear(x, y, force) {
 }
 
 document.addEventListener("pointermove", (e) => {
-  // 背景山跟著滑鼠微微移動（視差）
-  const root = document.documentElement.style;
-  root.setProperty("--mx", ((e.clientX / window.innerWidth) * 2 - 1).toFixed(3));
-  root.setProperty("--my", ((e.clientY / window.innerHeight) * 2 - 1).toFixed(3));
+  // 背景跟著滑鼠微微移動（視差）。只改背景這一個元素，而且一格最多改一次
+  parallax.x = (e.clientX / window.innerWidth) * 2 - 1;
+  parallax.y = (e.clientY / window.innerHeight) * 2 - 1;
+  if (!parallax.queued) {
+    parallax.queued = true;
+    requestAnimationFrame(() => {
+      parallax.queued = false;
+      const st = $("skyImg").style;
+      st.setProperty("--mx", parallax.x.toFixed(3));
+      st.setProperty("--my", parallax.y.toFixed(3));
+    });
+  }
 
   if (!cloth || moving) return;
   const { x, y } = local(e);
@@ -253,6 +296,7 @@ function applyDeity(d, { rolled }) {
   deity = d;
   $("plaque").textContent = d.plaque;
   buildCloth(d, { rolled });
+  needDraw = true;
   applyTheme(d.theme);
   applyCopy(d);
   chimes.setNoteOffset(d.note);
@@ -264,14 +308,12 @@ function applyDeity(d, { rolled }) {
 // ── 換神明：往下滑 = 走進門（門放大淡出），新的門從遠處出現 ──
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-function setGate(transform, opacity, blur, ms) {
+function setGate(transform, opacity, _blur, ms) {
   const g = $("gate");
-  g.style.transition = ms
-    ? `transform ${ms}ms var(--ease), opacity ${ms}ms var(--ease), filter ${ms}ms var(--ease)`
-    : "none";
+  // 效能：只動 transform 和 opacity（顯示卡很擅長），不做模糊
+  g.style.transition = ms ? `transform ${ms}ms var(--ease), opacity ${ms}ms var(--ease)` : "none";
   g.style.transform = transform;
   g.style.opacity = String(opacity);
-  g.style.filter = blur ? `blur(${blur}px)` : "none";
 }
 
 async function goTo(index) {
@@ -395,6 +437,26 @@ window.__debug = {
   },
   get wind() {
     return wind;
+  },
+  get koi() {
+    return koi;
+  },
+  get petals() {
+    return petals;
+  },
+  // 量每個部分每格花幾毫秒
+  perf(n = 60) {
+    const time = (fn) => {
+      const t0 = performance.now();
+      for (let i = 0; i < n; i++) fn();
+      return +((performance.now() - t0) / n).toFixed(2);
+    };
+    return {
+      clothStep: time(() => step(cloth, SIM)),
+      clothDraw: time(() => draw()),
+      koi: koi ? time(() => koi.tick()) : null,
+      petals: time(() => petals.tick(0))
+    };
   },
   // 視窗在背景時動畫會暫停；這個可以手動往前跑 n 格
   run(n = 120) {
