@@ -4,6 +4,8 @@
 // 行為：平常隨意游；滑鼠停著會慢慢游過來；滑鼠揮太快或點一下，會被嚇跑。
 
 const SLICES = 28;
+const SHADOW_ALPHA = 0.16; // 影子很淡
+const SHADOW_COLOR = "rgb(92, 80, 68)"; // 暖灰色，不用純黑（配月白背景比較柔和）
 
 export class KoiPond {
   constructor(canvas, sprites, count = 5) {
@@ -44,7 +46,10 @@ export class KoiPond {
       cruise: 0.5 + Math.random() * 0.4,
       phase: Math.random() * 10,
       wander: Math.random() * Math.PI * 2,
-      fear: 0
+      fear: 0,
+      // 每隻魚自己的小畫布：先在這裡把切條拼好（不旋轉），再整張轉向貼到畫面上
+      bodyBuf: document.createElement("canvas"),
+      shadowBuf: document.createElement("canvas")
     };
   }
 
@@ -125,32 +130,54 @@ export class KoiPond {
     const { ctx } = this;
     const sp = f.sprite;
     const L = f.len;
-    const k = L / sp.w; // 圖上 1px = 畫面上 k px
     const amp = L * (0.05 + Math.min(0.06, f.speed * 0.012));
+    // 先把身體和影子各自「拼」在不旋轉的小畫布上
+    this.warp(sp, sp.body, f.bodyBuf, L, amp, f.phase);
+    this.warp(sp, sp.shadow, f.shadowBuf, L, amp, f.phase);
 
+    // 影子：光從左上照下來，所以影子固定往右下偏（不跟著魚轉）
+    this.blit(f.shadowBuf, f.x + L * 0.05, f.y + L * 0.09, f.angle, SHADOW_ALPHA);
+    this.blit(f.bodyBuf, f.x, f.y, f.angle, 0.96);
+  }
+
+  // 把小畫布轉向後貼到畫面上（只貼一次，所以半透明的地方不會疊出條紋）
+  blit(buf, x, y, angle, alpha) {
+    const { ctx } = this;
+    const w = buf.width / this.dpr;
+    const h = buf.height / this.dpr;
     ctx.save();
-    ctx.translate(f.x, f.y);
-    ctx.rotate(f.angle);
-    // 水下的影子（已經模糊好的圖），往右下偏一點
-    ctx.globalAlpha = 0.22;
-    this.slices(sp, sp.shadow, k, L, amp, f.phase, 10, 14);
-    ctx.globalAlpha = 0.95;
-    this.slices(sp, sp.body, k, L, amp, f.phase, 0, 0);
+    ctx.globalAlpha = alpha;
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.drawImage(buf, -w / 2, -h / 2, w, h);
     ctx.restore();
   }
 
-  slices(sp, src, k, L, amp, phase, ox, oy) {
-    const { ctx } = this;
+  // 切條擺動：在「沒有旋轉」的小畫布上畫，每條的左右邊界都對齊整數像素，
+  // 所以條與條之間不用重疊、也不會有縫（重疊會讓半透明處疊出條紋）
+  warp(sp, src, buf, L, amp, phase) {
+    const k = (L / sp.w) * this.dpr; // 圖上 1px = 小畫布上 k px
     const tw = src.width;
     const th = src.height;
-    const sw = tw / SLICES;
     const H = th * k;
+    const margin = Math.ceil(L * 0.12 * this.dpr); // 上下留空間給擺動
+    const bw = Math.ceil(tw * k);
+    const bh = Math.ceil(H + margin * 2);
+    if (buf.width !== bw || buf.height !== bh) {
+      buf.width = bw;
+      buf.height = bh;
+    }
+    const b = buf.getContext("2d");
+    b.clearRect(0, 0, bw, bh);
+    const sw = tw / SLICES;
     for (let i = 0; i < SLICES; i++) {
-      const sx = i * sw;
+      const sx0 = i * sw;
+      const dx0 = Math.round(sx0 * k);
+      const dx1 = Math.round((sx0 + sw) * k);
       // u：0 = 頭（右邊）, 1 = 尾（左邊）
-      const u = Math.min(1, Math.max(0, 1 - (sx + sw / 2 - sp.pad) / sp.w));
-      const off = Math.sin(phase - u * 3.4) * amp * Math.pow(u, 1.5);
-      ctx.drawImage(src, sx, 0, sw + 1, th, -L / 2 + (sx - sp.pad) * k + ox, -H / 2 + off + oy, sw * k + 1, H);
+      const u = Math.min(1, Math.max(0, 1 - (sx0 + sw / 2 - sp.pad) / sp.w));
+      const off = Math.sin(phase - u * 3.4) * amp * Math.pow(u, 1.5) * this.dpr;
+      b.drawImage(src, sx0, 0, sw, th, dx0, margin + off, dx1 - dx0, H);
     }
   }
 
@@ -177,7 +204,7 @@ export class KoiPond {
 function prepareSprite(img, w) {
   const s = w / img.width;
   const h = Math.ceil(img.height * s);
-  const pad = Math.ceil(w * 0.06);
+  const pad = Math.ceil(w * 0.08); // 留邊給影子的模糊
   const make = () => {
     const c = document.createElement("canvas");
     c.width = w + pad * 2;
@@ -186,10 +213,17 @@ function prepareSprite(img, w) {
   };
   const body = make();
   body.getContext("2d").drawImage(img, pad, pad, w, h);
+  // 影子：先把魚的形狀塗成暖灰色（半透明的鰭影子也會比較淡），再柔柔地模糊
+  const tint = make();
+  const tc = tint.getContext("2d");
+  tc.drawImage(img, pad, pad, w, h);
+  tc.globalCompositeOperation = "source-in";
+  tc.fillStyle = SHADOW_COLOR;
+  tc.fillRect(0, 0, tint.width, tint.height);
   const shadow = make();
   const sc = shadow.getContext("2d");
-  sc.filter = `blur(${Math.max(2, pad * 0.4)}px) brightness(0)`;
-  sc.drawImage(img, pad, pad, w, h);
+  sc.filter = `blur(${Math.max(3, w * 0.022)}px)`;
+  sc.drawImage(tint, 0, 0);
   return { body, shadow, w, h, pad };
 }
 
