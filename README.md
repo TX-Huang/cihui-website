@@ -38,3 +38,9 @@ npm test
 | `tools/cut_gate.py`、`tools/cut_koi.py` | AI 圖去背、裁切 |
 | `docs/asset-prompts.md` | 生成圖片用的提示詞 |
 | `docs/deities-lore.md` | 神明典故研究（附來源） |
+
+## 授權標示
+
+- 匾額篆體字：用[崇羲篆體](https://xiaoxue.iis.sinica.edu.tw/chongxi/)（中央研究院）畫成圖片 `assets/plaque-text.webp`，
+  授權 CC BY-ND 3.0 TW（可商用、須標示作者、不得改作）。網站右下角有標示。字型檔本身不放進倉庫。
+- 經文：《瑤池金母普度收圓定慧解脫真經》節錄，依道場誦本確認用字。

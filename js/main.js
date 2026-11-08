@@ -81,7 +81,6 @@ function layout() {
   pl.top = `${P.cy - P.h / 2}px`;
   pl.width = `${P.w}px`;
   pl.height = `${P.h}px`;
-  pl.fontSize = `${Math.round(P.h * 0.56)}px`;
   $("gate").style.transformOrigin = `50% ${(((D.y0 + D.y1) / 2) / GATE.h) * 100}%`;
   atlas = null;
   glyphs.clear();
@@ -386,7 +385,7 @@ function applyCopy(d) {
 
 function applyDeity(d, { rolled }) {
   deity = d;
-  $("plaque").textContent = d.plaque;
+  $("plaque").setAttribute("aria-label", d.plaque);
   buildCloth(d, { rolled });
   needDraw = true;
   applyTheme(d.theme);

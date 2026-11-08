@@ -1,24 +1,41 @@
 // 會游的鯉魚。
-// 做法：一張「從上往下看、頭朝右」的鯉魚圖，切成很多直條，
-// 每條上下錯開一點（越靠尾巴錯越多），連起來就像身體在擺動。
+// 做法（WebGL）：每隻魚有一條「脊椎」（js/spine.js）。頭往前游，身體一節一節跟上，
+// 轉彎時自然彎成 C 形；再疊上從頭傳到尾的波，就是游泳的 S 形擺動。
+// 魚的圖（從上往下看、頭朝右）貼在沿著脊椎的一條帶子上，由顯示卡畫，沒有切條的縫或條紋。
+// 瀏覽器不支援 WebGL 時，退回舊的「切條平移」畫法。
 // 行為：平常隨意游；滑鼠停著會慢慢游過來；滑鼠揮太快或點一下，會被嚇跑。
 
-const SLICES = 28;
+import { createSpine, followHead, buildStrip } from "./spine.js";
+
+const SPINE_POINTS = 16;
+const MAX_BEND = 0.22; // 每一節最多彎多少（弧度）：太大像蛇，太小像木棍
+const WAVE_K = 3.6; // 身上的波有多密
 const SHADOW_ALPHA = 0.16; // 影子很淡
 const SHADOW_COLOR = "rgb(92, 80, 68)"; // 暖灰色，不用純黑（配月白背景比較柔和）
+const SLICES = 28; // 只給沒有 WebGL 時的備用畫法用
 
 export class KoiPond {
   constructor(canvas, sprites, count = 5) {
     this.c = canvas;
-    this.ctx = canvas.getContext("2d");
-    this.rawSprites = sprites;
     this.mouse = { x: -9999, y: -9999, speed: 0, still: 0 };
     this.ripples = [];
     this.fish = [];
+    // 水波另外用一張 2D 畫布（WebGL 畫布不能同時用 2D 畫線），放在魚的下面
+    this.rc = document.createElement("canvas");
+    this.rc.className = canvas.className;
+    this.rc.style.zIndex = "4";
+    this.rc.setAttribute("aria-hidden", "true");
+    canvas.before(this.rc);
+    this.rctx = this.rc.getContext("2d");
+
+    this.gl = canvas.getContext("webgl", { alpha: true, premultipliedAlpha: true, antialias: true });
+    if (!this.gl) this.ctx = canvas.getContext("2d");
+
     this.resize();
-    // 效能：每隻魚的圖先縮成顯示大小，影子先模糊好，之後每格只貼圖、不再即時模糊
+    // 每隻魚的圖先縮成顯示大小、影子先模糊好（只做一次）
     const maxLen = Math.min(this.w, this.h) * 0.24;
     this.sprites = sprites.map((img) => prepareSprite(img, Math.ceil(maxLen * this.dpr)));
+    if (this.gl) this.initGL();
     for (let i = 0; i < count; i++) this.fish.push(this.spawn(i));
     window.addEventListener("resize", () => this.resize());
     window.addEventListener("pointermove", (e) => this.onMove(e));
@@ -29,27 +46,112 @@ export class KoiPond {
     this.dpr = Math.min(1.5, window.devicePixelRatio || 1);
     this.w = window.innerWidth;
     this.h = window.innerHeight;
-    this.c.width = this.w * this.dpr;
-    this.c.height = this.h * this.dpr;
+    for (const c of [this.c, this.rc]) {
+      c.width = this.w * this.dpr;
+      c.height = this.h * this.dpr;
+    }
+    if (this.gl) this.gl.viewport(0, 0, this.c.width, this.c.height);
+  }
+
+  // ── WebGL 設定 ──
+  initGL() {
+    const gl = this.gl;
+    const vs = `
+      attribute vec2 a_pos;
+      attribute vec2 a_uv;
+      uniform vec2 u_res;
+      uniform vec2 u_off;
+      varying vec2 v_uv;
+      void main() {
+        vec2 p = (a_pos + u_off) / u_res * 2.0 - 1.0;
+        gl_Position = vec4(p.x, -p.y, 0.0, 1.0);
+        v_uv = a_uv;
+      }`;
+    const fs = `
+      precision mediump float;
+      varying vec2 v_uv;
+      uniform sampler2D u_tex;
+      uniform float u_alpha;
+      void main() {
+        gl_FragColor = texture2D(u_tex, v_uv) * u_alpha;
+      }`;
+    const compile = (type, src) => {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      return s;
+    };
+    const prog = gl.createProgram();
+    gl.attachShader(prog, compile(gl.VERTEX_SHADER, vs));
+    gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      // 顯示卡不合作：改用備用畫法
+      this.gl = null;
+      this.ctx = this.c.getContext("2d");
+      return;
+    }
+    gl.useProgram(prog);
+    this.loc = {
+      pos: gl.getAttribLocation(prog, "a_pos"),
+      uv: gl.getAttribLocation(prog, "a_uv"),
+      res: gl.getUniformLocation(prog, "u_res"),
+      off: gl.getUniformLocation(prog, "u_off"),
+      alpha: gl.getUniformLocation(prog, "u_alpha"),
+      tex: gl.getUniformLocation(prog, "u_tex")
+    };
+    this.vbo = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+    gl.enableVertexAttribArray(this.loc.pos);
+    gl.enableVertexAttribArray(this.loc.uv);
+    gl.vertexAttribPointer(this.loc.pos, 2, gl.FLOAT, false, 16, 0);
+    gl.vertexAttribPointer(this.loc.uv, 2, gl.FLOAT, false, 16, 8);
+    gl.uniform1i(this.loc.tex, 0);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); // 預乘 alpha 的混色
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+    const upload = (canvas) => {
+      const t = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      return t;
+    };
+    for (const sp of this.sprites) {
+      sp.bodyTex = upload(sp.body);
+      sp.shadowTex = upload(sp.shadow);
+    }
   }
 
   spawn(i) {
     const sprite = this.sprites[i % this.sprites.length];
     const len = Math.min(this.w, this.h) * (0.16 + Math.random() * 0.08);
+    const x = Math.random() * this.w;
+    const y = this.h * (0.35 + Math.random() * 0.55);
+    const angle = Math.random() * Math.PI * 2;
+    // 脊椎長度 = 整張圖（含留邊）的長度；f.x / f.y 是頭的位置
+    const k = len / sprite.w;
+    const total = sprite.body.width * k;
     return {
       sprite,
       len,
-      x: Math.random() * this.w,
-      y: this.h * (0.35 + Math.random() * 0.55),
-      angle: Math.random() * Math.PI * 2,
+      x,
+      y,
+      angle,
       speed: 0.6,
       cruise: 0.5 + Math.random() * 0.4,
       phase: Math.random() * 10,
       wander: Math.random() * Math.PI * 2,
       fear: 0,
-      // 每隻魚自己的小畫布：先在這裡把切條拼好（不旋轉），再整張轉向貼到畫面上
-      bodyBuf: document.createElement("canvas"),
-      shadowBuf: document.createElement("canvas")
+      halfWidth: (sprite.body.height / 2) * k,
+      spine: createSpine(SPINE_POINTS, total / (SPINE_POINTS - 1), x, y, angle),
+      verts: null,
+      // 備用畫法用
+      bodyBuf: null,
+      shadowBuf: null
     };
   }
 
@@ -71,15 +173,15 @@ export class KoiPond {
   }
 
   tick() {
-    const { ctx } = this;
-    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    ctx.clearRect(0, 0, this.w, this.h);
     this.mouse.still++;
     this.mouse.speed *= 0.85;
-
-    for (const f of this.fish) this.steer(f);
+    for (const f of this.fish) {
+      this.steer(f);
+      followHead(f.spine, f.x, f.y, MAX_BEND);
+    }
     this.drawRipples();
-    for (const f of this.fish) this.drawFish(f);
+    if (this.gl) this.drawGL();
+    else this.draw2D();
   }
 
   steer(f) {
@@ -122,25 +224,59 @@ export class KoiPond {
 
     f.x += Math.cos(f.angle) * f.speed;
     f.y += Math.sin(f.angle) * f.speed;
-    // 尾巴擺動的速度跟游速有關
+    // 擺尾的速度跟游速有關
     f.phase += 0.06 + f.speed * 0.09;
   }
 
-  drawFish(f) {
-    const { ctx } = this;
-    const sp = f.sprite;
-    const L = f.len;
-    const amp = L * (0.05 + Math.min(0.06, f.speed * 0.012));
-    // 先把身體和影子各自「拼」在不旋轉的小畫布上
-    this.warp(sp, sp.body, f.bodyBuf, L, amp, f.phase);
-    this.warp(sp, sp.shadow, f.shadowBuf, L, amp, f.phase);
-
-    // 影子：光從左上照下來，所以影子固定往右下偏（不跟著魚轉）
-    this.blit(f.shadowBuf, f.x + L * 0.05, f.y + L * 0.09, f.angle, SHADOW_ALPHA);
-    this.blit(f.bodyBuf, f.x, f.y, f.angle, 0.96);
+  amp(f) {
+    // 游越快擺越大；停下來時還是會輕輕擺
+    return f.len * (0.07 + Math.min(0.06, f.speed * 0.014));
   }
 
-  // 把小畫布轉向後貼到畫面上（只貼一次，所以半透明的地方不會疊出條紋）
+  drawGL() {
+    const gl = this.gl;
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.uniform2f(this.loc.res, this.w, this.h);
+    const n = SPINE_POINTS * 2;
+    for (const f of this.fish) {
+      f.verts = buildStrip(f.spine, { halfWidth: f.halfWidth, amp: this.amp(f), phase: f.phase, waveK: WAVE_K }, f.verts);
+      gl.bufferData(gl.ARRAY_BUFFER, f.verts, gl.DYNAMIC_DRAW);
+      // 影子：光從左上照下來，所以影子固定往右下偏
+      gl.bindTexture(gl.TEXTURE_2D, f.sprite.shadowTex);
+      gl.uniform2f(this.loc.off, f.len * 0.05, f.len * 0.09);
+      gl.uniform1f(this.loc.alpha, SHADOW_ALPHA);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, n);
+      // 身體
+      gl.bindTexture(gl.TEXTURE_2D, f.sprite.bodyTex);
+      gl.uniform2f(this.loc.off, 0, 0);
+      gl.uniform1f(this.loc.alpha, 0.96);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, n);
+    }
+  }
+
+  // ── 備用畫法（沒有 WebGL 時）：切條平移，整隻沿著頭→尾的方向貼上 ──
+  draw2D() {
+    const { ctx } = this;
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.clearRect(0, 0, this.w, this.h);
+    for (const f of this.fish) {
+      const p = f.spine.pts;
+      const head = p[0];
+      const tail = p[p.length - 1];
+      const cx = (head.x + tail.x) / 2;
+      const cy = (head.y + tail.y) / 2;
+      const ang = Math.atan2(head.y - tail.y, head.x - tail.x);
+      f.bodyBuf ??= document.createElement("canvas");
+      f.shadowBuf ??= document.createElement("canvas");
+      const amp = this.amp(f) * 0.7;
+      this.warp(f.sprite, f.sprite.body, f.bodyBuf, f.len, amp, f.phase);
+      this.warp(f.sprite, f.sprite.shadow, f.shadowBuf, f.len, amp, f.phase);
+      this.blit(f.shadowBuf, cx + f.len * 0.05, cy + f.len * 0.09, ang, SHADOW_ALPHA);
+      this.blit(f.bodyBuf, cx, cy, ang, 0.96);
+    }
+  }
+
   blit(buf, x, y, angle, alpha) {
     const { ctx } = this;
     const w = buf.width / this.dpr;
@@ -153,14 +289,12 @@ export class KoiPond {
     ctx.restore();
   }
 
-  // 切條擺動：在「沒有旋轉」的小畫布上畫，每條的左右邊界都對齊整數像素，
-  // 所以條與條之間不用重疊、也不會有縫（重疊會讓半透明處疊出條紋）
   warp(sp, src, buf, L, amp, phase) {
-    const k = (L / sp.w) * this.dpr; // 圖上 1px = 小畫布上 k px
+    const k = (L / sp.w) * this.dpr;
     const tw = src.width;
     const th = src.height;
     const H = th * k;
-    const margin = Math.ceil(L * 0.12 * this.dpr); // 上下留空間給擺動
+    const margin = Math.ceil(L * 0.14 * this.dpr);
     const bw = Math.ceil(tw * k);
     const bh = Math.ceil(H + margin * 2);
     if (buf.width !== bw || buf.height !== bh) {
@@ -174,15 +308,17 @@ export class KoiPond {
       const sx0 = i * sw;
       const dx0 = Math.round(sx0 * k);
       const dx1 = Math.round((sx0 + sw) * k);
-      // u：0 = 頭（右邊）, 1 = 尾（左邊）
       const u = Math.min(1, Math.max(0, 1 - (sx0 + sw / 2 - sp.pad) / sp.w));
-      const off = Math.sin(phase - u * 3.4) * amp * Math.pow(u, 1.5) * this.dpr;
+      const off = Math.sin(phase - u * WAVE_K) * amp * Math.pow(u, 1.5) * this.dpr;
       b.drawImage(src, sx0, 0, sw, th, dx0, margin + off, dx1 - dx0, H);
     }
   }
 
   drawRipples() {
-    const { ctx } = this;
+    const ctx = this.rctx;
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.clearRect(0, 0, this.w, this.h);
+    if (!this.ripples.length) return;
     ctx.lineWidth = 1.5;
     this.ripples = this.ripples.filter((r) => r.life > 0.02);
     for (const r of this.ripples) {
@@ -200,11 +336,11 @@ export class KoiPond {
   }
 }
 
-// 把鯉魚圖縮成需要的大小，並先做好一張模糊的黑色影子
+// 把鯉魚圖縮成需要的大小，並先做好一張模糊的暖灰色影子（只做一次）
 function prepareSprite(img, w) {
   const s = w / img.width;
   const h = Math.ceil(img.height * s);
-  const pad = Math.ceil(w * 0.08); // 留邊給影子的模糊
+  const pad = Math.ceil(w * 0.08); // 留邊給影子的模糊和擺動
   const make = () => {
     const c = document.createElement("canvas");
     c.width = w + pad * 2;
@@ -213,7 +349,6 @@ function prepareSprite(img, w) {
   };
   const body = make();
   body.getContext("2d").drawImage(img, pad, pad, w, h);
-  // 影子：先把魚的形狀塗成暖灰色（半透明的鰭影子也會比較淡），再柔柔地模糊
   const tint = make();
   const tc = tint.getContext("2d");
   tc.drawImage(img, pad, pad, w, h);
