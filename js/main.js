@@ -139,6 +139,39 @@ function buildCloth(d, { rolled }) {
       p.y = p.oy = p.row * 1.2;
     }
   }
+  drop = rolled ? { phase: "fall", brake: 0 } : null;
+}
+
+// ── 珠簾放下來：先用大重力快速落下，落到底後短暫加大阻力（煞車），再回到平常的輕柔晃動 ──
+// 實測（30×43 珠簾，node 模擬）：原本 1.45 秒才垂到 9 成、最長拉到 1.22 倍；
+// 現在約 0.78 秒到底、最長 1.17 倍（多出來的部分藏在台階後面）
+const DROP_GRAVITY = 0.9;
+const DROP_TRIGGER = 0.7; // 落到 7 成長度就開始煞車，避免衝過頭拉太長
+const BRAKE_DAMPING = 0.88;
+const BRAKE_STEPS = 30;
+let drop = null;
+let dropBottom = null;
+
+function simParams() {
+  if (!drop) return SIM;
+  if (drop.phase === "fall") return { ...SIM, gravity: DROP_GRAVITY };
+  return { ...SIM, damping: BRAKE_DAMPING };
+}
+
+function advanceDrop() {
+  if (!drop) return;
+  if (drop.phase === "fall") {
+    if (!dropBottom || dropBottom[0] === undefined || !cloth.particles.includes(dropBottom[0])) {
+      dropBottom = cloth.particles.filter((p) => p.row === ROWS - 1);
+    }
+    const y = dropBottom.reduce((a, p) => a + p.y, 0) / dropBottom.length;
+    if (y >= CURTAIN_H * DROP_TRIGGER) {
+      drop.phase = "brake";
+      drop.brake = BRAKE_STEPS;
+    }
+  } else if (--drop.brake <= 0) {
+    drop = null;
+  }
 }
 
 // ── 畫珠簾 ──
@@ -176,28 +209,98 @@ function clothMoved() {
   return max > 0.02;
 }
 
+// 物理照「真實時間」走：每 1/60 秒算一步。電腦慢、畫面張數少時，一格就多算幾步，
+// 這樣不管什麼電腦，珠簾落下和晃動的速度都一樣
+const STEP_MS = 1000 / 60;
+const MAX_STEPS = 4; // 一格最多補 4 步，避免分頁切回來時一次算太多
 let t = 0;
 let needDraw = true;
-function loop() {
-  requestAnimationFrame(loop);
+let lastNow = 0;
+let acc = 0;
+
+function physicsStep() {
   t += 0.016;
+  // 捲動時的風 + 平常一點點微風
+  const breeze = Math.sin(t * 0.7) * 0.004;
+  for (const p of cloth.particles) {
+    if (p.pinned) continue;
+    const depth = p.row / ROWS;
+    p.ax += (wind + breeze) * depth * (0.7 + 0.3 * Math.sin(t * 3 + p.col * 0.45));
+  }
+  wind *= 0.9;
+  step(cloth, simParams());
+  advanceDrop();
+}
+
+// ── 效能儀表：網址加 ?perf 才會出現，顯示每秒張數與各部分耗時 ──
+const PERF = new URLSearchParams(location.search).has("perf");
+const perfStats = { frames: 0, since: 0, worst: 0, parts: {} };
+let perfBox = null;
+function perfMark(name, t0) {
+  if (!PERF) return;
+  perfStats.parts[name] = (perfStats.parts[name] || 0) + (performance.now() - t0);
+}
+function perfFrame(now, frameMs) {
+  if (!PERF) return;
+  if (!perfBox) {
+    perfBox = document.createElement("pre");
+    perfBox.style.cssText =
+      "position:fixed;left:8px;top:8px;z-index:99;margin:0;padding:8px 10px;font:12px/1.5 monospace;" +
+      "background:rgba(0,0,0,.72);color:#fff;border-radius:6px;pointer-events:none;white-space:pre";
+    document.body.appendChild(perfBox);
+    perfStats.since = now;
+  }
+  perfStats.frames++;
+  perfStats.worst = Math.max(perfStats.worst, frameMs);
+  const span = now - perfStats.since;
+  if (span >= 1000) {
+    const n = perfStats.frames;
+    const parts = Object.entries(perfStats.parts)
+      .map(([k, v]) => `${k.padEnd(7)} ${(v / n).toFixed(1).padStart(5)} ms`)
+      .join("\n");
+    perfBox.textContent = [
+      `每秒 ${((n * 1000) / span).toFixed(0)} 張（目標 60）`,
+      `最慢一格 ${perfStats.worst.toFixed(0)} ms`,
+      `畫面 ${innerWidth}×${innerHeight} · dpr ${devicePixelRatio}`,
+      "— 每格平均（CPU）—",
+      parts
+    ].join("\n");
+    perfStats.frames = 0;
+    perfStats.worst = 0;
+    perfStats.parts = {};
+    perfStats.since = now;
+  }
+}
+
+function loop(now = performance.now()) {
+  requestAnimationFrame(loop);
+  const elapsed = lastNow ? Math.min(100, now - lastNow) : STEP_MS;
+  perfFrame(now, lastNow ? now - lastNow : 0);
+  lastNow = now;
   if (cloth) {
-    // 捲動時的風 + 平常一點點微風
-    const breeze = Math.sin(t * 0.7) * 0.004;
-    for (const p of cloth.particles) {
-      if (p.pinned) continue;
-      const depth = p.row / ROWS;
-      p.ax += (wind + breeze) * depth * (0.7 + 0.3 * Math.sin(t * 3 + p.col * 0.45));
+    const t0 = performance.now();
+    acc += elapsed;
+    let n = 0;
+    while (acc >= STEP_MS && n < MAX_STEPS) {
+      physicsStep();
+      acc -= STEP_MS;
+      n++;
     }
-    wind *= 0.9;
-    step(cloth, SIM);
+    if (n === MAX_STEPS) acc = 0;
+    perfMark("物理", t0);
+    const t1 = performance.now();
     if (needDraw || clothMoved()) {
       draw();
       needDraw = false;
     }
+    perfMark("珠簾", t1);
   }
+  const t2 = performance.now();
   if (koi) koi.tick();
+  perfMark("鯉魚", t2);
+  const t3 = performance.now();
   petals.tick(wind);
+  perfMark("花瓣", t3);
 }
 
 // ── 滑鼠 / 手指 ──
@@ -534,7 +637,7 @@ window.__debug = {
   // 視窗在背景時動畫會暫停；這個可以手動往前跑 n 格
   run(n = 120) {
     for (let i = 0; i < n; i++) {
-      step(cloth, SIM);
+      physicsStep();
       if (koi) koi.tick();
     }
     draw();
