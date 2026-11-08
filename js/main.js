@@ -278,6 +278,7 @@ function applyTheme(t) {
   s.setProperty("--tint", t.tint);
   s.setProperty("--tint-a", String(t.tintA));
   s.setProperty("--mist", t.mist);
+  bakeMist(t.mist);
   petals.color = t.petal;
 }
 
@@ -308,12 +309,80 @@ function applyDeity(d, { rolled }) {
 // ── 換神明：往下滑 = 走進門（門放大淡出），新的門從遠處出現 ──
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-function setGate(transform, opacity, _blur, ms) {
+// 模糊效果：不即時模糊（每格都要重算，很慢），而是
+// 「清楚的拱門」和「預先模糊好的拱門」交叉淡入淡出，看起來一樣，但顯示卡只在調透明度。
+function setGate(transform, opacity, blurred, ms) {
   const g = $("gate");
-  // 效能：只動 transform 和 opacity（顯示卡很擅長），不做模糊
-  g.style.transition = ms ? `transform ${ms}ms var(--ease), opacity ${ms}ms var(--ease)` : "none";
+  const tr = (props) => (ms ? props.map((p) => `${p} ${ms}ms var(--ease)`).join(", ") : "none");
+  g.style.transition = tr(["transform", "opacity"]);
   g.style.transform = transform;
   g.style.opacity = String(opacity);
+  const mix = blurred ? 1 : 0;
+  for (const id of ["gateImg", "cloth", "plaque"]) {
+    if (!$(id)) continue;
+    const st = $(id).style;
+    st.transition = tr(["opacity"]);
+    st.opacity = String(1 - mix);
+  }
+  if ($("gateBlur")) {
+    const gb = $("gateBlur").style;
+    gb.transition = tr(["opacity"]);
+    gb.opacity = String(mix);
+  }
+}
+
+// 做一張模糊版的拱門（只做一次）。模糊後細節本來就看不到，所以用半解析度做，省 3/4 的計算
+const BLUR_PX = 6; // 跟原本換場時的 blur(6px) 一樣（拱門設計座標）
+function bakeBlurredGate() {
+  const img = $("gateImg");
+  // 舊版 index.html（瀏覽器快取）沒有這個畫布時，自己建一個，不要讓整頁壞掉
+  if (!$("gateBlur")) {
+    const c = document.createElement("canvas");
+    c.id = "gateBlur";
+    c.className = "gate-blur";
+    c.setAttribute("aria-hidden", "true");
+    img.after(c);
+  }
+  const make = () => {
+    const c = $("gateBlur");
+    const k = 0.5;
+    c.width = Math.round(GATE.w * k);
+    c.height = Math.round(GATE.h * k);
+    const x = c.getContext("2d");
+    x.filter = `blur(${BLUR_PX * k}px)`;
+    x.drawImage(img, 0, 0, c.width, c.height);
+  };
+  if (img.complete && img.naturalWidth) make();
+  else img.addEventListener("load", make, { once: true });
+}
+
+// 霧：預先把「漸層＋模糊」畫成一張小圖，CSS 只負責平移。效果跟原本 blur(30px) 相同
+const MIST_BLUR = 30; // 原本 CSS 的 blur(30px)
+const MIST_SCALE = 0.2; // 用 1/5 解析度做（霧本來就很糊，看不出差別）
+function bakeMist(color) {
+  const w = Math.max(64, Math.round(window.innerWidth * 2 * MIST_SCALE));
+  const h = Math.max(32, Math.round(window.innerHeight * 0.4 * MIST_SCALE));
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const x = c.getContext("2d");
+  // 先在沒模糊的畫布上畫橢圓漸層，再模糊貼過來
+  const src = document.createElement("canvas");
+  src.width = w;
+  src.height = h;
+  const sx = src.getContext("2d");
+  sx.save();
+  sx.translate(w / 2, h / 2);
+  sx.scale(w / 2, h / 2);
+  const g = sx.createRadialGradient(0, 0, 0, 0, 0, 1);
+  g.addColorStop(0, color);
+  g.addColorStop(0.7, "rgba(255,255,255,0)");
+  sx.fillStyle = g;
+  sx.fillRect(-1, -1, 2, 2);
+  sx.restore();
+  x.filter = `blur(${MIST_BLUR * MIST_SCALE}px)`;
+  x.drawImage(src, 0, 0);
+  document.documentElement.style.setProperty("--mist-img", `url(${c.toDataURL()})`);
 }
 
 async function goTo(index) {
@@ -328,7 +397,7 @@ async function goTo(index) {
   copy.classList.add("is-leaving");
   petals.burst(forward ? 1 : -0.5);
   // 往下：穿過門（放大）；往上：退出來（縮小）
-  setGate(forward ? "scale(3.2)" : "scale(0.6)", 0, 6, dur);
+  setGate(forward ? "scale(3.2)" : "scale(0.6)", 0, true, dur);
   document.documentElement.style.setProperty("--zoom", forward ? "1.12" : "0.96");
   await sleep(dur * 0.75);
 
@@ -337,9 +406,9 @@ async function goTo(index) {
   copy.classList.remove("is-leaving");
   copy.classList.add("is-entering");
 
-  setGate(forward ? "scale(0.6)" : "scale(3.2)", 0, 6, 0);
+  setGate(forward ? "scale(0.6)" : "scale(3.2)", 0, true, 0);
   void $("gate").offsetWidth;
-  setGate("none", 1, 0, dur);
+  setGate("none", 1, false, dur);
   document.documentElement.style.setProperty("--zoom", "1");
   requestAnimationFrame(() => copy.classList.remove("is-entering"));
   await sleep(dur);
@@ -407,7 +476,11 @@ function buildPage() {
 async function start() {
   buildPage();
   layout();
-  window.addEventListener("resize", layout);
+  window.addEventListener("resize", () => {
+    layout();
+    if (deity) bakeMist(deity.theme.mist);
+  });
+  bakeBlurredGate();
 
   const first = Math.max(0, ORDER.indexOf(location.hash.slice(1)));
   if (first > 0) window.scrollTo(0, first * window.innerHeight);

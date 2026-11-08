@@ -78,7 +78,9 @@ body {
   left: -50%;
   width: 200%;
   height: 40vh;
-  background: radial-gradient(50% 50% at 50% 50%, var(--mist), transparent 70%);
+  /* 霧的圖由 JS 預先模糊好（跟原本 blur(30px) 一樣的效果），這裡只負責平移 */
+  background: var(--mist-img, radial-gradient(50% 50% at 50% 50%, var(--mist), transparent 70%)) center / 100% 100% no-repeat;
+  will-change: transform;
   animation: drift 40s linear infinite;
 }
 .mist.m1 {
@@ -203,6 +205,16 @@ body {
   height: 100%;
   user-select: none;
   filter: drop-shadow(0 24px 36px rgba(90, 70, 50, 0.16));
+}
+/* 換場用：預先模糊好的拱門，平常透明，換場時跟清楚的拱門交叉淡入淡出 */
+.gate-blur {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
 }
 /* 門洞裡面：看得到後面的瑤池，但暗一點，珠簾才顯眼 */
 .door-glow {
