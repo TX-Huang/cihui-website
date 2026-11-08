@@ -29,7 +29,7 @@ npm test
 
 | 檔案 | 用途 |
 |---|---|
-| `js/deities.js` | 四位神明的文字、顏色（**珠簾文字目前是暫用的，要換成正式經文**） |
+| `js/deities.js` | 四位神明的文字、顏色、珠簾經文（定慧解脫真經節錄） |
 | `js/cloth.js` | 珠簾物理（Verlet） |
 | `js/chimes.js` | 風鈴聲（Web Audio 即時合成） |
 | `js/koi.js` | 鯉魚游動 |

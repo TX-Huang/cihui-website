@@ -129,7 +129,7 @@ function draw() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
   for (const p of cloth.particles) {
-    if (!p.ch || p.ch === " ") continue;
+    if (!p.ch || p.ch === " " || p.ch === "　") continue;
     let cos = 1;
     let sin = 0;
     if (p.down) {
