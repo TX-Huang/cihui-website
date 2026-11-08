@@ -67,16 +67,48 @@ export function buildStrip(spine, { halfWidth, amp, phase, waveK }, out) {
     forward(disp, i, f);
     const nx = -f.y;
     const ny = f.x;
+    // 3) 防止「翻面」：急彎時，內側的寬度不能超過彎曲半徑，否則內側的邊會交叉打結。
+    //    彎越急，內側收越窄；外側不受影響。
+    let wNeg = halfWidth; // -法向量那一側（v = 0）
+    let wPos = halfWidth; // +法向量那一側（v = 1）
+    // 看前後三個點中最急的彎（只看自己的話，旁邊更急的彎會漏掉，尾巴附近還是會翻）
+    let turn = 0;
+    for (let j = i - 1; j <= i + 1; j++) {
+      if (j < 0 || j >= n) continue;
+      const tj = turnAt(disp, j);
+      if (Math.abs(tj) > Math.abs(turn)) turn = tj;
+    }
+    if (turn !== 0) {
+      const radius = (segAvg(disp, i) / Math.abs(turn)) * 0.9;
+      if (turn > 0) wPos = Math.min(wPos, radius);
+      else wNeg = Math.min(wNeg, radius);
+    }
     const u = 1 - i / (n - 1);
     const k = i * 8;
-    v[k] = disp[i].x - nx * halfWidth;
-    v[k + 1] = disp[i].y - ny * halfWidth;
+    v[k] = disp[i].x - nx * wNeg;
+    v[k + 1] = disp[i].y - ny * wNeg;
     v[k + 2] = u;
     v[k + 3] = 0;
-    v[k + 4] = disp[i].x + nx * halfWidth;
-    v[k + 5] = disp[i].y + ny * halfWidth;
+    v[k + 4] = disp[i].x + nx * wPos;
+    v[k + 5] = disp[i].y + ny * wPos;
     v[k + 6] = u;
     v[k + 7] = 1;
   }
   return v;
+}
+
+// 第 i 點的轉彎角（往頭的方向看；正 = 往 +法向量那邊彎）。兩端回傳 0
+function turnAt(p, i) {
+  if (i === 0 || i === p.length - 1) return 0;
+  const ax = p[i].x - p[i + 1].x;
+  const ay = p[i].y - p[i + 1].y;
+  const bx = p[i - 1].x - p[i].x;
+  const by = p[i - 1].y - p[i].y;
+  return Math.atan2(ax * by - ay * bx, ax * bx + ay * by);
+}
+
+function segAvg(p, i) {
+  const a = p[Math.max(0, i - 1)];
+  const b = p[Math.min(p.length - 1, i + 1)];
+  return Math.hypot(a.x - b.x, a.y - b.y) / 2;
 }

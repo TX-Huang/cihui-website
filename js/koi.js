@@ -30,6 +30,15 @@ export class KoiPond {
 
     this.gl = canvas.getContext("webgl", { alpha: true, premultipliedAlpha: true, antialias: true });
     if (!this.gl) this.ctx = canvas.getContext("2d");
+    // WebGL 被系統收回（例如顯示卡驅動重置）時：先暫停，恢復後重新上傳圖片
+    canvas.addEventListener("webglcontextlost", (e) => {
+      e.preventDefault();
+      this.lost = true;
+    });
+    canvas.addEventListener("webglcontextrestored", () => {
+      this.lost = false;
+      this.initGL();
+    });
 
     this.resize();
     // 每隻魚的圖先縮成顯示大小、影子先模糊好（只做一次）
@@ -50,7 +59,6 @@ export class KoiPond {
       c.width = this.w * this.dpr;
       c.height = this.h * this.dpr;
     }
-    if (this.gl) this.gl.viewport(0, 0, this.c.width, this.c.height);
   }
 
   // ── WebGL 設定 ──
@@ -87,8 +95,7 @@ export class KoiPond {
     gl.linkProgram(prog);
     if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
       // 顯示卡不合作：改用備用畫法
-      this.gl = null;
-      this.ctx = this.c.getContext("2d");
+      this.useFallback();
       return;
     }
     gl.useProgram(prog);
@@ -124,6 +131,16 @@ export class KoiPond {
       sp.bodyTex = upload(sp.body);
       sp.shadowTex = upload(sp.shadow);
     }
+  }
+
+  // 同一張畫布一旦拿過 WebGL，就再也拿不到 2D 畫筆，所以換一張新的畫布
+  useFallback() {
+    const nc = this.c.cloneNode(false);
+    this.c.replaceWith(nc);
+    this.c = nc;
+    this.gl = null;
+    this.ctx = nc.getContext("2d");
+    this.resize();
   }
 
   spawn(i) {
@@ -180,8 +197,9 @@ export class KoiPond {
       followHead(f.spine, f.x, f.y, MAX_BEND);
     }
     this.drawRipples();
-    if (this.gl) this.drawGL();
-    else this.draw2D();
+    if (this.gl) {
+      if (!this.lost) this.drawGL();
+    } else if (this.ctx) this.draw2D();
   }
 
   steer(f) {
@@ -235,6 +253,8 @@ export class KoiPond {
 
   drawGL() {
     const gl = this.gl;
+    // 顯示卡可能給的比要求的小（記憶體不夠時），用實際大小
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.uniform2f(this.loc.res, this.w, this.h);
@@ -261,12 +281,15 @@ export class KoiPond {
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.clearRect(0, 0, this.w, this.h);
     for (const f of this.fish) {
+      // 用脊椎「沿身體一半長度」的位置當中心（彎曲時頭尾連線的中點會偏掉）
       const p = f.spine.pts;
-      const head = p[0];
-      const tail = p[p.length - 1];
-      const cx = (head.x + tail.x) / 2;
-      const cy = (head.y + tail.y) / 2;
-      const ang = Math.atan2(head.y - tail.y, head.x - tail.x);
+      const a = p[Math.floor((p.length - 1) / 2)];
+      const b = p[Math.ceil((p.length - 1) / 2)];
+      const cx = (a.x + b.x) / 2;
+      const cy = (a.y + b.y) / 2;
+      const front = p[Math.max(0, Math.floor((p.length - 1) / 2) - 2)];
+      const back = p[Math.min(p.length - 1, Math.ceil((p.length - 1) / 2) + 2)];
+      const ang = Math.atan2(front.y - back.y, front.x - back.x);
       f.bodyBuf ??= document.createElement("canvas");
       f.shadowBuf ??= document.createElement("canvas");
       const amp = this.amp(f) * 0.7;

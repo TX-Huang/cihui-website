@@ -79,3 +79,38 @@ test("buildStrip: the swimming wave moves the tail much more than the head", () 
   assert.ok(headMax < 0.5, `head moved ${headMax}`);
   assert.ok(tailMax > 7, `tail moved only ${tailMax}`);
 });
+
+// 實際魚的比例：脊椎 16 點、總長約 1.16L、半寬約 0.3L（含魚鰭與留邊）
+test("buildStrip: a fish at maximum bend plus swimming wave never folds over itself", () => {
+  const L = 160;
+  const n = 16;
+  const total = L * 1.16;
+  const halfWidth = L * 0.3;
+  for (const dir of [1, -1]) {
+  const s = createSpine(n, total / (n - 1), 0, 0, 0);
+  // 一直急轉彎（左轉、右轉各一次），讓每一節都彎到最大
+  for (let k = 1; k <= 120; k++) {
+    const a = dir * k * 0.12;
+    followHead(s, s.pts[0].x + Math.cos(a) * 3, s.pts[0].y + Math.sin(a) * 3, 0.22);
+  }
+  for (let ph = 0; ph < Math.PI * 2; ph += 0.2) {
+    const v = buildStrip(s, { halfWidth, amp: L * 0.13, phase: ph, waveK: 3.6 });
+    // 每一格四邊形（第 i、i+1 點的左右頂點）都要同一個方向，不能有翻面的
+    let sign = 0;
+    for (let i = 0; i < n - 1; i++) {
+      const a = [v[i * 8], v[i * 8 + 1]];
+      const b = [v[i * 8 + 4], v[i * 8 + 5]];
+      const c = [v[(i + 1) * 8 + 4], v[(i + 1) * 8 + 5]];
+      const d = [v[(i + 1) * 8], v[(i + 1) * 8 + 1]];
+      // 兩個三角形的方向
+      for (const [p, q, r] of [[a, b, c], [a, c, d]]) {
+        const cross = (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+        if (Math.abs(cross) < 1e-6) continue;
+        const sg = Math.sign(cross);
+        if (sign === 0) sign = sg;
+        assert.equal(sg, sign, `quad ${i} folded at phase ${ph.toFixed(1)} (dir ${dir})`);
+      }
+    }
+  }
+  }
+});
