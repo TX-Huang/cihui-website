@@ -209,14 +209,10 @@ function clothMoved() {
   return max > 0.02;
 }
 
-// 物理照「真實時間」走：每 1/60 秒算一步。電腦慢、畫面張數少時，一格就多算幾步，
-// 這樣不管什麼電腦，珠簾落下和晃動的速度都一樣
-const STEP_MS = 1000 / 60;
-const MAX_STEPS = 4; // 一格最多補 4 步，避免分頁切回來時一次算太多
+// 物理：每畫一格算一步（使用者偏好原本的晃動速度，不改成照真實時間）
 let t = 0;
 let needDraw = true;
 let lastNow = 0;
-let acc = 0;
 
 function physicsStep() {
   t += 0.016;
@@ -274,19 +270,11 @@ function perfFrame(now, frameMs) {
 
 function loop(now = performance.now()) {
   requestAnimationFrame(loop);
-  const elapsed = lastNow ? Math.min(100, now - lastNow) : STEP_MS;
   perfFrame(now, lastNow ? now - lastNow : 0);
   lastNow = now;
   if (cloth) {
     const t0 = performance.now();
-    acc += elapsed;
-    let n = 0;
-    while (acc >= STEP_MS && n < MAX_STEPS) {
-      physicsStep();
-      acc -= STEP_MS;
-      n++;
-    }
-    if (n === MAX_STEPS) acc = 0;
+    physicsStep();
     perfMark("物理", t0);
     const t1 = performance.now();
     if (needDraw || clothMoved()) {
