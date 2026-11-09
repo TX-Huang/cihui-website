@@ -75,3 +75,70 @@
 > Edit the attached image. Remove the body, keeping ONLY the fins and the tail, exactly where they are now — same position, same size, same colors, same canvas size. Fill the gap where the fins met the body softly. Transparent background PNG. Do not redraw or move anything.
 
 ChatGPT 改圖時位置可能會跑掉一點點，沒關係，我會用程式對齊。
+
+---
+
+## 4. 每位仙佛的元素（會動、可以跟滑鼠互動）
+
+典故依據見 `docs/deities-lore.md`。原則：每位 1～2 個「活的」東西，像鯉魚一樣會動、會對滑鼠有反應；顏色都壓低，配月白風格。
+**要會動的東西一律拆零件生**（身體、翅膀、尾羽分開），這樣才不會像鯉魚那樣被擠成一塊一塊。
+
+| 仙佛 | 元素 | 怎麼動 | 典故 |
+|---|---|---|---|
+| 瑤池金母 | **三青鳥** | 偶爾三隻從遠處飛來，停在匾額或屋脊上；滑鼠揮太快就飛走 | 《山海經》三青鳥為西王母取食；《漢武故事》青鳥先來報信 |
+| 瑤池金母 | 蟠桃 | 桃花瓣裡偶爾落下一顆蟠桃，點了浮現「三千年一熟」 | 《漢武帝內傳》 |
+| 九天玄女 | **丹鳳** | 長尾羽像絲帶一樣飄（跟鯉魚尾巴同一套做法） | 《墉城集仙錄》玄女乘丹鳳 |
+| 九天玄女 | 大霧 | 切到玄女時起大霧，滑鼠撥開霧 | 黃帝戰蚩尤，蚩尤作大霧 |
+| 中壇元帥 | **混天綾** | 一條紅綢在風裡飄，滑鼠可以撥動、拉扯 | 《封神演義》 |
+| 中壇元帥 | 蓮花 | 點水面，開出一朵蓮花 | 蓮花化身重生 |
+| 福德正神 | **稻穗** | 畫面下方一片稻穗隨風擺，滑鼠經過會被撥開 | 土地公護田、春祈秋報 |
+| 福德正神 | 虎爺（彩蛋） | 藏在角落，點了會抬頭 | 供桌下虎爺 |
+
+以下 prompt 都要 **Transparent background PNG**，生好放 `assets/raw/chatgpt2/`。
+
+### 4-1. 三青鳥（拆 3 張）
+
+先生整隻（之後兩張用「改圖」從這張拆）：`bluebird.png`
+> Create an image. Size 1536x1024. Transparent background PNG.
+> A mythical Chinese "blue bird" (青鳥, messenger of the Queen Mother of the West), seen from the side, flying to the RIGHT with wings spread open, elegant and slender like a small swallow-crane, long graceful tail feathers. Soft celadon-teal and blue-green feathers with hairline pale-gold edges, refined and calm, painterly realism, very fine feather detail. Only the bird — no background, no shadow, no text.
+
+再改圖拆開：
+- `bluebird-body.png`：
+  > Edit the attached image. Remove both wings, keep ONLY the body, head and tail exactly as they are — same position, size, colors, canvas size. Transparent background PNG. Do not redraw or move anything.
+- `bluebird-wing.png`：
+  > Edit the attached image. Keep ONLY the near (front) wing exactly as it is — same position, size, colors, canvas size. Remove everything else. Transparent background PNG.
+
+### 4-2. 丹鳳（拆 3 張）
+
+`phoenix.png`
+> Create an image. Size 1536x1024. Transparent background PNG.
+> An elegant Chinese phoenix (丹鳳) seen from the side, gliding to the RIGHT with wings spread, and 3 very long, flowing, ribbon-like tail plumes trailing behind. Muted cinnabar and soft peach feathers with pale gold edges — refined, not bright red, quiet luxury. Painterly realism, very fine detail. Only the bird — no background, no shadow, no text.
+
+再改圖拆開：`phoenix-body.png`（拿掉翅膀和長尾羽）、`phoenix-wing.png`（只留前面的翅膀）、`phoenix-plume.png`（只留**一根**長尾羽，拉直、水平擺放）。說法照 4-1。
+
+### 4-3. 混天綾 `ribbon.png`
+
+> Create an image. Size 1536x512. Transparent background PNG.
+> A single long, straight, horizontal strip of translucent silk ribbon, laid perfectly flat and straight from the left edge to the right edge, even width. Muted vermilion silk with a soft sheen and very faint pale-gold woven cloud pattern; slightly translucent. No folds, no twists, no background, no shadow, no text.
+
+（拉直的就好，飄動和彎曲我用程式做。）
+
+### 4-4. 蓮花（3 張）
+
+`lotus-bud.png`、`lotus-open.png`、`lotus-leaf.png`
+> Create an image. Size 1024x1024. Transparent background PNG.
+> [A closed lotus bud on a short stem / A fully open lotus flower seen from slightly above / A single round lotus leaf seen from directly above], very pale pink fading to white, soft and refined, painterly realism, fine detail. Only the object — no water, no background, no shadow, no text.
+
+（每次只選中括號裡的一種，生三次。）
+
+### 4-5. 稻穗 `rice.png`
+
+> Create an image. Size 512x1536 (tall). Transparent background PNG.
+> A single stalk of ripe rice, perfectly straight and vertical, the heavy grain head drooping slightly at the top. Soft pale gold and warm wheat colors, refined, painterly realism, fine detail. Only the stalk — no background, no shadow, no text.
+
+（一根就好，整片稻田我用程式複製、各自擺動。）
+
+### 4-6. 虎爺（彩蛋）`tiger.png`
+
+> Create an image. Size 1024x1024. Transparent background PNG.
+> A small, dignified, gentle Taiwanese "Tiger Lord" (虎爺) temple guardian figure, lying down calmly, seen from the front three-quarter view. Carved pale wood with hairline pale-gold accents, minimal and refined, cute but respectful. Only the figure — no background, no shadow, no text.
