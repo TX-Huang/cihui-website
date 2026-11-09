@@ -38,6 +38,7 @@ const SUTRA_NEZHA = strip(
 );
 
 const INK = "#2f2a25";
+// theme.mark：珠簾上重點句的顏色，照每位神尊頁面的主色（金母淡金、玄女紫、三太子橘紅、土地公土金）
 const GOLD = "#a8844a";
 
 export const DEITIES = {
@@ -50,9 +51,9 @@ export const DEITIES = {
     subtitle: "慈悲為懷，護佑眾生",
     aside: "金母慈光照耀，願來到這裡的每一個人，心有所安。",
     cloth: SUTRA,
-    key: "解脫非難難在定慧", // 珠簾上標成金色的那一句
+    keys: ["解脫非難難在定慧", "身心大定便生智慧", "五蘊自明三家會合"], // 珠簾上標成金色的句子（每句標一次，散在不同地方）
     note: 0,
-    theme: { tint: "#ffffff", tintA: 0, mist: "rgba(255, 255, 255, 0.45)", ink: INK, gold: GOLD, petal: "#ead3cc" }
+    theme: { mark: "#b0893f", tint: "#ffffff", tintA: 0, mist: "rgba(255, 255, 255, 0.45)", ink: INK, gold: GOLD, petal: "#ead3cc" }
   },
   xuannu: {
     id: "xuannu",
@@ -63,9 +64,9 @@ export const DEITIES = {
     subtitle: "智慧之神，指引明路",
     aside: "傳說玄女授黃帝兵書，助其平定天下。",
     cloth: SUTRA_XUANNU,
-    key: "吾為救世降紅塵", // 珠簾上標成金色的那一句
+    keys: ["吾為救世降紅塵", "手執寶劍斬妖邪", "吾駕祥雲護其身"], // 珠簾上標成金色的句子（每句標一次，散在不同地方）
     note: 2,
-    theme: { tint: "#8c84c8", tintA: 0.32, mist: "rgba(240, 238, 255, 0.45)", ink: "#2c2a3a", gold: "#8e86b8", petal: "#d9d4ea" }
+    theme: { mark: "#6f63b8", tint: "#8c84c8", tintA: 0.32, mist: "rgba(240, 238, 255, 0.45)", ink: "#2c2a3a", gold: "#8e86b8", petal: "#d9d4ea" }
   },
   nezha: {
     id: "nezha",
@@ -76,9 +77,9 @@ export const DEITIES = {
     subtitle: "腳踏風火，鎮守中壇",
     aside: "俗稱太子爺、哪吒三太子，護法除煞，守護一方。",
     cloth: SUTRA_NEZHA,
-    key: "腳踏金霞風火輪", // 珠簾上標成金色的那一句
+    keys: ["本是上界降魔星", "七歲能開乾坤弓", "腳踏金霞風火輪"], // 珠簾上標成金色的句子（每句標一次，散在不同地方）
     note: 4,
-    theme: { tint: "#e4a072", tintA: 0.3, mist: "rgba(255, 244, 236, 0.45)", ink: "#3a2a22", gold: "#b9794a", petal: "#efd2bd" }
+    theme: { mark: "#c0662f", tint: "#e4a072", tintA: 0.3, mist: "rgba(255, 244, 236, 0.45)", ink: "#3a2a22", gold: "#b9794a", petal: "#efd2bd" }
   },
   tudi: {
     id: "tudi",
@@ -89,9 +90,9 @@ export const DEITIES = {
     subtitle: "土地之神，福佑家園",
     aside: "俗稱土地公，守護土地與家宅，保佑五穀豐收、生意興隆。",
     cloth: SUTRA_TUDI,
-    key: "保佑四境生靈", // 珠簾上標成金色的那一句
+    keys: ["人人敬我我愛人群", "鎮守金域管護社稷", "保佑四境生靈"], // 珠簾上標成金色的句子（每句標一次，散在不同地方）
     note: 7,
-    theme: { tint: "#d6bb78", tintA: 0.3, mist: "rgba(255, 250, 236, 0.45)", ink: "#33301f", gold: "#a8914a", petal: "#ebdfba" }
+    theme: { mark: "#8f7a26", tint: "#d6bb78", tintA: 0.3, mist: "rgba(255, 250, 236, 0.45)", ink: "#33301f", gold: "#a8914a", petal: "#ebdfba" }
   }
 };
 

@@ -3,7 +3,7 @@ import { Chimes } from "./chimes.js";
 import { DEITIES, ORDER } from "./deities.js";
 import { GATE } from "./gate.js";
 import { fitGate, curtainGrid } from "./layout.js";
-import { highlightRange, isHighlighted } from "./highlight.js";
+import { highlightRanges, isHighlighted } from "./highlight.js";
 import { Petals } from "./petals.js";
 import { KoiPond, loadKoiKits } from "./koi.js";
 import { IntroView } from "./intro-view.js";
@@ -125,11 +125,11 @@ function glyph(ch, color) {
 
 function buildCloth(d, { rolled }) {
   cloth = createCloth({ cols: COLS, rows: ROWS, width: CURTAIN_W, height: CURTAIN_H });
-  // 都是墨色字，只有經文裡最重要的那一句是金色（見 js/highlight.js）
-  const gold = highlightRange(d.cloth, d.key, COLS, ROWS);
+  // 都是墨色字，只有經文裡幾句重要的話用這位神尊的顏色標出來，散在不同地方（見 js/highlight.js）
+  const gold = highlightRanges(d.cloth, d.keys, COLS, ROWS, d.id);
   for (const p of cloth.particles) {
     p.ch = charAt(d.cloth, p.col, p.row, COLS, ROWS);
-    p.color = isHighlighted(p.col, p.row, COLS, ROWS, gold) ? d.theme.gold : d.theme.ink;
+    p.color = isHighlighted(p.col, p.row, COLS, ROWS, gold) ? d.theme.mark : d.theme.ink;
     if (rolled && !p.pinned) {
       // 珠簾先收在門楣上，進場時自己垂下來
       p.y = p.oy = p.row * 1.2;
