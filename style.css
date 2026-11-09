@@ -226,7 +226,7 @@ body {
   position: absolute;
   z-index: 2;
 }
-/* 匾額上的字：崇羲篆體金箔字（預先畫好的圖，見 tools/render_plaque.py） */
+/* 匾額上的字：崇羲篆體陰刻金字（挖進木頭、槽裡貼金；預先畫好的圖，見 tools/render_plaque.py） */
 .plaque {
   position: absolute;
   z-index: 4;
