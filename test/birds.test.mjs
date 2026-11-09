@@ -135,6 +135,26 @@ test("birds: never two birds on the same perch, never more than two", () => {
   }
 });
 
+test("birds: fly calmly — never faster than 6 px per frame, coming in or going out", () => {
+  for (let seed = 1; seed <= 10; seed++) {
+    const flock = createFlock({ firstIn: 0 });
+    const e = env({ random: seeded(seed) });
+    let max = 0;
+    const last = new Map();
+    for (let i = 0; i < 6000; i++) {
+      stepFlock(flock, e);
+      for (const b of flock.birds) {
+        if (b.state === "in" || b.state === "out") {
+          const p = last.get(b);
+          if (p && p.state === b.state) max = Math.max(max, Math.hypot(b.x - p.x, b.y - p.y));
+        }
+        last.set(b, { x: b.x, y: b.y, state: b.state });
+      }
+    }
+    assert.ok(max <= 6, `seed ${seed}: ${max.toFixed(1)} px/frame`);
+  }
+});
+
 test("birds: wings keep beating the whole flight (no stiff gliding pose)", () => {
   const flock = createFlock({ firstIn: 0 });
   const e = env();

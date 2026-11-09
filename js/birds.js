@@ -4,8 +4,10 @@
 // 一群 1～2 隻：從畫面外飛進來 → 降落（倒播起飛影片）停在大門上（屋脊、匾額上緣）→ 休息一陣子（偶爾轉過來看你、轉身）
 // → 起飛（起飛影片）飛走。滑鼠在旁邊揮太快會被嚇飛；切到其他神明時也會飛走。每隔 20～40 秒來一群。
 
-export const FLY_IN = 240; // 飛進來要幾格（約 4 秒）
-export const FLY_OUT = 200; // 飛走要幾格
+export const FLY_IN = 360; // 飛進來最少幾格（約 6 秒）；路遠就飛久一點，速度維持差不多
+const FLY_IN_MAX = 660;
+const CRUISE = 2.3; // 飛進來的平均速度（每格幾像素）
+export const FLY_OUT = 400; // 飛走要幾格（約 7 秒）
 const REST_MIN = 480; // 停多久（8～17 秒）
 const REST_MAX = 1020;
 const GAP_MIN = 1200; // 一群走了之後，下一群隔多久來（20～40 秒）
@@ -50,8 +52,10 @@ export function createFlock({ firstIn } = {}) {
   return { birds: [], timer: firstIn ?? 300 + Math.random() * 600 };
 }
 
-const easeOut = (t) => 1 - (1 - t) ** 3;
-const easeIn = (t) => t * t;
+// 飛進來：一開始速度是平均的 2 倍，慢慢減速到 0（以前用 3 次方，一進畫面衝太快）
+const easeOut = (t) => 1 - (1 - t) ** 2;
+// 飛走：不從 0 開始（起飛影片結束時鳥已經在飛），慢慢加速
+const easeIn = (t) => 0.4 * t + 0.6 * t * t;
 
 function spawn(flock, e) {
   const free = [];
@@ -132,7 +136,8 @@ function stepBird(b, e) {
   }
   if (b.state === "in") {
     if (!e.active) return takeOff(b, e);
-    b.t = Math.min(1, b.t + 1 / FLY_IN);
+    b.inLen ??= inFrames(b, e);
+    b.t = Math.min(1, b.t + 1 / b.inLen);
     const target = hoverPoint(b, e);
     const p = curveAt(curve(b.start, target, b.bend), easeOut(b.t));
     b.x = p.x;
@@ -244,4 +249,11 @@ export function stepFlock(flock, e) {
     flock.timer = GAP_MIN + e.random() * (GAP_MAX - GAP_MIN);
     for (const b of flock.birds) stepBird(b, e);
   }
+}
+
+// 飛進來要幾格：照路的長短算（曲線比直線長一點）
+function inFrames(b, e) {
+  const to = hoverPoint(b, e);
+  const len = Math.hypot(to.x - b.start.x, to.y - b.start.y) * 1.15;
+  return Math.max(FLY_IN, Math.min(FLY_IN_MAX, len / CRUISE));
 }
