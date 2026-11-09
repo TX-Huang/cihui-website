@@ -107,6 +107,10 @@ ChatGPT 改圖時位置可能會跑掉一點點，沒關係，我會用程式對
   > Edit the attached image. Remove both wings, keep ONLY the body, head and tail exactly as they are — same position, size, colors, canvas size. Transparent background PNG. Do not redraw or move anything.
 - `bluebird-wing.png`：
   > Edit the attached image. Keep ONLY the near (front) wing exactly as it is — same position, size, colors, canvas size. Remove everything else. Transparent background PNG.
+- `bluebird-wing-up.png`、`bluebird-wing-down.png`（拍翅膀用：翅膀往上、往下各一張）：
+  > Edit the attached image. Keep ONLY the near (front) wing, but raised high above the body (the top of a wingbeat) / lowered below the body (the bottom of a wingbeat), still attached at the same shoulder point. Same bird, same feathers, same colors, same canvas size. Transparent background PNG.
+
+  （一次選一種，生兩次。翅膀在上、中、下三個樣子之間換，拍起來才自然；只轉一張翅膀圖會像紙片。）
 
 ### 4-2. 丹鳳（拆 3 張）
 
