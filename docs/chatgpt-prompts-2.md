@@ -111,6 +111,10 @@ ChatGPT 改圖時位置可能會跑掉一點點，沒關係，我會用程式對
   > Edit the attached image. Keep ONLY the near (front) wing, but raised high above the body (the top of a wingbeat) / lowered below the body (the bottom of a wingbeat), still attached at the same shoulder point. Same bird, same feathers, same colors, same canvas size. Transparent background PNG.
 
   （一次選一種，生兩次。翅膀在上、中、下三個樣子之間換，拍起來才自然；只轉一張翅膀圖會像紙片。）
+- 後面那片翅膀（選做，不生的話我用前翅縮小調暗代替）：`bluebird-farwing.png`、`bluebird-farwing-up.png`、`bluebird-farwing-down.png`
+  > Edit the attached image. Keep ONLY the far (back) wing — the wing on the other side of the body — shown complete as if the body were not blocking it, [in the same position as now / raised high above the body (top of a wingbeat) / lowered below the body (bottom of a wingbeat)], attached at the same shoulder point. Slightly smaller and a little darker than the near wing because it is farther away. Same bird, same feathers, same colors, same canvas size. Transparent background PNG.
+
+  （中括號一次選一種，生三次。）
 
 ### 4-2. 丹鳳（拆 3 張）
 
