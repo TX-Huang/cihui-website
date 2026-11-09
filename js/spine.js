@@ -2,6 +2,9 @@
 // 轉彎時身體自然彎成 C 形；再疊上一個「從頭傳到尾」的波，就是游泳時的 S 形擺動。
 // 純計算、不碰畫面，方便測試。
 
+// 擺動幅度沿身體怎麼長：s 的幾次方（越大，前半身越不動、只有尾巴擺；鯉魚就是這樣游的，
+// 前半身一扭，長在那裡的胸鰭、背鰭就會被擠成一塊一塊）
+const WAVE_ENVELOPE = 3;
 // 急彎時內側最多用到彎曲半徑的幾成（1 = 剛好碰到圓心，會翻面）
 const RADIUS_FRACTION = 0.9;
 
@@ -62,7 +65,7 @@ export function buildStrip(spine, { halfWidth, amp, phase, waveK, subdiv = 1 }, 
   for (let i = 0; i < n; i++) {
     const s = i / (n - 1);
     forward(p, i, f);
-    const off = Math.sin(phase - s * waveK) * amp * Math.pow(s, 1.5);
+    const off = Math.sin(phase - s * waveK) * amp * Math.pow(s, WAVE_ENVELOPE);
     // 法向量 = 往頭方向轉 90°
     disp[i] = { x: p[i].x - f.y * off, y: p[i].y + f.x * off };
   }

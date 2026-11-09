@@ -136,6 +136,30 @@ test("buildStrip: subdivision keeps the head and tail ends in place", () => {
   }
 });
 
+// 鯉魚游泳時前半身幾乎不彎（魚鰭長在那裡，前半身一扭，鰭就被擠成一塊一塊），只有後半身和尾巴擺
+test("buildStrip: swimming keeps the front half of the body nearly straight, the tail still swings", () => {
+  const L = 160;
+  const n = 16;
+  const s = createSpine(n, (L * 1.16) / (n - 1), 0, 0, 0); // 頭朝右，直的
+  const pairs = (15 * 4 + 1);
+  let frontWorst = 0;
+  let tailMax = 0;
+  for (let ph = 0; ph < Math.PI * 2; ph += 0.1) {
+    const v = buildStrip(s, { halfWidth: 2, amp: L * 0.13, phase: ph, waveK: 3.6, subdiv: 4 });
+    const mid = (i) => ({ x: (v[i * 8] + v[i * 8 + 4]) / 2, y: (v[i * 8 + 1] + v[i * 8 + 5]) / 2 });
+    // 前 45%：每一小段的方向跟「頭往前」差多少
+    for (let i = 1; i <= Math.round(pairs * 0.45); i++) {
+      const a = mid(i - 1);
+      const b = mid(i);
+      const heading = Math.atan2(a.y - b.y, a.x - b.x); // 往頭的方向，直的時候 = 0
+      frontWorst = Math.max(frontWorst, Math.abs(heading));
+    }
+    tailMax = Math.max(tailMax, Math.abs(mid(pairs - 1).y));
+  }
+  assert.ok(frontWorst < 0.13, `front half turned ${frontWorst.toFixed(3)} rad`);
+  assert.ok(tailMax > L * 0.09, `tail only swung ${tailMax.toFixed(1)}px`);
+});
+
 // 實際魚的比例：脊椎 16 點、總長約 1.16L、半寬約 0.3L（含魚鰭與留邊）
 test("buildStrip: a fish at maximum bend plus swimming wave never folds over itself", () => {
   const L = 160;
