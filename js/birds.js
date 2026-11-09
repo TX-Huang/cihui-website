@@ -1,7 +1,7 @@
 // 三青鳥：金母的使者（《山海經》三青鳥為西王母取食；《漢武故事》青鳥先飛來報信）。
 // 純計算（方便測試），畫面在 js/bird-view.js。時間單位是「格」（60 格 ≈ 1 秒）。
 //
-// 一群 1～3 隻：從畫面外飛進來 → 停在大門上（屋脊、匾額上緣）→ 休息一陣子（偶爾轉過來看你、轉身）
+// 一群 1～2 隻：從畫面外飛進來 → 停在大門上（屋脊、匾額上緣）→ 休息一陣子（偶爾轉過來看你、轉身）
 // → 飛走。滑鼠在旁邊揮太快會被嚇飛；切到其他神明時也會飛走。每隔 20～40 秒來一群。
 
 export const FLY_IN = 240; // 飛進來要幾格（約 4 秒）
@@ -56,7 +56,7 @@ const easeIn = (t) => t * t;
 function spawn(flock, e) {
   const free = [];
   for (let i = 0; i < e.perchCount; i++) if (!e.visible || e.visible(i)) free.push(i); // 手機上兩側屋頂在畫面外，不停那裡
-  const n = Math.min(free.length, 1 + Math.floor(e.random() * 3));
+  const n = Math.min(free.length, 1 + Math.floor(e.random() * 2)); // 一次 1～2 隻
   if (!n) return;
   const fromLeft = e.random() < 0.5;
   flock.birds = [];

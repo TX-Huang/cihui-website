@@ -55,7 +55,7 @@ test("birds: fly in, land exactly on a perch, slowing down at the end", () => {
   const flock = createFlock({ firstIn: 0 });
   const e = env();
   stepFlock(flock, e);
-  assert.ok(flock.birds.length >= 1 && flock.birds.length <= 3);
+  assert.ok(flock.birds.length >= 1 && flock.birds.length <= 2);
   const b = flock.birds[0];
   const target = PERCHES[b.perch];
   const track = [];
@@ -111,14 +111,14 @@ test("birds: when the page moves to another deity, resting birds leave and no ne
   assert.ok(flock.birds.every((b) => b.state === "gone"), "nobody comes while inactive");
 });
 
-test("birds: never two birds on the same perch, never more than three", () => {
+test("birds: never two birds on the same perch, never more than two", () => {
   for (let seed = 1; seed <= 20; seed++) {
     const flock = createFlock({ firstIn: 0 });
     const e = env({ random: seeded(seed) });
     for (let i = 0; i < 6000; i++) {
       stepFlock(flock, e);
       const alive = flock.birds.filter((b) => b.state !== "gone");
-      assert.ok(alive.length <= 3, `seed ${seed}: ${alive.length} birds`);
+      assert.ok(alive.length <= 2, `seed ${seed}: ${alive.length} birds`);
       const perches = alive.map((b) => b.perch);
       assert.equal(new Set(perches).size, perches.length, `seed ${seed}: two birds share a perch`);
     }
