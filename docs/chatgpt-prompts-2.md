@@ -28,6 +28,23 @@
 
 要改就在同一個對話說，例如「中間的門再高一點」「兩側再窄一點」。
 
+### 1b. `gate-grand-v2.png` — 三開間大門（第二版，更宏偉）
+
+開新對話，上傳**現在這張三開間大門**（`gate.png`）當參考，貼上：
+
+> Create an image. Size 1536x1024 (landscape). Transparent background PNG.
+>
+> Redesign the attached three-bay gate to feel even GRANDER and more majestic, keeping the same materials, colors and quiet-luxury mood (matte moon-white plaster, pale warm stone tiles, hairline pale-gold accents, pale wooden lattice).
+> Perfectly symmetrical, straight-on front view. The central bay is much taller than the side bays, with a TRIPLE-eave roof stacked high like a sacred pavilion; the side bays have single lower roofs. Wider, deeper flight of pale stone steps (seven steps) spanning the whole front, with a low pale stone balustrade at both ends of the steps.
+> CENTRAL BAY: a tall round-topped arched doorway (semicircle top, straight vertical sides), taller than before. The doorway opening must be fully transparent (empty) — nothing inside.
+> A light natural-wood horizontal plaque with a hairline pale-gold border centered above the central doorway — completely blank, no characters.
+> SIDE BAYS: delicate pale wooden lattice panels; the gaps in the lattice must be transparent.
+> The gate fills almost the whole canvas edge to edge (very little empty margin), so it stays sharp when enlarged.
+> Camera at the height of the bottom step, but all vertical lines perfectly vertical.
+> NO lanterns, no red, no painted decoration, no people, no text, no sky, no trees, no ground beyond the steps.
+> Soft diffused dawn light from the upper left, subtle shadows, photorealistic with a slight painterly softness, very fine crisp detail.
+
+
 ---
 
 ## 2. 開場「從凡間升入瑤池」（3 張）

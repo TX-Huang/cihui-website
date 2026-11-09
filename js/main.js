@@ -5,6 +5,7 @@ import { GATE } from "./gate.js";
 import { fitGate, curtainGrid } from "./layout.js";
 import { Petals } from "./petals.js";
 import { KoiPond, loadImages } from "./koi.js";
+import { IntroView } from "./intro-view.js";
 
 // ── 珠簾尺寸（拱門圖的設計座標，圖寬 1000） ──
 const D = GATE.door;
@@ -561,6 +562,10 @@ function buildPage() {
 }
 
 async function start() {
+  // 開場（第一次進來才播）：在雲裡的時候網頁才開始，雲散開時珠簾剛好落下
+  const intro = IntroView.create({ reduceMotion });
+  window.__debug.intro = intro; // 除錯：__debug.intro.render(毫秒) 可以看任一格
+  if (intro) intro.start();
   buildPage();
   layout();
   window.addEventListener("resize", () => {
@@ -580,6 +585,7 @@ async function start() {
     /* 用系統字也可以 */
   }
   glyphs.clear();
+  if (intro) await intro.revealed;
 
   currentIndex = first;
   wantedIndex = first;

@@ -484,3 +484,72 @@ body {
     animation: none;
   }
 }
+
+/* ── 開場：從凡間升入瑤池 ── */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  pointer-events: none;
+}
+.no-intro .intro {
+  display: none;
+}
+.intro-on,
+.intro-on body {
+  overflow: hidden;
+}
+.intro-night {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(#3b4a63, #26324a);
+}
+.intro-earth {
+  /* 直的長圖：寬度塞滿、高度照比例（比畫面高），底部對齊畫面底部 */
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: auto;
+  min-height: 100%;
+  object-fit: cover;
+  will-change: transform, opacity;
+  transform-origin: 50% 100%;
+  /* 上緣淡掉，往下移時不會看到一條硬邊 */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 18%);
+}
+.intro-clouds {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: max(150vw, 225vh);
+  will-change: transform, opacity;
+  transform-origin: 50% 70%;
+  opacity: 0;
+}
+.intro-veil {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(120% 90% at 50% 60%, #fbf8f3, #ece8e3 70%);
+}
+.intro-skip {
+  position: absolute;
+  right: clamp(16px, 4vw, 40px);
+  bottom: clamp(16px, 4vh, 40px);
+  pointer-events: auto;
+  padding: 8px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.85);
+  font: 13px/1 var(--sans, sans-serif);
+  letter-spacing: 0.3em;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+.intro-skip:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
