@@ -186,7 +186,7 @@ export class KoiPond {
       x,
       y,
       angle,
-      speed: 0.4,
+      speed: 0.25,
       cruise: cruiseSpeed(),
       phase: Math.random() * 10,
       wander: Math.random() * Math.PI * 2,

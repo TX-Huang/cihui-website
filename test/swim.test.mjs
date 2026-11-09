@@ -116,7 +116,7 @@ test("swim: fish stay inside the pond", () => {
   }
 });
 
-test("swim: koi glide calmly — cruising under 0.6 px/frame, and even a scared fish stays under 2.6", async () => {
+test("swim: koi glide calmly — cruising under 0.4 px/frame, and even a scared fish stays under 1.7", async () => {
   const { cruiseSpeed } = await import("../js/swim.js");
   const random = seeded(3);
   const w = 1200;
@@ -129,7 +129,7 @@ test("swim: koi glide calmly — cruising under 0.6 px/frame, and even a scared 
       steer(f, env);
       max = Math.max(max, f.speed);
     }
-    assert.ok(max <= 0.6, `cruising at ${max.toFixed(2)}`);
+    assert.ok(max <= 0.4, `cruising at ${max.toFixed(2)}`);
     // 滑鼠在旁邊揮很快 → 嚇跑，但不要衝太快
     let scared = 0;
     for (let t = 0; t < 300; t++) {
@@ -137,7 +137,7 @@ test("swim: koi glide calmly — cruising under 0.6 px/frame, and even a scared 
       steer(f, env);
       scared = Math.max(scared, f.speed);
     }
-    assert.ok(scared > 1, "a scared fish still darts away");
-    assert.ok(scared <= 2.6, `scared at ${scared.toFixed(2)}`);
+    assert.ok(scared > 0.8, "a scared fish still swims off");
+    assert.ok(scared <= 1.7, `scared at ${scared.toFixed(2)}`);
   }
 });

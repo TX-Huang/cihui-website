@@ -12,9 +12,9 @@ const BORED_MIN = 1200;
 const BORED_MAX = 1800;
 const NEW_SPOT = 80; // 滑鼠移動超過這麼多像素，算「換地方了」，又會好奇
 // 游速（每格像素）：要優雅，不要躁動。平常慢慢滑；被嚇到也只是快一點游開，不是衝走
-const SCARED_SPEED = 2.4;
+const SCARED_SPEED = 1.6;
 export function cruiseSpeed(random = Math.random) {
-  return 0.35 + random() * 0.2;
+  return 0.22 + random() * 0.14;
 }
 
 export function steer(f, env) {
@@ -68,7 +68,7 @@ export function steer(f, env) {
   // 靠近滑鼠時放慢，像在聞
   let want = f.cruise;
   if (scared) want = SCARED_SPEED;
-  else if (curious && md < 90) want = 0.15;
+  else if (curious && md < 90) want = 0.1;
   f.speed += (want - f.speed) * 0.05;
   f.fear *= 0.97;
 
@@ -82,7 +82,7 @@ export function steer(f, env) {
 function setGoal(f, w, h, random) {
   f.goal = pickGoal(f, w, h, random);
   const d = Math.hypot(f.goal.x - f.x, f.goal.y - f.y);
-  f.goalTime = (d / Math.max(0.3, f.cruise)) * 1.6 + 120;
+  f.goalTime = (d / Math.max(0.15, f.cruise)) * 1.6 + 120;
 }
 
 // 在池子裡挑一個點：試幾個，挑「夠遠、又大致在前方」的（一直掉頭很不自然）
