@@ -80,6 +80,62 @@ test("buildStrip: the swimming wave moves the tail much more than the head", () 
   assert.ok(tailMax > 7, `tail moved only ${tailMax}`);
 });
 
+// 魚身的輪廓要是平滑的曲線，不能看得出一節一節的折角
+// （脊椎只有 16 點，每節最多彎 0.22 弧度；直接連起來，折角就看得到）
+function curvedFish(dir = 1) {
+  const L = 160;
+  const n = 16;
+  const s = createSpine(n, (L * 1.16) / (n - 1), 0, 0, 0);
+  for (let k = 1; k <= 120; k++) {
+    const a = dir * k * 0.12;
+    followHead(s, s.pts[0].x + Math.cos(a) * 3, s.pts[0].y + Math.sin(a) * 3, 0.22);
+  }
+  return { s, L };
+}
+// 帶子某一邊（side 0 / 1）的輪廓上，最大的「折角」有幾像素：
+// 折角角度 × 旁邊較短那段的長度 ≈ 折角凸出來多少。小於 1 像素就看不出來。
+function maxCornerPx(v, side) {
+  const p = [];
+  for (let i = 0; i < v.length / 8; i++) p.push([v[i * 8 + side * 4], v[i * 8 + side * 4 + 1]]);
+  let worst = 0;
+  for (let i = 2; i < p.length; i++) {
+    const ax = p[i - 1][0] - p[i - 2][0];
+    const ay = p[i - 1][1] - p[i - 2][1];
+    const bx = p[i][0] - p[i - 1][0];
+    const by = p[i][1] - p[i - 1][1];
+    const ang = Math.abs(Math.atan2(ax * by - ay * bx, ax * bx + ay * by));
+    worst = Math.max(worst, ang * Math.min(Math.hypot(ax, ay), Math.hypot(bx, by)));
+  }
+  return worst;
+}
+
+test("buildStrip: with subdivision the outline is a smooth curve (no visible joints)", () => {
+  for (const dir of [1, -1]) {
+    const { s, L } = curvedFish(dir);
+    for (let ph = 0; ph < Math.PI * 2; ph += 0.4) {
+      const v = buildStrip(s, { halfWidth: L * 0.3, amp: L * 0.13, phase: ph, waveK: 3.6, subdiv: 4 });
+      assert.equal(v.length, (15 * 4 + 1) * 8, "16 spine points x 4 subdivisions -> 61 pairs");
+      for (const side of [0, 1]) {
+        const c = maxCornerPx(v, side);
+        assert.ok(c < 1.2, `side ${side} has a ${c.toFixed(2)}px corner at phase ${ph.toFixed(1)} (dir ${dir})`);
+      }
+    }
+  }
+});
+
+test("buildStrip: subdivision keeps the head and tail ends in place", () => {
+  const { s } = curvedFish();
+  const opts = { halfWidth: 2, amp: 0, phase: 0, waveK: 3.6 }; // 很窄：不會被急彎收窄，只比中線
+  const a = buildStrip(s, opts);
+  const b = buildStrip(s, { ...opts, subdiv: 4 });
+  for (const [ia, ib] of [[0, 0], [15, 60]]) {
+    const ma = [(a[ia * 8] + a[ia * 8 + 4]) / 2, (a[ia * 8 + 1] + a[ia * 8 + 5]) / 2];
+    const mb = [(b[ib * 8] + b[ib * 8 + 4]) / 2, (b[ib * 8 + 1] + b[ib * 8 + 5]) / 2];
+    assert.ok(Math.hypot(ma[0] - mb[0], ma[1] - mb[1]) < 1e-3);
+    assert.equal(a[ia * 8 + 2], b[ib * 8 + 2], "u (head=1, tail=0) unchanged");
+  }
+});
+
 // 實際魚的比例：脊椎 16 點、總長約 1.16L、半寬約 0.3L（含魚鰭與留邊）
 test("buildStrip: a fish at maximum bend plus swimming wave never folds over itself", () => {
   const L = 160;
@@ -93,11 +149,12 @@ test("buildStrip: a fish at maximum bend plus swimming wave never folds over its
     const a = dir * k * 0.12;
     followHead(s, s.pts[0].x + Math.cos(a) * 3, s.pts[0].y + Math.sin(a) * 3, 0.22);
   }
+  for (const subdiv of [1, 4])
   for (let ph = 0; ph < Math.PI * 2; ph += 0.2) {
-    const v = buildStrip(s, { halfWidth, amp: L * 0.13, phase: ph, waveK: 3.6 });
+    const v = buildStrip(s, { halfWidth, amp: L * 0.13, phase: ph, waveK: 3.6, subdiv });
     // 每一格四邊形（第 i、i+1 點的左右頂點）都要同一個方向，不能有翻面的
     let sign = 0;
-    for (let i = 0; i < n - 1; i++) {
+    for (let i = 0; i < v.length / 8 - 1; i++) {
       const a = [v[i * 8], v[i * 8 + 1]];
       const b = [v[i * 8 + 4], v[i * 8 + 5]];
       const c = [v[(i + 1) * 8 + 4], v[(i + 1) * 8 + 5]];

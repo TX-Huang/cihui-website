@@ -6,8 +6,10 @@
 // 行為：平常隨意游；滑鼠停著會慢慢游過來；滑鼠揮太快或點一下，會被嚇跑。
 
 import { createSpine, followHead, buildStrip } from "./spine.js";
+import { steer } from "./swim.js";
 
 const SPINE_POINTS = 16;
+const SUBDIV = 4; // 畫的時候每節再切 4 小段，輪廓才會是平滑曲線（不是一節一節）
 const MAX_BEND = 0.22; // 每一節最多彎多少（弧度）：太大像蛇，太小像木棍
 const WAVE_K = 3.6; // 身上的波有多密
 const SHADOW_ALPHA = 0.16; // 影子很淡
@@ -18,6 +20,7 @@ export class KoiPond {
   constructor(canvas, sprites, count = 5) {
     this.c = canvas;
     this.mouse = { x: -9999, y: -9999, speed: 0, still: 0 };
+    this.env = { mouse: this.mouse, w: 0, h: 0 };
     this.ripples = [];
     this.fish = [];
     // 水波另外用一張 2D 畫布（WebGL 畫布不能同時用 2D 畫線），放在魚的下面
@@ -37,15 +40,13 @@ export class KoiPond {
     });
     canvas.addEventListener("webglcontextrestored", () => {
       this.lost = false;
-      this.initGL();
+      if (this.sprites) this.initGL();
     });
 
     this.resize();
-    // 每隻魚的圖先縮成顯示大小、影子先模糊好（只做一次）
-    const maxLen = Math.min(this.w, this.h) * 0.24;
-    this.sprites = sprites.map((img) => prepareSprite(img, Math.ceil(maxLen * this.dpr)));
-    if (this.gl) this.initGL();
-    for (let i = 0; i < count; i++) this.fish.push(this.spawn(i));
+    this.images = sprites;
+    this.count = count;
+    this.sprites = null; // 等視窗有大小了才準備（見 ready()）
     window.addEventListener("resize", () => this.resize());
     window.addEventListener("pointermove", (e) => this.onMove(e));
     window.addEventListener("pointerdown", (e) => this.splash(e.clientX, e.clientY));
@@ -55,10 +56,27 @@ export class KoiPond {
     this.dpr = Math.min(1.5, window.devicePixelRatio || 1);
     this.w = window.innerWidth;
     this.h = window.innerHeight;
+    if (this.env) {
+      this.env.w = this.w;
+      this.env.h = this.h;
+    }
     for (const c of [this.c, this.rc]) {
       c.width = this.w * this.dpr;
       c.height = this.h * this.dpr;
     }
+  }
+
+  // 視窗剛打開時大小可能還是 0：這時先不放魚（圖會變 0 寬、魚全擠在角落），等有大小再放
+  ready() {
+    if (this.sprites) return true;
+    if (this.w !== window.innerWidth || this.h !== window.innerHeight) this.resize(); // 不一定有 resize 事件
+    if (this.w < 50 || this.h < 50) return false;
+    // 每隻魚的圖先縮成顯示大小、影子先模糊好（只做一次）
+    const maxLen = Math.min(this.w, this.h) * 0.24;
+    this.sprites = this.images.map((img) => prepareSprite(img, Math.ceil(maxLen * this.dpr)));
+    if (this.gl) this.initGL();
+    for (let i = 0; i < this.count; i++) this.fish.push(this.spawn(i));
+    return true;
   }
 
   // ── WebGL 設定 ──
@@ -190,60 +208,17 @@ export class KoiPond {
   }
 
   tick() {
+    if (!this.ready()) return;
     this.mouse.still++;
     this.mouse.speed *= 0.85;
     for (const f of this.fish) {
-      this.steer(f);
+      steer(f, this.env);
       followHead(f.spine, f.x, f.y, MAX_BEND);
     }
     this.drawRipples();
     if (this.gl) {
       if (!this.lost) this.drawGL();
     } else if (this.ctx) this.draw2D();
-  }
-
-  steer(f) {
-    const m = this.mouse;
-    const mdx = m.x - f.x;
-    const mdy = m.y - f.y;
-    const md = Math.hypot(mdx, mdy);
-
-    // 滑鼠揮很快又很近 → 害怕
-    if (md < 180 && m.speed > 28) f.fear = 1;
-
-    let target;
-    if (f.fear > 0.05) {
-      target = Math.atan2(-mdy, -mdx); // 往反方向逃
-    } else if (md < 420 && m.still < 240) {
-      target = Math.atan2(mdy, mdx); // 好奇，游過去
-    } else {
-      f.wander += (Math.random() - 0.5) * 0.15;
-      target = f.angle + Math.sin(f.wander) * 0.6;
-    }
-
-    // 別游出畫面：靠邊時轉回中間
-    const margin = f.len * 0.8;
-    if (f.x < margin || f.x > this.w - margin || f.y < this.h * 0.2 || f.y > this.h - margin * 0.6) {
-      target = Math.atan2(this.h * 0.62 - f.y, this.w / 2 - f.x);
-    }
-
-    // 慢慢轉向（魚不會瞬間轉彎）
-    let diff = target - f.angle;
-    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    const turn = f.fear > 0.05 ? 0.09 : 0.025;
-    f.angle += Math.max(-turn, Math.min(turn, diff));
-
-    // 靠近滑鼠時放慢，像在聞
-    let want = f.cruise;
-    if (f.fear > 0.05) want = 4.5;
-    else if (md < 90 && m.still < 240) want = 0.15;
-    f.speed += (want - f.speed) * 0.05;
-    f.fear *= 0.97;
-
-    f.x += Math.cos(f.angle) * f.speed;
-    f.y += Math.sin(f.angle) * f.speed;
-    // 擺尾的速度跟游速有關
-    f.phase += 0.06 + f.speed * 0.09;
   }
 
   amp(f) {
@@ -258,9 +233,13 @@ export class KoiPond {
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.uniform2f(this.loc.res, this.w, this.h);
-    const n = SPINE_POINTS * 2;
     for (const f of this.fish) {
-      f.verts = buildStrip(f.spine, { halfWidth: f.halfWidth, amp: this.amp(f), phase: f.phase, waveK: WAVE_K }, f.verts);
+      f.verts = buildStrip(
+        f.spine,
+        { halfWidth: f.halfWidth, amp: this.amp(f), phase: f.phase, waveK: WAVE_K, subdiv: SUBDIV },
+        f.verts
+      );
+      const n = f.verts.length / 4; // 每個頂點 4 個數字
       gl.bufferData(gl.ARRAY_BUFFER, f.verts, gl.DYNAMIC_DRAW);
       // 影子：光從左上照下來，所以影子固定往右下偏
       gl.bindTexture(gl.TEXTURE_2D, f.sprite.shadowTex);
