@@ -175,3 +175,35 @@ ChatGPT 改圖時位置可能會跑掉一點點，沒關係，我會用程式對
 
 > Create an image. Size 1024x1024. Transparent background PNG.
 > A small, dignified, gentle Taiwanese "Tiger Lord" (虎爺) temple guardian figure, lying down calmly, seen from the front three-quarter view. Carved pale wood with hairline pale-gold accents, minimal and refined, cute but respectful. Only the figure — no background, no shadow, no text.
+
+---
+
+## 5. 青鳥動畫影片（Sora 或 Grok Imagine）
+
+用影片做「拍翅膀、轉頭、轉身」，我再切成一格一格的畫面，去背後接上網頁。
+
+**共通規則（很重要）：**
+- **先上傳參考圖**（每段寫了用哪張），讓牠是同一隻鳥。
+- **背景要純洋紅色（#FF00FF）**：我用這個顏色去背。青鳥是藍綠、白、金色，洋紅最好去。不行的話改「純黑色背景」。
+- **鏡頭不能動**、鳥待在畫面中間，不要飛出畫面。
+- 下載影片原檔（mp4），檔名照下面寫，丟進同一個雲端硬碟資料夾。
+
+### 5-1. `bird-flap.mp4` — 原地拍翅膀（最重要）
+參考圖：`bluebird.png`
+> Animate the attached bird. Side view: the bird faces RIGHT and flaps its wings in place, as if flying forward while staying in the center of the frame — no travel, no camera movement. Two full, slow, graceful wingbeats in about 4 seconds; the long tail feathers flow gently behind. The last frame must match the first frame (seamless loop). Background: solid flat pure magenta (#FF00FF) everywhere — no gradient, no shadow, no clouds, no other objects. Keep exactly the same bird design, colors and proportions as the image. Locked-off static camera, soft even lighting.
+
+### 5-2. `bird-head.mp4` — 停著轉頭看你
+參考圖：`bluebird-perch.png`
+> Animate the attached bird perched, side view facing RIGHT, standing on a thin straight plain dark-grey bar at the bottom of the frame. It slowly turns its head to look toward the camera, pauses, blinks once, then turns its head back to the original side view. Body, feet and tail stay still except tiny natural feather movement. About 4 seconds; the last frame matches the first frame (seamless loop). Background: solid flat pure magenta (#FF00FF) — no gradient, no shadow, no other objects. Same bird design, colors and proportions as the image. Locked-off static camera, soft even lighting.
+
+### 5-3. `bird-turn.mp4` — 停著跳一下轉身
+參考圖：`bluebird-perch.png`
+> Animate the attached bird perched, side view facing RIGHT, standing on a thin straight plain dark-grey bar at the bottom of the frame. It gives one small hop, turns around in the air to face LEFT, lands back on the same spot and settles its feathers. About 3 seconds. Background: solid flat pure magenta (#FF00FF) — no gradient, no shadow, no other objects. Same bird design, colors and proportions as the image. Locked-off static camera, soft even lighting.
+
+（往左轉回右邊不用另外生，我把影片左右翻過來用。）
+
+### 5-4.（選做）`bird-land.mp4` — 降落
+參考圖：`bluebird.png`
+> Animate the attached bird flying in from the left side of the frame, slowing down with wings raised, and landing gently on a thin straight plain dark-grey bar at the bottom center, then folding its wings and standing still, side view facing RIGHT. About 3 seconds. Background: solid flat pure magenta (#FF00FF) — no gradient, no shadow, no other objects. Same bird design, colors and proportions. Locked-off static camera.
+
+**檢查一下再丟：** 鳥的樣子跟參考圖一樣、背景整片是洋紅、鏡頭沒動、鳥沒有被畫面切掉。不合格就再生一次。
