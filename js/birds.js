@@ -13,16 +13,6 @@ const GAP_MAX = 2400;
 const SCARE_R = 140;
 const SCARE_SPEED = 25;
 
-// 拍翅膀：往上 → 展翅 → 往下 → 展翅，每一格的最後 25% 淡入下一格（太長會看到兩隻疊在一起的重影）
-const FLAP = ["up", "mid", "down", "mid"];
-export function flapPose(p) {
-  const q = (((p % 1) + 1) % 1) * 4;
-  const i = Math.floor(q);
-  const frac = q - i;
-  const mix = Math.min(1, Math.max(0, (frac - 0.75) / 0.25));
-  return { a: FLAP[i], b: FLAP[(i + 1) % 4], mix };
-}
-
 // 飛行路線：一條彎彎的曲線（三次貝茲）。bend：往旁邊彎多少（正負決定往哪邊）
 export function curve(from, to, bend) {
   const dx = to.x - from.x;
@@ -92,7 +82,7 @@ function spawn(flock, e) {
       rest: 0,
       look: 0,
       glide: 0, // 還要滑翔幾格（翅膀張開不拍）
-      beats: 2 + Math.floor(e.random() * 3), // 再拍幾下就滑翔一段
+      beats: 1 + Math.floor(e.random() * 2), // 再拍幾下就滑翔一段
       brake: false, // 快降落：翅膀舉高煞車
       landed: 0, // 降落後過了幾格（落地時輕輕一沉）
       hop: 99, // 轉身的小跳躍進行到第幾格
@@ -116,7 +106,7 @@ function flapOrGlide(b, rate, canGlide, random) {
     b.beats -= 1;
     if (b.beats <= 0 && canGlide) {
       b.glide = 30 + random() * 40;
-      b.beats = 2 + Math.floor(random() * 3);
+      b.beats = 1 + Math.floor(random() * 2);
     }
   }
 }
@@ -161,7 +151,7 @@ function stepBird(b, e) {
     // 最後一段：翅膀舉高、拍得急，像在煞車
     b.brake = b.t > 0.82;
     if (b.brake) b.glide = 0;
-    flapOrGlide(b, b.brake ? 0.075 : 0.045, b.t > 0.1 && b.t < 0.7, e.random);
+    flapOrGlide(b, b.brake ? 0.02 : 0.012, b.t > 0.1 && b.t < 0.7, e.random); // 影片裡拍一下約 1.5 秒
     if (b.t >= 1) {
       b.brake = false;
       b.landed = 0;
@@ -213,7 +203,7 @@ function stepBird(b, e) {
     b.y = p.y;
     b.angle = p.angle;
     b.facing = Math.cos(p.angle) >= 0 ? 1 : -1;
-    flapOrGlide(b, b.t < 0.3 ? 0.08 : 0.05, b.t > 0.35, e.random); // 起飛時拍得最急，飛遠了才滑翔
+    flapOrGlide(b, b.t < 0.3 ? 0.022 : 0.014, b.t > 0.35, e.random); // 起飛時拍得最急，飛遠了才滑翔
     if (b.t >= 1) b.state = "gone";
   }
 }

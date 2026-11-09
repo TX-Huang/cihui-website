@@ -1,19 +1,17 @@
 // 畫青鳥（js/birds.js 決定牠們在哪、在做什麼，這裡只負責畫）。
-// 飛的時候：往上／展翅／往下三格輪流（翻頁動畫，直接切換），拍幾下滑翔一段，身體跟著起伏。
+// 飛的時候：影片拆出來的 36 格依序播（tools/prep_bird_video.py），拍一兩下滑翔一段，身體跟著起伏。
 // 停著：側面那張；偶爾換成正面（像轉過來看你）；轉身時跳一下。
 import { createFlock, stepFlock } from "./birds.js";
 
-const FLY_LEN = 160; // 飛行時整隻鳥多長（大門設計座標）
+const FLY_LEN = 190; // 飛行時整隻鳥多長（大門設計座標）
 const PERCH_H = 115; // 停著時多高（大門設計座標）
-const FLY_FEET = [0.625, 0.755];
-const FLAP_ORDER = ["up", "mid", "down", "mid"]; // 往上 → 展翅 → 往下 → 展翅
-const SETTLE = 12; // 落地後幾格內輕輕一沉再站直 // 飛行圖裡腳的位置（比例）：飛和停用同一個點，降落時才不會跳
+const SETTLE = 12; // 落地後幾格內輕輕一沉再站直
 
 export class BirdView {
   constructor(canvas, kit, gate, gateEl) {
     this.c = canvas;
     this.ctx = canvas.getContext("2d");
-    this.kit = kit; // { meta, img }
+    this.kit = kit; // { meta, img：停著的圖, fly, flyImg：拍翅膀的 36 格 }
     this.gate = gate;
     this.gateEl = gateEl;
     this.flock = createFlock();
@@ -84,29 +82,26 @@ export class BirdView {
         this.bob.delete(b);
         continue;
       }
-      if (b.state !== "perched") this.drawFlying(b, k, P, meta);
+      if (b.state !== "perched") this.drawFlying(b, k);
       else this.drawPerched(b, k, P, meta);
     }
   }
 
-  // 飛：三格直接切換（不淡入淡出，才不會有重影）；拍翅膀時身體跟著上下起伏；
-  // 滑翔時翅膀張開不動；快降落時翅膀舉高、頭抬起來煞車
-  drawFlying(b, k, P, meta) {
-    let name;
-    if (b.brake) name = b.flap % 1 < 0.6 ? "up" : "mid";
-    else if (b.glide > 0) name = "mid";
-    else name = FLAP_ORDER[Math.floor(((b.flap % 1) + 1) % 1 * 4)];
-    // 往下拍時身體往上浮：用拍翅膀的相位算，滑翔時慢慢回到 0
-    const target = b.glide > 0 ? 0 : Math.sin(b.flap * Math.PI * 2) * 0.035 * FLY_LEN * k;
-    const bob = lerp(this.bob.get(b) ?? target, target, 0.35);
+  // 飛：用影片拆出來的 36 格（一下完整的拍翅膀）依序播；滑翔時停在翅膀最平的那格；
+  // 拍翅膀時身體跟著上下起伏（往下拍時往上浮）；快降落時抬頭煞車
+  drawFlying(b, k) {
+    const fly = this.kit.fly;
+    const n = fly.frames.length;
+    const idx = b.glide > 0 ? fly.glideFrame : Math.floor((((b.flap % 1) + 1) % 1) * n) % n;
+    const target = b.glide > 0 ? 0 : Math.sin((b.flap - 0.45) * Math.PI * 2) * 0.03 * FLY_LEN * k;
+    const bob = lerp(this.bob.get(b) ?? target, target, 0.25);
     this.bob.set(b, bob);
-    const s = (FLY_LEN * k) / meta.flyLength;
+    const s = (FLY_LEN * k) / fly.length;
     // 往右飛：照路線方向傾斜；往左飛：鏡像
     const tilt = b.facing > 0 ? b.angle : Math.PI - b.angle;
-    let bank = Math.max(-0.55, Math.min(0.55, Math.atan2(Math.sin(tilt), Math.cos(tilt))));
+    let bank = Math.max(-0.5, Math.min(0.5, Math.atan2(Math.sin(tilt), Math.cos(tilt))));
     if (b.brake) bank -= 0.3; // 抬頭
-    const p = P[name];
-    this.sprite(p, b.x, b.y - bob, b.facing, b.facing > 0 ? bank : -bank, s, s, [p.rect[2] * FLY_FEET[0], p.rect[3] * FLY_FEET[1]]);
+    this.sprite(this.kit.flyImg, fly.frames[idx], b.x, b.y - bob, b.facing, b.facing > 0 ? bank : -bank, s, s, fly.pivot);
   }
 
   // 停：剛落地輕輕一沉再站直；平常微微呼吸；轉身時跳一下
@@ -122,18 +117,18 @@ export class BirdView {
     sy *= 1 + 0.012 * Math.sin(b.age * 0.09);
     const hopY = b.hop < 14 ? Math.sin((Math.PI * b.hop) / 14) * 0.06 * PERCH_H * k : 0;
     const p = b.pose === "front" ? P.front : P.perch;
-    this.sprite(p, b.x, b.y - hopY, b.facing, 0, s * sx, s * sy, p.pivot);
+    this.sprite(this.kit.img, p.rect, b.x, b.y - hopY, b.facing, 0, s * sx, s * sy, p.pivot);
   }
 
-  sprite(part, x, y, facing, angle, sx, sy, pivot) {
+  sprite(img, rect, x, y, facing, angle, sx, sy, pivot) {
     const { ctx } = this;
-    const [rx, ry, rw, rh] = part.rect;
+    const [rx, ry, rw, rh] = rect;
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(facing, 1);
     ctx.rotate(angle);
     ctx.scale(sx, sy);
-    ctx.drawImage(this.kit.img, rx, ry, rw, rh, -pivot[0], -pivot[1], rw, rh);
+    ctx.drawImage(img, rx, ry, rw, rh, -pivot[0], -pivot[1], rw, rh);
     ctx.restore();
   }
 }
@@ -143,15 +138,21 @@ function lerp(a, b, t) {
 }
 
 export async function loadBirdKit(name) {
-  try {
-    const meta = await fetch(`assets/birds/${name}.json`).then((r) => r.json());
-    const img = await new Promise((res, rej) => {
+  const img = (u) =>
+    new Promise((res, rej) => {
       const im = new Image();
       im.onload = () => res(im);
       im.onerror = rej;
-      im.src = `assets/birds/${name}.webp`;
+      im.src = u;
     });
-    return { meta, img };
+  try {
+    const [meta, fly, perchImg, flyImg] = await Promise.all([
+      fetch(`assets/birds/${name}.json`).then((r) => r.json()),
+      fetch(`assets/birds/${name}-fly.json`).then((r) => r.json()),
+      img(`assets/birds/${name}.webp`),
+      img(`assets/birds/${name}-fly.webp`)
+    ]);
+    return { meta, img: perchImg, fly, flyImg };
   } catch (_) {
     return null;
   }

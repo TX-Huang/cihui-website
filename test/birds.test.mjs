@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { flapPose, curve, curveAt, createFlock, stepFlock, FLY_IN, FLY_OUT } from "../js/birds.js";
+import { curve, curveAt, createFlock, stepFlock, FLY_IN, FLY_OUT } from "../js/birds.js";
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -33,20 +33,6 @@ function env(over = {}) {
     ...over
   };
 }
-
-test("flapPose: wings go up → spread → down → spread, blending smoothly", () => {
-  const seq = [];
-  for (let p = 0; p < 1; p += 0.125) {
-    const f = flapPose(p);
-    seq.push(f.mix < 0.5 ? f.a : f.b);
-  }
-  assert.deepEqual(seq, ["up", "up", "mid", "mid", "down", "down", "mid", "mid"]);
-  // 連續：相鄰兩點的「主要畫面」不會跳過一格
-  const f1 = flapPose(0.24);
-  const f2 = flapPose(0.26);
-  assert.equal(f1.b, "mid");
-  assert.equal(f2.a, "mid");
-});
 
 test("curve: starts at the start, ends exactly at the perch, faces where it is going", () => {
   const c = curve({ x: -100, y: 100 }, { x: 600, y: 300 }, 0.3);
