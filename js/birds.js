@@ -4,9 +4,9 @@
 // 一群 1～2 隻：從畫面外飛進來（從停的方向後面來，一路不轉身） → 降落（倒播起飛影片）停在大門上（屋脊、匾額上緣）→ 休息一陣子（偶爾轉過來看你、轉身）
 // → 起飛（起飛影片）飛走。滑鼠在旁邊揮太快會被嚇飛；切到其他神明時也會飛走。每隔 20～40 秒來一群。
 
-export const FLY_IN = 360; // 飛進來最少幾格（約 6 秒）；路遠就飛久一點，速度維持差不多
+export const FLY_IN = 260; // 飛進來最少幾格（約 4 秒）；路遠就飛久一點，速度維持差不多
 const FLY_IN_MAX = 660;
-const CRUISE = 2.3; // 飛進來的平均速度（每格幾像素）
+const CRUISE = 2.8; // 飛進來的平均速度（每格幾像素）
 export const FLY_OUT = 300; // 飛走最少幾格（約 5 秒）；路遠就飛久一點
 export const FLY_OUT_MAX = 600;
 const REST_MIN = 480; // 停多久（8～17 秒）
@@ -137,7 +137,7 @@ function takeOff(b, e) {
   b.outCurve.p2 = { x: (b.x + b.outCurve.p3.x) / 2, y: Math.min(b.y, b.outCurve.p3.y) - 40 };
   // 飛走要幾格：照路長算（平均 2.8 像素／格）
   const len = Math.hypot(b.outCurve.p3.x - b.x, b.outCurve.p3.y - b.y) * 1.15;
-  b.outLen = Math.max(FLY_OUT, Math.min(FLY_OUT_MAX, len / 2.8));
+  b.outLen = Math.max(FLY_OUT, Math.min(FLY_OUT_MAX, len / 3.3));
   // 接著起飛影片：一開始的方向、速度跟影片最後一樣（影片裡鳥幾乎是往上飛），再慢慢加速
   b.outA = 0.4;
   const v = e.leaveVelocity?.(b.perch);

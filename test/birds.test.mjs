@@ -135,7 +135,7 @@ test("birds: never two birds on the same perch, never more than two", () => {
   }
 });
 
-test("birds: fly calmly — never faster than 6 px per frame, coming in or going out", () => {
+test("birds: fly calmly — never faster than 7 px per frame (but not sluggish), coming in or going out", () => {
   for (let seed = 1; seed <= 10; seed++) {
     const flock = createFlock({ firstIn: 0 });
     const e = env({ random: seeded(seed) });
@@ -151,7 +151,8 @@ test("birds: fly calmly — never faster than 6 px per frame, coming in or going
         last.set(b, { x: b.x, y: b.y, state: b.state });
       }
     }
-    assert.ok(max <= 6, `seed ${seed}: ${max.toFixed(1)} px/frame`);
+    assert.ok(max <= 7, `seed ${seed}: ${max.toFixed(1)} px/frame`);
+    assert.ok(max >= 5.5, `seed ${seed}: too sluggish (${max.toFixed(1)} px/frame at its fastest)`);
   }
 });
 

@@ -12,9 +12,9 @@ const BORED_MIN = 1200;
 const BORED_MAX = 1800;
 const NEW_SPOT = 80; // 滑鼠移動超過這麼多像素，算「換地方了」，又會好奇
 // 游速（每格像素）：要優雅，不要躁動。平常慢慢滑；被嚇到也只是快一點游開，不是衝走
-const SCARED_SPEED = 1.6;
+const SCARED_SPEED = 2.0;
 export function cruiseSpeed(random = Math.random) {
-  return 0.22 + random() * 0.14;
+  return 0.32 + random() * 0.18;
 }
 
 export function steer(f, env) {
