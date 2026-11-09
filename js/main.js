@@ -3,6 +3,7 @@ import { Chimes } from "./chimes.js";
 import { DEITIES, ORDER } from "./deities.js";
 import { GATE } from "./gate.js";
 import { fitGate, curtainGrid } from "./layout.js";
+import { highlightRange, isHighlighted } from "./highlight.js";
 import { Petals } from "./petals.js";
 import { KoiPond, loadKoiKits } from "./koi.js";
 import { IntroView } from "./intro-view.js";
@@ -122,17 +123,13 @@ function glyph(ch, color) {
   return g;
 }
 
-// 大部分是墨色字，少數幾處淡金色，像珠簾上點綴的金珠
-function beadColor(col, row, t) {
-  const v = Math.sin(col * 0.9 + row * 0.35) + Math.sin(row * 0.21 - col * 0.4);
-  return v > 1.35 ? t.gold : t.ink;
-}
-
 function buildCloth(d, { rolled }) {
   cloth = createCloth({ cols: COLS, rows: ROWS, width: CURTAIN_W, height: CURTAIN_H });
+  // 都是墨色字，只有經文裡最重要的那一句是金色（見 js/highlight.js）
+  const gold = highlightRange(d.cloth, d.key, COLS, ROWS);
   for (const p of cloth.particles) {
     p.ch = charAt(d.cloth, p.col, p.row, COLS, ROWS);
-    p.color = beadColor(p.col, p.row, d.theme);
+    p.color = isHighlighted(p.col, p.row, COLS, ROWS, gold) ? d.theme.gold : d.theme.ink;
     if (rolled && !p.pinned) {
       // 珠簾先收在門楣上，進場時自己垂下來
       p.y = p.oy = p.row * 1.2;
