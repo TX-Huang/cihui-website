@@ -3,21 +3,15 @@
 
 // 沿著身體中線（頭在 pts[0]）走到 s（0 = 頭、1 = 身體末端），再往側邊推 d×L。
 // 回傳那一點和那裡「往頭的方向」（angle）。d > 0 是圖的下方（頭朝右時的 +y）。
+// s 照「第幾個點」算（跟身體的圖怎麼貼一樣：u = 1 - i/(n-1)），
+// 不照實際長度算：身體擺動時每段長度會稍微變，照長度算的話鰭會在身上滑來滑去。
 export function placeOnLine(pts, s, d, L) {
   const n = pts.length;
-  let total = 0;
-  const acc = [0];
-  for (let i = 1; i < n; i++) {
-    total += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
-    acc.push(total);
-  }
-  const want = Math.min(1, Math.max(0, s)) * total;
-  let i = 1;
-  while (i < n - 1 && acc[i] < want) i++;
-  const seg = acc[i] - acc[i - 1] || 1;
-  const t = (want - acc[i - 1]) / seg;
-  const a = pts[i - 1];
-  const b = pts[i];
+  const f = Math.min(1, Math.max(0, s)) * (n - 1);
+  const i = Math.min(n - 2, Math.floor(f));
+  const t = f - i;
+  const a = pts[i];
+  const b = pts[i + 1];
   const x = a.x + (b.x - a.x) * t;
   const y = a.y + (b.y - a.y) * t;
   const angle = Math.atan2(a.y - b.y, a.x - b.x); // 往頭
@@ -130,4 +124,22 @@ export function tailStrip(tail, up, down, out) {
     v[k + 7] = 1;
   }
   return v;
+}
+
+// 備用 2D 畫法的身體是一張不彎的圖：給它一條直的中線，鰭和尾巴才會接在真的畫出來的身體上
+export function rigidLine(head, angle, length, n) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const k = (length * i) / (n - 1);
+    pts.push({ x: head.x - Math.cos(angle) * k, y: head.y - Math.sin(angle) * k });
+  }
+  return pts;
+}
+
+// 影子比零件本身大一圈（模糊會往外暈開）：取圖時多取 pad，接點也跟著挪
+export function padRect({ rect, pivot }, pad) {
+  return {
+    rect: [rect[0] - pad, rect[1] - pad, rect[2] + pad * 2, rect[3] + pad * 2],
+    pivot: [pivot[0] + pad, pivot[1] + pad]
+  };
 }

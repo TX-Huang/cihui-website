@@ -109,6 +109,16 @@ def process(color, whole_name):
         body[m] = fins[m]
         bm |= m
 
+    # 把身體「拉直」：ChatGPT 畫的身體中線不是水平的（上下差到快 20 像素），
+    # 但網頁是把身體圖的正中間對在脊椎上。所以每一欄上下挪，讓每欄的中線都在同一條水平線 A 上。
+    # 鰭的 d 是從「那一欄的中線」量的，拉直後就跟網頁對得上。
+    A = int(round(np.nanmean(axis[bx0 : bx1 + 1])))
+    for x in range(bx0, bx1 + 1):
+        dy = int(round(A - axis[x]))
+        if dy:
+            body[:, x] = np.roll(body[:, x], dy, axis=0)
+            bm[:, x] = np.roll(bm[:, x], dy, axis=0)
+
     # 每個零件接在身體上的點：零件裡離身體最近的那些像素的中心
     dist_to_body = ndimage.distance_transform_edt(~bm)
     pieces = [("body", bm, body, None)]
@@ -124,13 +134,16 @@ def process(color, whole_name):
     for kind, m, src, root in pieces:
         ys, xs = np.nonzero(m)
         x0, x1, y0, y1 = xs.min(), xs.max() + 1, ys.min(), ys.max() + 1
+        if kind == "body":  # 上下對稱地裁，圖的正中間 = 中線 A
+            half = max(A - y0, y1 - A)
+            y0, y1 = A - half, A + half
         rgba = src[y0:y1, x0:x1].copy()
         rgba[..., 3] = np.where(m[y0:y1, x0:x1], rgba[..., 3], 0)
         im = Image.fromarray(rgba, "RGBA")
         w, h = max(1, round((x1 - x0) * k)), max(1, round((y1 - y0) * k))
         im = im.resize((w, h), Image.LANCZOS)
         if kind == "body":
-            px, py = (x1 - 1 - x0) * k, (axis[bx1] - y0) * k  # 身體的「接點」= 頭尖
+            px, py = (x1 - 1 - x0) * k, (A - y0) * k  # 身體的「接點」= 頭尖
             s, dd = 0.0, 0.0
         else:
             px, py = (root[0] - x0) * k, (root[1] - y0) * k
@@ -140,9 +153,7 @@ def process(color, whole_name):
         extra = {}
         if kind == "tail":
             ay = axis[bx0]
-            extra = {"up": (ay - y0) * k, "down": (y1 - ay) * k, "rootX": (bx0 + 0.06 * L - x0) * k}
-        if kind == "body":
-            extra = {"axisY": (axis[bx1] - y0) * k, "x0s": 1.0}
+            extra = {"up": (ay - y0) * k, "down": (y1 - ay) * k}
         out.append({"kind": kind, "im": im, "pivot": [px, py], "s": s, "d": dd, **extra})
 
     # 打包成圖集（一列一列排）
@@ -171,6 +182,7 @@ def process(color, whole_name):
     shadow.save(OUT / f"{color}-shadow.webp", quality=80, method=6)
     meta = {
         "L": TARGET_L,
+        "pad": PAD,  # 影子圖集裡每個零件四周多出來的模糊範圍
         "atlas": [W, H],
         "parts": [
             {k2: (round(v, 4) if isinstance(v, float) else v) for k2, v in p.items() if k2 != "im"}

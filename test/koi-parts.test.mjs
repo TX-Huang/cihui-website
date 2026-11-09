@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { placeOnLine, createTail, stepTail, finQuad, tailStrip } from "../js/koi-parts.js";
+import { placeOnLine, createTail, stepTail, finQuad, tailStrip, rigidLine, padRect } from "../js/koi-parts.js";
+import { createSpine, waveLine, buildStrip } from "../js/spine.js";
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
@@ -29,19 +30,68 @@ test("placeOnLine: on a bent body the fin stays attached at the same distance", 
 });
 
 test("finQuad: a rigid fin rotates around its root, size unchanged", () => {
+  // 圖 40 x 12，pivot 在 (5, 2)；轉 90 度（往下）、根部在 (10, 20)
   const q = finQuad({ x: 10, y: 20 }, Math.PI / 2, { pivot: [5, 2], w: 40, h: 12 }, 1);
-  // 4 個角：[x, y, u, v] × 4
-  const c = (i) => ({ x: q[i * 4], y: q[i * 4 + 1] });
-  assert.ok(Math.abs(dist(c(0), c(1)) - 40) < 1e-9 || Math.abs(dist(c(0), c(2)) - 40) < 1e-9);
-  // 圖上 pivot 那一點要剛好落在根部 (10, 20)
-  const u = 5 / 40;
-  const v = 2 / 12;
-  // 雙線性內插四個角
-  const P = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
-  const top = P(c(0), c(1), u);
-  const bottom = P(c(2), c(3), u);
-  const at = P(top, bottom, v);
-  assert.ok(Math.abs(at.x - 10) < 1e-9 && Math.abs(at.y - 20) < 1e-9, `pivot landed at ${at.x},${at.y}`);
+  const corners = [0, 1, 2, 3].map((i) => [q[i * 4], q[i * 4 + 1], q[i * 4 + 2], q[i * 4 + 3]]);
+  // 轉 90 度：圖的 +x 變成畫面 +y，圖的 +y 變成畫面 -x
+  const expect = [
+    [10 + 2, 20 - 5, 0, 0], // 左上 (-5, -2)
+    [10 + 2, 20 + 35, 1, 0], // 右上 (35, -2)
+    [10 - 10, 20 - 5, 0, 1], // 左下 (-5, 10)
+    [10 - 10, 20 + 35, 1, 1] // 右下 (35, 10)
+  ];
+  corners.forEach((c, i) => c.forEach((v, j) => assert.ok(Math.abs(v - expect[i][j]) < 1e-9, `corner ${i}[${j}] = ${v}, want ${expect[i][j]}`)));
+});
+
+test("placeOnLine: s walks along the points (s = 0.25 on 41 points is point 10)", () => {
+  const arc = Array.from({ length: 41 }, (_, i) => {
+    const a = (i / 40) * 1.2;
+    return { x: Math.cos(a) * 200, y: Math.sin(a) * 200 };
+  });
+  const p = placeOnLine(arc, 0.25, 0, 240);
+  assert.ok(dist(p, arc[10]) < 1e-6, `landed ${dist(p, arc[10]).toFixed(3)}px off`);
+  // 往頭的方向 = 從第 11 點指向第 10 點那一段
+  const want = Math.atan2(arc[10].y - arc[11].y, arc[10].x - arc[11].x);
+  assert.ok(Math.abs(angDiff(p.angle, want)) < 1e-9);
+});
+
+test("placeOnLine: fins stay at the same spot of the body picture while the body waves", () => {
+  // 身體的圖照「第幾個點」貼（u = 1 - i/(n-1)），所以鰭也要照同樣的算法放，不然擺動時鰭會在身上滑
+  const sp = createSpine(16, 100 / 15, 0, 0, 0);
+  for (const phase of [0, 1.5, 3, 4.5]) {
+    const opts = { halfWidth: 1, amp: 18, phase, waveK: 3.6, subdiv: 4 };
+    const line = waveLine(sp, opts);
+    const v = buildStrip(sp, { ...opts, line });
+    const n = v.length / 8;
+    for (const s of [0.3, 0.6, 0.8]) {
+      const f = s * (n - 1);
+      const i = Math.floor(f);
+      const t = f - i;
+      const mid = (k) => ({ x: (v[k * 8] + v[k * 8 + 4]) / 2, y: (v[k * 8 + 1] + v[k * 8 + 5]) / 2 });
+      const a = mid(i);
+      const b = mid(Math.min(n - 1, i + 1));
+      const m = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+      const p = placeOnLine(line, s, 0, 100);
+      assert.ok(dist(p, m) < 0.05, `s=${s} phase=${phase}: fin ${dist(p, m).toFixed(2)}px off its spot`);
+    }
+  }
+});
+
+test("rigidLine: the 2D fallback body is a straight line, so fins attach to the body actually drawn", () => {
+  const line = rigidLine({ x: 50, y: 10 }, Math.PI / 6, 120, 9);
+  assert.equal(line.length, 9);
+  assert.ok(dist(line[0], { x: 50, y: 10 }) < 1e-9, "starts at the head");
+  for (let i = 1; i < 9; i++) {
+    assert.ok(Math.abs(dist(line[i], line[i - 1]) - 15) < 1e-9);
+    const a = Math.atan2(line[i - 1].y - line[i].y, line[i - 1].x - line[i].x);
+    assert.ok(Math.abs(angDiff(a, Math.PI / 6)) < 1e-9, "every segment points at the heading");
+  }
+});
+
+test("padRect: shadow uses a bigger area (the blur spills past the part), pivot shifted to match", () => {
+  const r = padRect({ rect: [100, 50, 40, 12], pivot: [5, 2] }, 14);
+  assert.deepEqual(r.rect, [86, 36, 68, 40]);
+  assert.deepEqual(r.pivot, [19, 16]);
 });
 
 function swim(tail, steps, angleAt) {

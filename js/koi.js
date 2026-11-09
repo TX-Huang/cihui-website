@@ -8,7 +8,7 @@
 // 行為（js/swim.js）：平常挑遠處的點游過去；滑鼠停著會游過來看一下；揮太快或點一下會被嚇跑。
 
 import { createSpine, followHead, buildStrip, waveLine } from "./spine.js";
-import { placeOnLine, createTail, stepTail, finQuad, tailStrip } from "./koi-parts.js";
+import { placeOnLine, createTail, stepTail, finQuad, tailStrip, rigidLine, padRect } from "./koi-parts.js";
 import { steer } from "./swim.js";
 
 const SPINE_POINTS = 16;
@@ -240,6 +240,12 @@ export class KoiPond {
   // 算出這一格每個零件的位置
   pose(f) {
     f.line = waveLine(f.spine, { amp: this.amp(f), phase: f.phase, waveK: WAVE_K, subdiv: SUBDIV });
+    if (!this.gl) {
+      // 備用 2D：身體畫成一張不彎的圖，所以中線也用直的（鰭和尾巴才會接在畫出來的身體上）
+      const p = f.line;
+      const k = Math.floor(p.length / 2);
+      f.line = rigidLine(p[0], Math.atan2(p[0].y - p[k].y, p[0].x - p[k].x), f.bodyLen, p.length);
+    }
     stepTail(f.tail, placeOnLine(f.line, f.tailEdgeS, 0, f.bodyLen));
     const t = f.phase * 0.45;
     for (const fin of f.fins) {
@@ -260,36 +266,41 @@ export class KoiPond {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.uniform2f(this.loc.res, this.w, this.h);
     for (const f of this.fish) {
-      const geo = this.geometry(f);
-      // 影子：光從左上照下來，所以影子固定往右下偏
+      // 影子：光從左上照下來，所以影子固定往右下偏；影子圖比零件大一圈（模糊暈開的部分）
       gl.bindTexture(gl.TEXTURE_2D, f.kit.shadowTex);
       gl.uniform2f(this.loc.off, f.len * 0.05, f.len * 0.09);
       gl.uniform1f(this.loc.alpha, SHADOW_ALPHA);
-      for (const g of geo) this.drawPart(f, g);
+      for (const g of this.geometry(f, f.kit.meta.pad || 0)) this.drawPart(f, g);
       gl.bindTexture(gl.TEXTURE_2D, f.kit.tex);
       gl.uniform2f(this.loc.off, 0, 0);
       gl.uniform1f(this.loc.alpha, 0.96);
-      for (const g of geo) this.drawPart(f, g);
+      for (const g of this.geometry(f, 0)) this.drawPart(f, g);
     }
   }
 
-  // 每個零件的頂點（由下往上：尾巴、鰭、身體）
-  geometry(f) {
+  // 每個零件的頂點（由下往上：尾巴、鰭、身體）。pad > 0：畫影子，每個零件往外多一圈
+  // （身體、尾巴是帶子，只往兩側加寬；頭尖、尾尖那一點點不加）
+  geometry(f, pad) {
     const s = f.scale;
+    const key = pad ? "shadow" : "main";
+    f.verts ??= { main: {}, shadow: {} };
+    const buf = f.verts[key];
     const tp = f.tailPart;
-    f.tailVerts = tailStrip(f.tail, tp.up * s, tp.down * s, f.tailVerts);
-    const parts = [{ rect: tp.rect, verts: f.tailVerts }];
-    for (const fin of f.fins) {
-      fin.verts = finQuad(fin.at, fin.angle, { pivot: fin.pivot, w: fin.rect[2], h: fin.rect[3] }, s, fin.verts);
-      parts.push({ rect: fin.rect, verts: fin.verts });
-    }
+    buf.tail = tailStrip(f.tail, (tp.up + pad) * s, (tp.down + pad) * s, buf.tail);
+    const widen = (r) => [r[0], r[1] - pad, r[2], r[3] + pad * 2];
+    const parts = [{ rect: widen(tp.rect), verts: buf.tail }];
+    f.fins.forEach((fin, i) => {
+      const { rect, pivot } = pad ? padRect(fin, pad) : fin;
+      buf[i] = finQuad(fin.at, fin.angle, { pivot, w: rect[2], h: rect[3] }, s, buf[i]);
+      parts.push({ rect, verts: buf[i] });
+    });
     const b = f.body;
-    f.bodyVerts = buildStrip(
+    buf.body = buildStrip(
       f.spine,
-      { halfWidth: (b.rect[3] / 2) * s, amp: this.amp(f), phase: f.phase, waveK: WAVE_K, subdiv: SUBDIV, line: f.line },
-      f.bodyVerts
+      { halfWidth: (b.rect[3] / 2 + pad) * s, amp: this.amp(f), phase: f.phase, waveK: WAVE_K, subdiv: SUBDIV, line: f.line },
+      buf.body
     );
-    parts.push({ rect: b.rect, verts: f.bodyVerts });
+    parts.push({ rect: widen(b.rect), verts: buf.body });
     return parts;
   }
 
@@ -314,16 +325,19 @@ export class KoiPond {
       const tailAngle = Math.atan2(f.tail.pts[0].y - f.tail.pts[2].y, f.tail.pts[0].x - f.tail.pts[2].x);
       const tp = f.tailPart;
       const items = [
-        { part: tp, at: tailBase, angle: tailAngle, pivot: [tp.rect[2], tp.up] },
-        ...f.fins.map((fin) => ({ part: fin, at: fin.at, angle: fin.angle, pivot: fin.pivot })),
-        { part: f.body, at: head, angle: bodyAngle, pivot: f.body.pivot }
+        { part: { rect: tp.rect, pivot: [tp.rect[2], tp.up] }, at: tailBase, angle: tailAngle },
+        ...f.fins.map((fin) => ({ part: fin, at: fin.at, angle: fin.angle })),
+        { part: f.body, at: head, angle: bodyAngle }
       ];
-      for (const [img, alpha, dx, dy] of [
-        [f.kit.shadow, SHADOW_ALPHA, f.len * 0.05, f.len * 0.09],
-        [f.kit.atlas, 0.96, 0, 0]
+      const pad = f.kit.meta.pad || 0;
+      for (const [img, alpha, dx, dy, grow] of [
+        [f.kit.shadow, SHADOW_ALPHA, f.len * 0.05, f.len * 0.09, pad],
+        [f.kit.atlas, 0.96, 0, 0, 0]
       ]) {
         ctx.globalAlpha = alpha;
-        for (const { part, at, angle, pivot } of items) {
+        for (const { part: raw, at, angle } of items) {
+          const part = grow ? padRect(raw, grow) : raw;
+          const pivot = part.pivot;
           const [rx, ry, rw, rh] = part.rect;
           ctx.save();
           ctx.translate(at.x + dx, at.y + dy);
