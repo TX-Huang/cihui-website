@@ -2,6 +2,7 @@ import { createCloth, step, push, nearest, charAt } from "./cloth.js";
 import { Chimes } from "./chimes.js";
 import { DEITIES, ORDER } from "./deities.js";
 import { GATE } from "./gate.js";
+import { fitGate, curtainGrid } from "./layout.js";
 import { Petals } from "./petals.js";
 import { KoiPond, loadImages } from "./koi.js";
 
@@ -11,8 +12,8 @@ const CURTAIN_X = D.x0;
 const CURTAIN_Y = D.y0;
 const CURTAIN_W = D.x1 - D.x0;
 const CURTAIN_H = D.y1 - D.y0;
-const COLS = 30;
-const ROWS = 43;
+// 字的間距固定，門洞多大就掛幾排幾列（見 js/layout.js）
+const { cols: COLS, rows: ROWS } = curtainGrid(CURTAIN_W, CURTAIN_H);
 const PAD = 160;
 const CANVAS_W = CURTAIN_W + PAD * 2;
 const CANVAS_H = CURTAIN_H + PAD * 2;
@@ -49,11 +50,7 @@ const glyphs = new Map();
 function layout() {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const mobile = vw <= 720;
-  scale = mobile
-    ? Math.min((vh * 0.75) / GATE.h, (vw * 1.3) / GATE.w)
-    : Math.min(1.3, (vh - 24) / GATE.h, (vw * 0.96) / GATE.w);
-  scale = Math.max(0.3, scale);
+  scale = fitGate(vw, vh, GATE);
   document.documentElement.style.setProperty("--s", scale.toFixed(4));
 
   dpr = Math.min(2.5, (window.devicePixelRatio || 1) * scale);

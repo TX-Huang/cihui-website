@@ -250,12 +250,13 @@ body {
 }
 
 /* ── 文字 ── */
+/* 三開間大門很寬，下面兩側被側門佔滿；文字放到左上、右上（側門屋頂上方的天空） */
 .copy {
   position: absolute;
   z-index: 20;
-  inset: auto clamp(16px, 4vw, 56px) clamp(24px, 7vh, 72px);
+  inset: clamp(84px, 13vh, 140px) clamp(16px, 4vw, 56px) auto;
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 32px;
 }
@@ -269,7 +270,7 @@ body {
   margin: 0;
   font-family: var(--serif);
   font-weight: 900;
-  font-size: clamp(44px, 7vw, 96px);
+  font-size: clamp(40px, 5vw, 80px);
   line-height: 1.05;
   letter-spacing: 0.08em;
   font-weight: 600;
