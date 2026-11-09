@@ -116,6 +116,14 @@ ChatGPT 改圖時位置可能會跑掉一點點，沒關係，我會用程式對
 
   （中括號一次選一種，生三次。）
 
+停著的樣子（停在匾額、屋脊上用；一樣先上傳 `bluebird.png`，讓牠是同一隻鳥）：
+- `bluebird-perch.png`（側面停著）：
+  > Use the attached bird as the exact same character (same feathers, colors, proportions). Show it PERCHED, seen from the side, facing RIGHT, wings neatly folded against the body, long tail feathers hanging down gracefully, feet gripping as if standing on a ledge. Size 1024x1024. Transparent background PNG. Only the bird — no branch, no ledge, no background, no shadow, no text.
+- `bluebird-perch-head.png`（從上一張拆出頭，讓牠可以轉頭、低頭）：
+  > Edit the attached image. Keep ONLY the head and neck exactly as they are — same position, size, colors, canvas size. Remove everything else. Transparent background PNG.
+- `bluebird-perch-front.png`（正面偏一點點，看著畫面外的人）：
+  > Use the attached bird as the exact same character. Show it PERCHED, seen from the front three-quarter view, looking toward the viewer, wings folded, long tail feathers hanging down. Size 1024x1024. Transparent background PNG. Only the bird — no ledge, no background, no shadow, no text.
+
 ### 4-2. 丹鳳（拆 3 張）
 
 `phoenix.png`
