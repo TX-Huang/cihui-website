@@ -125,26 +125,19 @@ test("birds: never two birds on the same perch, never more than three", () => {
   }
 });
 
-test("birds: flight mixes flapping with gliding (not a metronome)", () => {
+test("birds: wings keep beating the whole flight (no stiff gliding pose)", () => {
   const flock = createFlock({ firstIn: 0 });
   const e = env();
   stepFlock(flock, e);
   const b = flock.birds[0];
-  let still = 0;
-  let longestGlide = 0;
-  let flapped = 0;
   let last = b.flap;
+  let frozen = 0;
   while (b.state === "in") {
     stepFlock(flock, e);
-    if (b.flap === last) longestGlide = Math.max(longestGlide, ++still);
-    else {
-      still = 0;
-      flapped++;
-    }
+    if (b.flap === last) frozen++;
     last = b.flap;
   }
-  assert.ok(longestGlide >= 20, `never glided (longest ${longestGlide} frames)`);
-  assert.ok(flapped >= 40, "it still flaps most of the way");
+  assert.equal(frozen, 0, `wings froze for ${frozen} frames`);
 });
 
 test("birds: just before landing the bird brakes (wings up), and it settles after touching down", () => {

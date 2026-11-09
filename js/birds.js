@@ -81,8 +81,6 @@ function spawn(flock, e) {
       pose: "fly",
       rest: 0,
       look: 0,
-      glide: 0, // 還要滑翔幾格（翅膀張開不拍）
-      beats: 1 + Math.floor(e.random() * 2), // 再拍幾下就滑翔一段
       brake: false, // 快降落：翅膀舉高煞車
       landed: 0, // 降落後過了幾格（落地時輕輕一沉）
       hop: 99, // 轉身的小跳躍進行到第幾格
@@ -94,29 +92,11 @@ function spawn(flock, e) {
 
 const HOP = 14; // 轉身跳一下要幾格
 
-// 拍翅膀或滑翔：拍幾下就張開翅膀滑一段（真的鳥不會一直用同樣速度拍）
-function flapOrGlide(b, rate, canGlide, random) {
-  if (b.glide > 0) {
-    b.glide -= 1;
-    return;
-  }
-  const before = Math.floor(b.flap);
-  b.flap += rate;
-  if (Math.floor(b.flap) > before) {
-    b.beats -= 1;
-    if (b.beats <= 0 && canGlide) {
-      b.glide = 30 + random() * 40;
-      b.beats = 1 + Math.floor(random() * 2);
-    }
-  }
-}
-
 function takeOff(b, e) {
   b.state = "out";
   b.t = 0;
   b.pose = "fly";
   b.brake = false;
-  b.glide = 0;
   const toLeft = b.x < e.w / 2;
   b.outCurve = curve(
     { x: b.x, y: b.y },
@@ -150,8 +130,7 @@ function stepBird(b, e) {
     b.facing = Math.cos(p.angle) >= 0 ? 1 : -1;
     // 最後一段：翅膀舉高、拍得急，像在煞車
     b.brake = b.t > 0.82;
-    if (b.brake) b.glide = 0;
-    flapOrGlide(b, b.brake ? 0.02 : 0.012, b.t > 0.1 && b.t < 0.7, e.random); // 影片裡拍一下約 1.5 秒
+    b.flap += b.brake ? 0.02 : 0.012; // 一直拍（影片裡拍一下約 1.5 秒），煞車時拍快一點
     if (b.t >= 1) {
       b.brake = false;
       b.landed = 0;
@@ -203,7 +182,7 @@ function stepBird(b, e) {
     b.y = p.y;
     b.angle = p.angle;
     b.facing = Math.cos(p.angle) >= 0 ? 1 : -1;
-    flapOrGlide(b, b.t < 0.3 ? 0.022 : 0.014, b.t > 0.35, e.random); // 起飛時拍得最急，飛遠了才滑翔
+    b.flap += b.t < 0.3 ? 0.022 : 0.014; // 起飛時拍得最急
     if (b.t >= 1) b.state = "gone";
   }
 }

@@ -1,5 +1,5 @@
 // 畫青鳥（js/birds.js 決定牠們在哪、在做什麼，這裡只負責畫）。
-// 飛的時候：影片拆出來的 36 格依序播（tools/prep_bird_video.py），拍一兩下滑翔一段，身體跟著起伏。
+// 飛的時候：影片拆出來的 36 格依序播（tools/prep_bird_video.py），一直拍，身體跟著起伏。
 // 停著：側面那張；偶爾換成正面（像轉過來看你）；轉身時跳一下。
 import { createFlock, stepFlock } from "./birds.js";
 
@@ -87,13 +87,13 @@ export class BirdView {
     }
   }
 
-  // 飛：用影片拆出來的 36 格（一下完整的拍翅膀）依序播；滑翔時停在翅膀最平的那格；
+  // 飛：用影片拆出來的 36 格（一下完整的拍翅膀）一直依序播；
   // 拍翅膀時身體跟著上下起伏（往下拍時往上浮）；快降落時抬頭煞車
   drawFlying(b, k) {
     const fly = this.kit.fly;
     const n = fly.frames.length;
-    const idx = b.glide > 0 ? fly.glideFrame : Math.floor((((b.flap % 1) + 1) % 1) * n) % n;
-    const target = b.glide > 0 ? 0 : Math.sin((b.flap - 0.45) * Math.PI * 2) * 0.03 * FLY_LEN * k;
+    const idx = Math.floor((((b.flap % 1) + 1) % 1) * n) % n;
+    const target = Math.sin((b.flap - 0.45) * Math.PI * 2) * 0.03 * FLY_LEN * k;
     const bob = lerp(this.bob.get(b) ?? target, target, 0.25);
     this.bob.set(b, bob);
     const s = (FLY_LEN * k) / fly.length;
