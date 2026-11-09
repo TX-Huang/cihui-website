@@ -27,7 +27,7 @@ const TOUCH_R2 = 60 * 60;
 const TOUCH_FORCE = 3;
 const GRAB_R2 = 24 * 24;
 const CHIME_R2 = 50 * 50;
-const MOVE_MS = 900;
+const MOVE_MS = 1600; // 換神明：穿過門要多久（慢慢走進去，不要咻一下）
 
 const $ = (id) => document.getElementById(id);
 const canvas = $("cloth");
@@ -507,7 +507,7 @@ async function goTo(index) {
 
   // 進場時輕輕響一串
   [2, 9, 16].forEach((c, k) =>
-    setTimeout(() => chimes.strike({ id: -10 - k, col: c, cols: COLS, intensity: 0.35, force: true }), k * 160)
+    setTimeout(() => chimes.strike({ id: -10 - k, col: c, cols: COLS, intensity: 0.35, force: true }), k * 320) // 一聲一聲慢慢響
   );
 
   moving = false;

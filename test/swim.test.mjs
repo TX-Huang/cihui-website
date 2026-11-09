@@ -115,3 +115,29 @@ test("swim: fish stay inside the pond", () => {
     }
   }
 });
+
+test("swim: koi glide calmly — cruising under 0.6 px/frame, and even a scared fish stays under 2.6", async () => {
+  const { cruiseSpeed } = await import("../js/swim.js");
+  const random = seeded(3);
+  const w = 1200;
+  const h = 800;
+  for (let k = 0; k < 5; k++) {
+    const f = { ...makeFish(random, w, h), cruise: cruiseSpeed(random), speed: 0.4 };
+    const env = { w, h, random, mouse: { x: -9999, y: -9999, speed: 0, still: 9999 } };
+    let max = 0;
+    for (let t = 0; t < 3000; t++) {
+      steer(f, env);
+      max = Math.max(max, f.speed);
+    }
+    assert.ok(max <= 0.6, `cruising at ${max.toFixed(2)}`);
+    // 滑鼠在旁邊揮很快 → 嚇跑，但不要衝太快
+    let scared = 0;
+    for (let t = 0; t < 300; t++) {
+      env.mouse = { x: f.x + 40, y: f.y, speed: t < 5 ? 60 : 0, still: 0 };
+      steer(f, env);
+      scared = Math.max(scared, f.speed);
+    }
+    assert.ok(scared > 1, "a scared fish still darts away");
+    assert.ok(scared <= 2.6, `scared at ${scared.toFixed(2)}`);
+  }
+});

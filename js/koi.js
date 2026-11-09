@@ -9,7 +9,7 @@
 
 import { createSpine, followHead, buildStrip, waveLine } from "./spine.js";
 import { placeOnLine, createTail, stepTail, finQuad, tailStrip, rigidLine, padRect } from "./koi-parts.js";
-import { steer } from "./swim.js";
+import { steer, cruiseSpeed } from "./swim.js";
 
 const SPINE_POINTS = 16;
 const SUBDIV = 4; // 畫的時候每節再切 4 小段，輪廓才會是平滑曲線
@@ -186,8 +186,8 @@ export class KoiPond {
       x,
       y,
       angle,
-      speed: 0.6,
-      cruise: 0.5 + Math.random() * 0.4,
+      speed: 0.4,
+      cruise: cruiseSpeed(),
       phase: Math.random() * 10,
       wander: Math.random() * Math.PI * 2,
       fear: 0,

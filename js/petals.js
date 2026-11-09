@@ -32,24 +32,24 @@ export class Petals {
       vx: 0,
       vy: 0,
       size,
-      fall: 0.25 + Math.random() * 0.5,
+      fall: 0.18 + Math.random() * 0.32, // 慢慢飄
       sway: Math.random() * Math.PI * 2,
-      swaySpeed: 0.008 + Math.random() * 0.012,
+      swaySpeed: 0.005 + Math.random() * 0.008,
       rot: Math.random() * Math.PI * 2,
-      spin: (Math.random() - 0.5) * 0.04,
+      spin: (Math.random() - 0.5) * 0.024,
       flip: Math.random() * Math.PI * 2,
       alpha: 0.5 + Math.random() * 0.5
     };
   }
 
-  // 走進門時：花瓣迎面飛散
+  // 走進門時：花瓣迎面輕輕散開（不是噴出去）
   burst(dir) {
     for (const p of this.list) {
       const dx = p.x - this.w / 2;
       const dy = p.y - this.h * 0.6;
       const d = Math.hypot(dx, dy) || 1;
-      p.vx += (dx / d) * 6 * dir;
-      p.vy += (dy / d) * 6 * dir;
+      p.vx += (dx / d) * 2.4 * dir;
+      p.vy += (dy / d) * 2.4 * dir;
     }
   }
 
@@ -61,19 +61,19 @@ export class Petals {
     for (let i = 0; i < this.list.length; i++) {
       const p = this.list[i];
       p.sway += p.swaySpeed;
-      p.flip += 0.03;
+      p.flip += 0.018;
       p.rot += p.spin;
       const mdx = p.x - this.mouse.x;
       const mdy = p.y - this.mouse.y;
       const md2 = mdx * mdx + mdy * mdy;
       if (md2 < 120 * 120 && md2 > 1) {
-        const f = (1 - md2 / (120 * 120)) * 0.6;
+        const f = (1 - md2 / (120 * 120)) * 0.35;
         const md = Math.sqrt(md2);
         p.vx += (mdx / md) * f;
         p.vy += (mdy / md) * f;
       }
-      p.vx = (p.vx + wind * 0.3) * 0.96;
-      p.vy *= 0.96;
+      p.vx = (p.vx + wind * 0.3) * 0.975;
+      p.vy *= 0.975;
       p.x += p.vx + Math.sin(p.sway) * 0.6;
       p.y += p.vy + p.fall;
       if (p.y > this.h + 20 || p.x < -40 || p.x > this.w + 40) {

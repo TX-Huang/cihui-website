@@ -44,7 +44,7 @@ body {
   inset: -4%;
   background: url("assets/bg-yaochi.webp") center 60% / cover no-repeat;
   transform: translate3d(calc(var(--mx, 0) * -14px), calc(var(--my, 0) * -8px), 0) scale(var(--zoom, 1));
-  transition: transform 1.2s var(--ease);
+  transition: transform 2s var(--ease);
 }
 /* 每位神明一層不同的晨光色調 */
 .sky-img::after {
@@ -54,7 +54,7 @@ body {
   background: var(--tint);
   mix-blend-mode: color;
   opacity: var(--tint-a);
-  transition: opacity 1.4s var(--ease), background-color 1.4s var(--ease);
+  transition: opacity 2.2s var(--ease), background-color 2.2s var(--ease);
 }
 /* 讓下方文字讀得清楚 */
 .sky::after {
@@ -323,8 +323,8 @@ body {
   transition: opacity 900ms var(--ease), transform 900ms var(--ease);
 }
 .copy.is-leaving .title .c {
-  animation: fade-up 400ms var(--ease) forwards;
-  animation-delay: calc(var(--i) * 30ms);
+  animation: fade-up 800ms var(--ease) forwards;
+  animation-delay: calc(var(--i) * 60ms);
   opacity: 1;
   transform: none;
   filter: none;
