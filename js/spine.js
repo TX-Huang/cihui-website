@@ -51,17 +51,13 @@ function forward(p, i, out) {
   return out;
 }
 
-// 沿著脊椎做一條「帶子」（三角形帶），魚的圖就貼在上面。
-// 每個脊椎點兩個頂點：[x, y, u, v]。u：頭 = 1、尾 = 0；v：魚的左邊 = 0、右邊 = 1。
-// amp：擺動幅度；phase：波的相位；waveK：身體上有幾段波（越大波越密）。
-// subdiv：每一節再切成幾小段（沿平滑曲線補點）。脊椎點不多，直接連起來輪廓會一節一節有折角；
-//         切細之後輪廓是平滑的曲線。
-export function buildStrip(spine, { halfWidth, amp, phase, waveK, subdiv = 1 }, out) {
+// 游泳中的身體中線：脊椎（切細）＋從頭傳到尾的波。頭在 [0]。
+// 鰭和尾巴要接在這條線上，所以單獨拿出來。
+export function waveLine(spine, { amp, phase, waveK, subdiv = 1 }) {
   const p = smoothPoints(spine.pts, subdiv);
   const n = p.length;
   const disp = new Array(n);
   const f = { x: 0, y: 0 };
-  // 1) 先算每個點被波推開後的位置（頭幾乎不動、越往尾擺越大）
   for (let i = 0; i < n; i++) {
     const s = i / (n - 1);
     forward(p, i, f);
@@ -69,6 +65,20 @@ export function buildStrip(spine, { halfWidth, amp, phase, waveK, subdiv = 1 }, 
     // 法向量 = 往頭方向轉 90°
     disp[i] = { x: p[i].x - f.y * off, y: p[i].y + f.x * off };
   }
+  return disp;
+}
+
+// 沿著脊椎做一條「帶子」（三角形帶），魚的圖就貼在上面。
+// 每個脊椎點兩個頂點：[x, y, u, v]。u：頭 = 1、尾 = 0；v：魚的左邊 = 0、右邊 = 1。
+// amp：擺動幅度；phase：波的相位；waveK：身體上有幾段波（越大波越密）。
+// subdiv：每一節再切成幾小段（沿平滑曲線補點）。脊椎點不多，直接連起來輪廓會一節一節有折角；
+//         切細之後輪廓是平滑的曲線。
+export function buildStrip(spine, opts, out) {
+  const { halfWidth, subdiv = 1 } = opts;
+  // 1) 先算每個點被波推開後的位置（頭幾乎不動、越往尾擺越大）。已經算過的可以從 opts.line 傳進來
+  const disp = opts.line ?? waveLine(spine, opts);
+  const n = disp.length;
+  const f = { x: 0, y: 0 };
   // 2) 防止「翻面」：急彎時，內側的寬度不能超過彎曲半徑，否則內側的邊會交叉打結。
   //    彎越急，內側收越窄；外側不受影響。
   const wNeg = new Array(n).fill(halfWidth); // -法向量那一側（v = 0）

@@ -1,29 +1,36 @@
-// 會游的鯉魚。
-// 做法（WebGL）：每隻魚有一條「脊椎」（js/spine.js）。頭往前游，身體一節一節跟上，
-// 轉彎時自然彎成 C 形；再疊上從頭傳到尾的波，就是游泳的 S 形擺動。
-// 魚的圖（從上往下看、頭朝右）貼在沿著脊椎的一條帶子上，由顯示卡畫，沒有切條的縫或條紋。
-// 瀏覽器不支援 WebGL 時，退回舊的「切條平移」畫法。
-// 行為：平常隨意游；滑鼠停著會慢慢游過來；滑鼠揮太快或點一下，會被嚇跑。
+// 會游的鯉魚（拆零件版）。
+// 每隻魚 = 身體 ＋ 尾巴 ＋ 好幾片鰭，圖都在 assets/koi/{色}.webp（tools/prep_koi_parts.py 做的）。
+//   身體：沿著「脊椎」（js/spine.js）彎的帶子；前半身幾乎不動，只有後半身擺。
+//   尾巴：自己一條有慣性的鍊子，接在身體末端，像絲帶一樣慢半拍跟著甩（js/koi-parts.js）。
+//   鰭：硬的小圖，黏在身上固定的位置，各自輕輕划動。
+// 畫的順序（由下往上）：影子 → 尾巴 → 鰭 → 身體。
+// 瀏覽器不支援 WebGL 時，退回 2D：零件一樣分開畫，只是身體不彎。
+// 行為（js/swim.js）：平常挑遠處的點游過去；滑鼠停著會游過來看一下；揮太快或點一下會被嚇跑。
 
-import { createSpine, followHead, buildStrip } from "./spine.js";
+import { createSpine, followHead, buildStrip, waveLine } from "./spine.js";
+import { placeOnLine, createTail, stepTail, finQuad, tailStrip } from "./koi-parts.js";
 import { steer } from "./swim.js";
 
 const SPINE_POINTS = 16;
-const SUBDIV = 4; // 畫的時候每節再切 4 小段，輪廓才會是平滑曲線（不是一節一節）
-const MAX_BEND = 0.22; // 每一節最多彎多少（弧度）：太大像蛇，太小像木棍
+const SUBDIV = 4; // 畫的時候每節再切 4 小段，輪廓才會是平滑曲線
+const MAX_BEND = 0.22; // 身體每一節最多彎多少（弧度）
 const WAVE_K = 3.6; // 身上的波有多密
-const SHADOW_ALPHA = 0.16; // 影子很淡
-const SHADOW_COLOR = "rgb(92, 80, 68)"; // 暖灰色，不用純黑（配月白背景比較柔和）
-const SLICES = 28; // 只給沒有 WebGL 時的備用畫法用
+const TAIL_POINTS = 8;
+const SHADOW_ALPHA = 0.16;
+const BODY_SHARE = 0.68; // 身體佔整隻魚（含尾巴）長度的比例
+const FIN_FLAP = 0.16; // 鰭划動的幅度（弧度）
 
 export class KoiPond {
-  constructor(canvas, sprites, count = 5) {
+  constructor(canvas, kits, count = 5) {
     this.c = canvas;
     this.mouse = { x: -9999, y: -9999, speed: 0, still: 0 };
     this.env = { mouse: this.mouse, w: 0, h: 0 };
     this.ripples = [];
     this.fish = [];
-    // 水波另外用一張 2D 畫布（WebGL 畫布不能同時用 2D 畫線），放在魚的下面
+    this.kits = kits; // [{ meta, atlas, shadow }]
+    this.count = count;
+    this.started = false;
+    // 水波另外用一張 2D 畫布，放在魚的下面
     this.rc = document.createElement("canvas");
     this.rc.className = canvas.className;
     this.rc.style.zIndex = "4";
@@ -40,13 +47,10 @@ export class KoiPond {
     });
     canvas.addEventListener("webglcontextrestored", () => {
       this.lost = false;
-      if (this.sprites) this.initGL();
+      if (this.started) this.initGL();
     });
 
     this.resize();
-    this.images = sprites;
-    this.count = count;
-    this.sprites = null; // 等視窗有大小了才準備（見 ready()）
     window.addEventListener("resize", () => this.resize());
     window.addEventListener("pointermove", (e) => this.onMove(e));
     window.addEventListener("pointerdown", (e) => this.splash(e.clientX, e.clientY));
@@ -56,26 +60,22 @@ export class KoiPond {
     this.dpr = Math.min(1.5, window.devicePixelRatio || 1);
     this.w = window.innerWidth;
     this.h = window.innerHeight;
-    if (this.env) {
-      this.env.w = this.w;
-      this.env.h = this.h;
-    }
+    this.env.w = this.w;
+    this.env.h = this.h;
     for (const c of [this.c, this.rc]) {
       c.width = this.w * this.dpr;
       c.height = this.h * this.dpr;
     }
   }
 
-  // 視窗剛打開時大小可能還是 0：這時先不放魚（圖會變 0 寬、魚全擠在角落），等有大小再放
+  // 視窗剛打開時大小可能還是 0：這時先不放魚，等有大小再放
   ready() {
-    if (this.sprites) return true;
-    if (this.w !== window.innerWidth || this.h !== window.innerHeight) this.resize(); // 不一定有 resize 事件
+    if (this.started) return true;
+    if (this.w !== window.innerWidth || this.h !== window.innerHeight) this.resize();
     if (this.w < 50 || this.h < 50) return false;
-    // 每隻魚的圖先縮成顯示大小、影子先模糊好（只做一次）
-    const maxLen = Math.min(this.w, this.h) * 0.24;
-    this.sprites = this.images.map((img) => prepareSprite(img, Math.ceil(maxLen * this.dpr)));
     if (this.gl) this.initGL();
     for (let i = 0; i < this.count; i++) this.fish.push(this.spawn(i));
+    this.started = true;
     return true;
   }
 
@@ -87,11 +87,12 @@ export class KoiPond {
       attribute vec2 a_uv;
       uniform vec2 u_res;
       uniform vec2 u_off;
+      uniform vec4 u_rect;
       varying vec2 v_uv;
       void main() {
         vec2 p = (a_pos + u_off) / u_res * 2.0 - 1.0;
         gl_Position = vec4(p.x, -p.y, 0.0, 1.0);
-        v_uv = a_uv;
+        v_uv = u_rect.xy + a_uv * u_rect.zw;
       }`;
     const fs = `
       precision mediump float;
@@ -112,8 +113,7 @@ export class KoiPond {
     gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fs));
     gl.linkProgram(prog);
     if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-      // 顯示卡不合作：改用備用畫法
-      this.useFallback();
+      this.useFallback(); // 顯示卡不合作：改用 2D
       return;
     }
     gl.useProgram(prog);
@@ -122,6 +122,7 @@ export class KoiPond {
       uv: gl.getAttribLocation(prog, "a_uv"),
       res: gl.getUniformLocation(prog, "u_res"),
       off: gl.getUniformLocation(prog, "u_off"),
+      rect: gl.getUniformLocation(prog, "u_rect"),
       alpha: gl.getUniformLocation(prog, "u_alpha"),
       tex: gl.getUniformLocation(prog, "u_tex")
     };
@@ -135,19 +136,19 @@ export class KoiPond {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); // 預乘 alpha 的混色
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-    const upload = (canvas) => {
+    const upload = (img) => {
       const t = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, t);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       return t;
     };
-    for (const sp of this.sprites) {
-      sp.bodyTex = upload(sp.body);
-      sp.shadowTex = upload(sp.shadow);
+    for (const kit of this.kits) {
+      kit.tex = upload(kit.atlas);
+      kit.shadowTex = upload(kit.shadow);
     }
   }
 
@@ -162,17 +163,26 @@ export class KoiPond {
   }
 
   spawn(i) {
-    const sprite = this.sprites[i % this.sprites.length];
-    const len = Math.min(this.w, this.h) * (0.16 + Math.random() * 0.08);
+    const kit = this.kits[i % this.kits.length];
+    const { meta } = kit;
+    const len = Math.min(this.w, this.h) * (0.16 + Math.random() * 0.08); // 整隻魚（含尾巴）
+    const bodyLen = len * BODY_SHARE;
+    const scale = bodyLen / meta.L; // 圖集像素 → 畫面像素
     const x = Math.random() * this.w;
     const y = this.h * (0.35 + Math.random() * 0.55);
     const angle = Math.random() * Math.PI * 2;
-    // 脊椎長度 = 整張圖（含留邊）的長度；f.x / f.y 是頭的位置
-    const k = len / sprite.w;
-    const total = sprite.body.width * k;
+    const spine = createSpine(SPINE_POINTS, bodyLen / (SPINE_POINTS - 1), x, y, angle);
+    const tailPart = meta.parts.find((p) => p.kind === "tail");
+    // 尾巴圖的右緣（接在身上的那一端）在身體哪個位置
+    const tailEdgeS = tailPart.s - (tailPart.rect[2] - tailPart.pivot[0]) / meta.L;
+    const tailLen = tailPart.rect[2] * scale;
+    const line = waveLine(spine, { amp: 0, phase: 0, waveK: WAVE_K, subdiv: SUBDIV });
+    const base = placeOnLine(line, tailEdgeS, 0, bodyLen);
     return {
-      sprite,
+      kit,
       len,
+      bodyLen,
+      scale,
       x,
       y,
       angle,
@@ -181,12 +191,12 @@ export class KoiPond {
       phase: Math.random() * 10,
       wander: Math.random() * Math.PI * 2,
       fear: 0,
-      halfWidth: (sprite.body.height / 2) * k,
-      spine: createSpine(SPINE_POINTS, total / (SPINE_POINTS - 1), x, y, angle),
-      verts: null,
-      // 備用畫法用
-      bodyBuf: null,
-      shadowBuf: null
+      spine,
+      tailPart,
+      tailEdgeS,
+      tail: createTail(TAIL_POINTS, tailLen / (TAIL_POINTS - 1), base, { maxBend: 0.13 }),
+      body: meta.parts.find((p) => p.kind === "body"),
+      fins: meta.parts.filter((p) => p.kind === "fin").map((p, k) => ({ ...p, seed: k * 1.7 + Math.random() }))
     };
   }
 
@@ -214,6 +224,7 @@ export class KoiPond {
     for (const f of this.fish) {
       steer(f, this.env);
       followHead(f.spine, f.x, f.y, MAX_BEND);
+      this.pose(f);
     }
     this.drawRipples();
     if (this.gl) {
@@ -222,97 +233,107 @@ export class KoiPond {
   }
 
   amp(f) {
-    // 游越快擺越大；停下來時還是會輕輕擺
-    return f.len * (0.07 + Math.min(0.06, f.speed * 0.014));
+    // 游越快擺越大；停下來時還是會輕輕擺（以身體長度為準）
+    return f.bodyLen * (0.1 + Math.min(0.08, f.speed * 0.02));
   }
 
+  // 算出這一格每個零件的位置
+  pose(f) {
+    f.line = waveLine(f.spine, { amp: this.amp(f), phase: f.phase, waveK: WAVE_K, subdiv: SUBDIV });
+    stepTail(f.tail, placeOnLine(f.line, f.tailEdgeS, 0, f.bodyLen));
+    const t = f.phase * 0.45;
+    for (const fin of f.fins) {
+      const at = placeOnLine(f.line, fin.s, fin.d, f.bodyLen);
+      // 胸鰭（靠前面的）划比較大；左右兩邊方向相反，像在划水
+      const strength = fin.s < 0.45 ? 1 : 0.5;
+      const flap = Math.sin(t + fin.seed) * FIN_FLAP * strength * Math.sign(fin.d || 1);
+      fin.at = at;
+      fin.angle = at.angle + flap;
+    }
+  }
+
+  // ── WebGL 畫法 ──
   drawGL() {
     const gl = this.gl;
-    // 顯示卡可能給的比要求的小（記憶體不夠時），用實際大小
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.uniform2f(this.loc.res, this.w, this.h);
     for (const f of this.fish) {
-      f.verts = buildStrip(
-        f.spine,
-        { halfWidth: f.halfWidth, amp: this.amp(f), phase: f.phase, waveK: WAVE_K, subdiv: SUBDIV },
-        f.verts
-      );
-      const n = f.verts.length / 4; // 每個頂點 4 個數字
-      gl.bufferData(gl.ARRAY_BUFFER, f.verts, gl.DYNAMIC_DRAW);
+      const geo = this.geometry(f);
       // 影子：光從左上照下來，所以影子固定往右下偏
-      gl.bindTexture(gl.TEXTURE_2D, f.sprite.shadowTex);
+      gl.bindTexture(gl.TEXTURE_2D, f.kit.shadowTex);
       gl.uniform2f(this.loc.off, f.len * 0.05, f.len * 0.09);
       gl.uniform1f(this.loc.alpha, SHADOW_ALPHA);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, n);
-      // 身體
-      gl.bindTexture(gl.TEXTURE_2D, f.sprite.bodyTex);
+      for (const g of geo) this.drawPart(f, g);
+      gl.bindTexture(gl.TEXTURE_2D, f.kit.tex);
       gl.uniform2f(this.loc.off, 0, 0);
       gl.uniform1f(this.loc.alpha, 0.96);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, n);
+      for (const g of geo) this.drawPart(f, g);
     }
   }
 
-  // ── 備用畫法（沒有 WebGL 時）：切條平移，整隻沿著頭→尾的方向貼上 ──
+  // 每個零件的頂點（由下往上：尾巴、鰭、身體）
+  geometry(f) {
+    const s = f.scale;
+    const tp = f.tailPart;
+    f.tailVerts = tailStrip(f.tail, tp.up * s, tp.down * s, f.tailVerts);
+    const parts = [{ rect: tp.rect, verts: f.tailVerts }];
+    for (const fin of f.fins) {
+      fin.verts = finQuad(fin.at, fin.angle, { pivot: fin.pivot, w: fin.rect[2], h: fin.rect[3] }, s, fin.verts);
+      parts.push({ rect: fin.rect, verts: fin.verts });
+    }
+    const b = f.body;
+    f.bodyVerts = buildStrip(
+      f.spine,
+      { halfWidth: (b.rect[3] / 2) * s, amp: this.amp(f), phase: f.phase, waveK: WAVE_K, subdiv: SUBDIV, line: f.line },
+      f.bodyVerts
+    );
+    parts.push({ rect: b.rect, verts: f.bodyVerts });
+    return parts;
+  }
+
+  drawPart(f, { rect, verts }) {
+    const gl = this.gl;
+    const [aw, ah] = f.kit.meta.atlas;
+    gl.uniform4f(this.loc.rect, rect[0] / aw, rect[1] / ah, rect[2] / aw, rect[3] / ah);
+    gl.bufferData(gl.ARRAY_BUFFER, verts, gl.DYNAMIC_DRAW);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, verts.length / 4);
+  }
+
+  // ── 備用 2D 畫法：零件分開畫，身體不彎 ──
   draw2D() {
     const { ctx } = this;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.clearRect(0, 0, this.w, this.h);
     for (const f of this.fish) {
-      // 用脊椎「沿身體一半長度」的位置當中心（彎曲時頭尾連線的中點會偏掉）
-      const p = f.spine.pts;
-      const a = p[Math.floor((p.length - 1) / 2)];
-      const b = p[Math.ceil((p.length - 1) / 2)];
-      const cx = (a.x + b.x) / 2;
-      const cy = (a.y + b.y) / 2;
-      const front = p[Math.max(0, Math.floor((p.length - 1) / 2) - 2)];
-      const back = p[Math.min(p.length - 1, Math.ceil((p.length - 1) / 2) + 2)];
-      const ang = Math.atan2(front.y - back.y, front.x - back.x);
-      f.bodyBuf ??= document.createElement("canvas");
-      f.shadowBuf ??= document.createElement("canvas");
-      const amp = this.amp(f) * 0.7;
-      this.warp(f.sprite, f.sprite.body, f.bodyBuf, f.len, amp, f.phase);
-      this.warp(f.sprite, f.sprite.shadow, f.shadowBuf, f.len, amp, f.phase);
-      this.blit(f.shadowBuf, cx + f.len * 0.05, cy + f.len * 0.09, ang, SHADOW_ALPHA);
-      this.blit(f.bodyBuf, cx, cy, ang, 0.96);
-    }
-  }
-
-  blit(buf, x, y, angle, alpha) {
-    const { ctx } = this;
-    const w = buf.width / this.dpr;
-    const h = buf.height / this.dpr;
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.translate(x, y);
-    ctx.rotate(angle);
-    ctx.drawImage(buf, -w / 2, -h / 2, w, h);
-    ctx.restore();
-  }
-
-  warp(sp, src, buf, L, amp, phase) {
-    const k = (L / sp.w) * this.dpr;
-    const tw = src.width;
-    const th = src.height;
-    const H = th * k;
-    const margin = Math.ceil(L * 0.14 * this.dpr);
-    const bw = Math.ceil(tw * k);
-    const bh = Math.ceil(H + margin * 2);
-    if (buf.width !== bw || buf.height !== bh) {
-      buf.width = bw;
-      buf.height = bh;
-    }
-    const b = buf.getContext("2d");
-    b.clearRect(0, 0, bw, bh);
-    const sw = tw / SLICES;
-    for (let i = 0; i < SLICES; i++) {
-      const sx0 = i * sw;
-      const dx0 = Math.round(sx0 * k);
-      const dx1 = Math.round((sx0 + sw) * k);
-      const u = Math.min(1, Math.max(0, 1 - (sx0 + sw / 2 - sp.pad) / sp.w));
-      const off = Math.sin(phase - u * WAVE_K) * amp * Math.pow(u, 1.5) * this.dpr;
-      b.drawImage(src, sx0, 0, sw, th, dx0, margin + off, dx1 - dx0, H);
+      const head = placeOnLine(f.line, 0, 0, f.bodyLen);
+      const mid = placeOnLine(f.line, 0.5, 0, f.bodyLen);
+      const bodyAngle = Math.atan2(head.y - mid.y, head.x - mid.x);
+      const tailBase = f.tail.pts[0];
+      const tailAngle = Math.atan2(f.tail.pts[0].y - f.tail.pts[2].y, f.tail.pts[0].x - f.tail.pts[2].x);
+      const tp = f.tailPart;
+      const items = [
+        { part: tp, at: tailBase, angle: tailAngle, pivot: [tp.rect[2], tp.up] },
+        ...f.fins.map((fin) => ({ part: fin, at: fin.at, angle: fin.angle, pivot: fin.pivot })),
+        { part: f.body, at: head, angle: bodyAngle, pivot: f.body.pivot }
+      ];
+      for (const [img, alpha, dx, dy] of [
+        [f.kit.shadow, SHADOW_ALPHA, f.len * 0.05, f.len * 0.09],
+        [f.kit.atlas, 0.96, 0, 0]
+      ]) {
+        ctx.globalAlpha = alpha;
+        for (const { part, at, angle, pivot } of items) {
+          const [rx, ry, rw, rh] = part.rect;
+          ctx.save();
+          ctx.translate(at.x + dx, at.y + dy);
+          ctx.rotate(angle);
+          ctx.scale(f.scale, f.scale);
+          ctx.drawImage(img, rx, ry, rw, rh, -pivot[0], -pivot[1], rw, rh);
+          ctx.restore();
+        }
+      }
+      ctx.globalAlpha = 1;
     }
   }
 
@@ -338,42 +359,27 @@ export class KoiPond {
   }
 }
 
-// 把鯉魚圖縮成需要的大小，並先做好一張模糊的暖灰色影子（只做一次）
-function prepareSprite(img, w) {
-  const s = w / img.width;
-  const h = Math.ceil(img.height * s);
-  const pad = Math.ceil(w * 0.08); // 留邊給影子的模糊和擺動
-  const make = () => {
-    const c = document.createElement("canvas");
-    c.width = w + pad * 2;
-    c.height = h + pad * 2;
-    return c;
-  };
-  const body = make();
-  body.getContext("2d").drawImage(img, pad, pad, w, h);
-  const tint = make();
-  const tc = tint.getContext("2d");
-  tc.drawImage(img, pad, pad, w, h);
-  tc.globalCompositeOperation = "source-in";
-  tc.fillStyle = SHADOW_COLOR;
-  tc.fillRect(0, 0, tint.width, tint.height);
-  const shadow = make();
-  const sc = shadow.getContext("2d");
-  sc.filter = `blur(${Math.max(3, w * 0.022)}px)`;
-  sc.drawImage(tint, 0, 0);
-  return { body, shadow, w, h, pad };
-}
-
-export function loadImages(urls) {
+// 讀每隻魚的零件圖集、影子圖集、說明檔
+export function loadKoiKits(colors) {
+  const img = (u) =>
+    new Promise((res) => {
+      const im = new Image();
+      im.onload = () => res(im);
+      im.onerror = () => res(null);
+      im.src = u;
+    });
   return Promise.all(
-    urls.map(
-      (u) =>
-        new Promise((res) => {
-          const im = new Image();
-          im.onload = () => res(im);
-          im.onerror = () => res(null);
-          im.src = u;
-        })
-    )
+    colors.map(async (c) => {
+      try {
+        const [meta, atlas, shadow] = await Promise.all([
+          fetch(`assets/koi/${c}.json`).then((r) => r.json()),
+          img(`assets/koi/${c}.webp`),
+          img(`assets/koi/${c}-shadow.webp`)
+        ]);
+        return atlas && shadow ? { meta, atlas, shadow } : null;
+      } catch (_) {
+        return null;
+      }
+    })
   ).then((list) => list.filter(Boolean));
 }

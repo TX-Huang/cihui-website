@@ -4,7 +4,7 @@ import { DEITIES, ORDER } from "./deities.js";
 import { GATE } from "./gate.js";
 import { fitGate, curtainGrid } from "./layout.js";
 import { Petals } from "./petals.js";
-import { KoiPond, loadImages } from "./koi.js";
+import { KoiPond, loadKoiKits } from "./koi.js";
 import { IntroView } from "./intro-view.js";
 
 // ── 珠簾尺寸（拱門圖的設計座標，圖寬 1000） ──
@@ -592,8 +592,8 @@ async function start() {
   applyDeity(DEITIES[ORDER[first]], { rolled: !reduceMotion });
   requestAnimationFrame(loop);
 
-  const sprites = await loadImages(["assets/koi-tancho.webp", "assets/koi-asagi.webp", "assets/koi-platinum.webp"]);
-  if (sprites.length) koi = new KoiPond(koiCanvas, sprites, reduceMotion ? 3 : 5);
+  const kits = await loadKoiKits(["red", "blue", "platinum"]);
+  if (kits.length) koi = new KoiPond(koiCanvas, kits, reduceMotion ? 3 : 5);
 }
 
 // 除錯用：在主控台打 __debug.cloth 可以看珠簾狀態
