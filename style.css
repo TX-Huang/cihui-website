@@ -307,8 +307,8 @@ body {
   opacity: 0;
   transform: translateY(0.4em);
   filter: blur(8px);
-  animation: rise 700ms var(--ease) forwards;
-  animation-delay: calc(200ms + var(--i) * 90ms);
+  animation: rise 1400ms var(--ease) forwards; /* 慢慢浮上來 */
+  animation-delay: calc(300ms + var(--i) * 180ms);
 }
 @keyframes rise {
   to {
@@ -320,7 +320,7 @@ body {
 .copy .eyebrow,
 .copy .subtitle,
 .copy .aside {
-  transition: opacity 500ms var(--ease), transform 500ms var(--ease);
+  transition: opacity 900ms var(--ease), transform 900ms var(--ease);
 }
 .copy.is-leaving .title .c {
   animation: fade-up 400ms var(--ease) forwards;

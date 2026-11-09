@@ -115,9 +115,17 @@ for name, fs in keyed.items():
     last = fs[-1][..., 3] > 128
     ly, lx = np.nonzero(last)
     end_offset = [round((lx.mean() - feet[0]) * k, 1), round((ly.mean() - feet[1]) * k, 1)]
+    # 最後幾格鳥移動的速度（每秒幾像素，跟 endOffset 同一個縮放）：起飛完接一般飛行時，從這個速度、方向接著飛
+    cs = []
+    for f in fs[-4:]:
+        my, mx = np.nonzero(f[..., 3] > 128)
+        cs.append((mx.mean(), my.mean()))
+    fps = 24 / next(c[2] for c in CLIPS if c[0] == name)
+    end_velocity = [round((cs[-1][0] - cs[0][0]) / (len(cs) - 1) * k * fps, 1), round((cs[-1][1] - cs[0][1]) / (len(cs) - 1) * k * fps, 1)]
     meta_clips[name] = {
         "frames": idx,
         "endOffset": end_offset,
+        "endVelocity": end_velocity,
         "fps": 24 / step,
         "pingpong": name == "flutter",  # 播完再倒著播回第一格
         "pivot": [round((feet[0] - box[0]) * k, 1), round((feet[1] - box[1]) * k, 1)],

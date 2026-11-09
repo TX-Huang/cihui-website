@@ -49,14 +49,25 @@ export function curveAt(c, t) {
   return { x, y, angle: Math.atan2(ty, tx) };
 }
 
+// 飛行時身體要傾斜多少（弧度，朝右飛時負的是抬頭）：跟著實際飛的方向，最多約 57 度；快降落時再抬頭煞車
+export const MAX_TILT = 1.0;
+export function bodyTilt(b) {
+  const t = b.facing > 0 ? b.angle : Math.PI - b.angle; // 往左飛：鏡像
+  let tilt = Math.max(-MAX_TILT, Math.min(MAX_TILT, Math.atan2(Math.sin(t), Math.cos(t))));
+  if (b.brake) tilt -= 0.3;
+  return tilt;
+}
+// 起飛影片最後一格，鳥身體大約抬頭幾度（接一般飛行時從這個角度開始轉）
+export const TAKEOFF_END_TILT = -0.6;
+
 export function createFlock({ firstIn } = {}) {
   return { birds: [], timer: firstIn ?? 300 + Math.random() * 600 };
 }
 
 // 飛進來：一開始速度是平均的 2 倍，慢慢減速到 0（以前用 3 次方，一進畫面衝太快）
 const easeOut = (t) => 1 - (1 - t) ** 2;
-// 飛走：不從 0 開始（起飛影片結束時鳥已經在飛），慢慢加速
-const easeIn = (t) => 0.4 * t + 0.6 * t * t;
+// 飛走：一開始的速度是平均的 a 倍（接起飛影片的速度），之後平順地變到巡航
+const easeIn = (t, a = 0.4) => a * t + (1 - a) * t * t;
 
 function spawn(flock, e) {
   const free = [];
@@ -124,9 +135,19 @@ function takeOff(b, e) {
   );
   // 起飛：往上的曲線，所以 p2 不要「從上方滑下來」，改成直接往目標
   b.outCurve.p2 = { x: (b.x + b.outCurve.p3.x) / 2, y: Math.min(b.y, b.outCurve.p3.y) - 40 };
-  // 飛走要幾格：照路長算（結束時速度約平均的 1.6 倍，平均 2.8 → 最快約 4.5 像素／格）
+  // 飛走要幾格：照路長算（平均 2.8 像素／格）
   const len = Math.hypot(b.outCurve.p3.x - b.x, b.outCurve.p3.y - b.y) * 1.15;
   b.outLen = Math.max(FLY_OUT, Math.min(FLY_OUT_MAX, len / 2.8));
+  // 接著起飛影片：一開始的方向、速度跟影片最後一樣（影片裡鳥幾乎是往上飛），再慢慢加速
+  b.outA = 0.4;
+  const v = e.leaveVelocity?.(b.perch);
+  const sp = v ? Math.hypot(v.x, v.y) : 0;
+  if (sp > 0) {
+    const d = len * 0.3;
+    b.outCurve.p1 = { x: b.x + (v.x / sp) * d, y: b.y + (v.y / sp) * d };
+    // 曲線一開始每格走 3·d·a / outLen；讓它等於影片的速度
+    b.outA = Math.max(0.1, Math.min(1.8, (sp * b.outLen) / (3 * d)));
+  }
 }
 
 function stepBird(b, e) {
@@ -235,7 +256,7 @@ function stepBird(b, e) {
   }
   if (b.state === "out") {
     b.t = Math.min(1, b.t + 1 / b.outLen);
-    const p = curveAt(b.outCurve, easeIn(b.t));
+    const p = curveAt(b.outCurve, easeIn(b.t, b.outA));
     b.x = p.x;
     b.y = p.y;
     b.angle = p.angle;

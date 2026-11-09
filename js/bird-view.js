@@ -1,7 +1,7 @@
 // 畫青鳥（js/birds.js 決定牠們在哪、在做什麼，這裡只負責畫）。
 // 飛的時候：影片拆出來的 36 格依序播（tools/prep_bird_video.py），一直拍，身體跟著起伏。
 // 停著：轉頭、原地拍翅都是影片拆出來的（tools/prep_bird_perch.py）；轉身時跳一下。
-import { createFlock, stepFlock, HOP, CLIP_SPEED } from "./birds.js";
+import { createFlock, stepFlock, bodyTilt, HOP, CLIP_SPEED, TAKEOFF_END_TILT } from "./birds.js";
 
 const FLY_LEN = 190; // 飛行時整隻鳥多長（大門設計座標）
 const PERCH_H = 70; // 停著時頭冠到腳多高（大門設計座標）
@@ -17,6 +17,7 @@ export class BirdView {
     this.mouse = { x: -9999, y: -9999, speed: 0 };
     this.active = true;
     this.bob = new Map(); // 每隻鳥：身體上下起伏（平滑過）
+    this.tilt = new Map(); // 每隻鳥：身體傾斜（平滑過，不會一下轉過去）
     window.addEventListener("pointermove", (e) => {
       this.mouse.speed = Math.hypot(e.clientX - this.mouse.x, e.clientY - this.mouse.y);
       this.mouse.x = e.clientX;
@@ -66,6 +67,13 @@ export class BirdView {
       random: Math.random,
       animLength: (name) => this.animLength(name),
       clipLength: () => this.animLength("takeoff"),
+      // 起飛影片最後的速度（每格幾像素，照停的方向左右翻；影片放慢播，速度也跟著慢）
+      leaveVelocity: (i) => {
+        const v = this.kit.perch.clips.takeoff.endVelocity;
+        if (!v) return null;
+        const s = ((PERCH_H * k) / this.kit.perch.height) * CLIP_SPEED / 60;
+        return { x: v[0] * s * perches[i].face, y: v[1] * s };
+      },
       // 降落前先飛到的點＝起飛影片最後一格鳥的位置（照停的方向左右翻）
       hover: (i) => {
         const at = env.perch(i);
@@ -86,10 +94,14 @@ export class BirdView {
     for (const b of this.flock.birds) {
       if (b.state === "gone" || b.state === "wait") {
         this.bob.delete(b);
+        this.tilt.delete(b);
         continue;
       }
       if (b.state === "in" || b.state === "out") this.drawFlying(b, k);
-      else this.drawPerched(b, k);
+      else {
+        this.tilt.delete(b);
+        this.drawPerched(b, k);
+      }
     }
   }
 
@@ -103,11 +115,12 @@ export class BirdView {
     const bob = lerp(this.bob.get(b) ?? target, target, 0.25);
     this.bob.set(b, bob);
     const s = (FLY_LEN * k) / fly.length;
-    // 往右飛：照路線方向傾斜；往左飛：鏡像
-    const tilt = b.facing > 0 ? b.angle : Math.PI - b.angle;
-    let bank = Math.max(-0.5, Math.min(0.5, Math.atan2(Math.sin(tilt), Math.cos(tilt))));
-    if (b.brake) bank -= 0.3; // 抬頭
-    this.sprite(this.kit.flyImg, fly.frames[idx], b.x, b.y - bob, b.facing, b.facing > 0 ? bank : -bank, s, s, fly.pivot);
+    // 身體照實際飛的方向傾斜（往上飛就抬頭）；剛起飛時從起飛影片最後的角度慢慢轉過去
+    const want = bodyTilt(b);
+    const start = b.state === "out" ? TAKEOFF_END_TILT : want;
+    const tilt = lerp(this.tilt.get(b) ?? start, want, 0.06);
+    this.tilt.set(b, tilt);
+    this.sprite(this.kit.flyImg, fly.frames[idx], b.x, b.y - bob, b.facing, tilt, s, s, fly.pivot);
   }
 
   // 停：平常是轉頭影片的第一格（兩段影片都從這個姿勢開始，所以接得起來）；

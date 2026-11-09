@@ -280,3 +280,40 @@ test("birds: calm motion — a wing beat takes 2+ seconds while cruising, the tu
   assert.ok(HOP >= 20, `hop is ${HOP} frames`);
   assert.ok(CLIP_SPEED <= 0.75, "video clips (head turn, flutter, take-off) play slower than recorded");
 });
+
+test("birds: leaving picks up the take-off clip's speed and direction, then speeds up smoothly", () => {
+  const vel = { x: 0.3, y: -1.6 }; // 起飛影片最後的速度（每格像素，朝右）
+  const flock = createFlock({ firstIn: 0 });
+  const e = env({ leaveVelocity: (i) => ({ x: vel.x * PERCHES[i].face, y: vel.y }) });
+  runUntil(flock, e, (f) => f.birds.length && f.birds[0].state === "perched");
+  const b = flock.birds[0];
+  b.rest = 1;
+  runUntil(flock, e, () => b.state === "out");
+  const want = e.leaveVelocity(b.perch);
+  let prev = { x: b.x, y: b.y };
+  stepFlock(flock, e);
+  const v0 = { x: b.x - prev.x, y: b.y - prev.y };
+  const speed = Math.hypot(v0.x, v0.y);
+  const wantSpeed = Math.hypot(want.x, want.y);
+  assert.ok(Math.abs(speed - wantSpeed) < wantSpeed * 0.3, `first step ${speed.toFixed(2)} px, clip ends at ${wantSpeed.toFixed(2)}`);
+  const da = Math.atan2(v0.y, v0.x) - Math.atan2(want.y, want.x);
+  assert.ok(Math.abs(Math.atan2(Math.sin(da), Math.cos(da))) < 0.3, "leaves in the clip's direction");
+  let lastSpeed = speed;
+  prev = { x: b.x, y: b.y };
+  while (b.state === "out") {
+    stepFlock(flock, e);
+    if (b.state === "gone") break; // 最後一格被截到終點，不算
+    const s = Math.hypot(b.x - prev.x, b.y - prev.y);
+    assert.ok(Math.abs(s - lastSpeed) < 0.12, `speed jumps ${lastSpeed.toFixed(2)} → ${s.toFixed(2)}`);
+    lastSpeed = s;
+    prev = { x: b.x, y: b.y };
+  }
+});
+
+test("birds: the body points where the bird is going — climbing steeply means nose up, not flat", async () => {
+  const { bodyTilt } = await import("../js/birds.js");
+  const up = Math.atan2(-217, 67); // 起飛影片最後的方向：往右上很陡
+  assert.ok(bodyTilt({ angle: up, facing: 1, brake: false }) < -0.9, "right-facing climb: nose up");
+  assert.ok(bodyTilt({ angle: Math.PI - up, facing: -1, brake: false }) < -0.9, "left-facing climb: nose up (mirrored)");
+  assert.ok(Math.abs(bodyTilt({ angle: 0.1, facing: 1, brake: false }) - 0.1) < 1e-9, "level flight follows the path");
+});
