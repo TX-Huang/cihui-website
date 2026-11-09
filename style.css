@@ -485,6 +485,16 @@ body {
   }
 }
 
+/* 三青鳥：畫在大門前面、文字下面，不擋滑鼠 */
+.birds {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 15;
+  pointer-events: none;
+}
+
 /* ── 開場：從凡間升入瑤池 ── */
 .intro {
   position: fixed;

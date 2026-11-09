@@ -6,6 +6,7 @@ import { fitGate, curtainGrid } from "./layout.js";
 import { Petals } from "./petals.js";
 import { KoiPond, loadKoiKits } from "./koi.js";
 import { IntroView } from "./intro-view.js";
+import { BirdView, loadBirdKit } from "./bird-view.js";
 
 // ── 珠簾尺寸（拱門圖的設計座標，圖寬 1000） ──
 const D = GATE.door;
@@ -36,6 +37,7 @@ const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const koiCanvas = $("koi");
 let koi = null;
+let birds = null;
 let cloth = null;
 let deity = null;
 let currentIndex = -1;
@@ -282,6 +284,11 @@ function loop(now = performance.now()) {
   }
   const t2 = performance.now();
   if (koi) koi.tick();
+  if (birds) {
+    // 青鳥只在金母這一頁出現；換頁（走進門）時飛走
+    birds.active = deity?.id === "jinmu" && !moving;
+    birds.tick();
+  }
   perfMark("鯉魚", t2);
   const t3 = performance.now();
   petals.tick(wind);
@@ -593,7 +600,11 @@ async function start() {
   requestAnimationFrame(loop);
 
   const kits = await loadKoiKits(["red", "blue", "platinum"]);
-  if (kits.length) koi = new KoiPond(koiCanvas, kits, reduceMotion ? 3 : 5);
+  if (kits.length) koi = new KoiPond(koiCanvas, kits, kits.length); // 每種顏色一隻
+
+  // 三青鳥：停在大門上（減少動畫時不出現）
+  const birdKit = reduceMotion ? null : await loadBirdKit("bluebird");
+  if (birdKit) birds = new BirdView($("birds"), birdKit, GATE, $("gateImg"));
 }
 
 // 除錯用：在主控台打 __debug.cloth 可以看珠簾狀態
@@ -606,6 +617,9 @@ window.__debug = {
   },
   get koi() {
     return koi;
+  },
+  get birds() {
+    return birds;
   },
   get petals() {
     return petals;
