@@ -20,8 +20,10 @@ test("deities: the wording checked against the daochang's own book is used", () 
   };
   has("jinmu", ["欲明解脫", "五蘊自明三家會合"]);
   has("tudi", ["吾是三皇五帝后土之臣", "墾荒教導純純", "敕封福德正神", "保佑四境生靈"]);
-  has("xuannu", ["炎黃世冑德為榮", "吾為救世降紅塵", "手執寶劍斬妖邪", "難逃天譴禍相侵"]);
+  // 九天玄女：《九天玄女治心消孽真經》本文第二段（2026-11-09 改用；誦本為「猶可違」「元君曰」）
+  has("xuannu", ["元君曰無心者謂之過", "有心者謂之惡", "天作孽猶可違", "孽者惡之積也"]);
   has("nezha", ["吾是玉皇靈珠兒", "金光洞裏鍊金剛", "腳踏金霞風火輪"]);
   assert.ok(!DEITIES.tudi.cloth.includes("懇荒"));
   assert.ok(!DEITIES.nezha.cloth.includes("金光洞裹"));
+  assert.ok(!DEITIES.xuannu.cloth.includes("尤可違"));
 });
