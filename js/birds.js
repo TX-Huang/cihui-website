@@ -1,8 +1,8 @@
 // 三青鳥：金母的使者（《山海經》三青鳥為西王母取食；《漢武故事》青鳥先飛來報信）。
 // 純計算（方便測試），畫面在 js/bird-view.js。時間單位是「格」（60 格 ≈ 1 秒）。
 //
-// 一群 1～2 隻：從畫面外飛進來 → 停在大門上（屋脊、匾額上緣）→ 休息一陣子（偶爾轉過來看你、轉身）
-// → 飛走。滑鼠在旁邊揮太快會被嚇飛；切到其他神明時也會飛走。每隔 20～40 秒來一群。
+// 一群 1～2 隻：從畫面外飛進來 → 降落（倒播起飛影片）停在大門上（屋脊、匾額上緣）→ 休息一陣子（偶爾轉過來看你、轉身）
+// → 起飛（起飛影片）飛走。滑鼠在旁邊揮太快會被嚇飛；切到其他神明時也會飛走。每隔 20～40 秒來一群。
 
 export const FLY_IN = 240; // 飛進來要幾格（約 4 秒）
 export const FLY_OUT = 200; // 飛走要幾格
@@ -85,6 +85,7 @@ function spawn(flock, e) {
       landed: 0, // 降落後過了幾格（落地時輕輕一沉）
       hop: 99, // 轉身的小跳躍進行到第幾格
       flipPending: false,
+      clipT: 0, // 起飛／降落影片播到第幾格
       anim: null, // 停著時正在播的動作影片："head"（轉頭）或 "flutter"（原地拍翅）
       animT: 0,
       age: 0
@@ -93,6 +94,14 @@ function spawn(flock, e) {
 }
 
 const HOP = 14; // 轉身跳一下要幾格
+
+// 降落前要先飛到的點＝起飛影片最後一格鳥的位置（畫面那邊依影片算好給我；測試或沒給時用上方 40px）
+function hoverPoint(b, e) {
+  if (e.hover) return e.hover(b.perch);
+  const p = e.perch(b.perch);
+  return { x: p.x, y: p.y - 40 };
+}
+const clipLength = (e) => e.clipLength?.() ?? 80; // 起飛／降落影片多長（格）
 
 function takeOff(b, e) {
   b.state = "out";
@@ -124,7 +133,7 @@ function stepBird(b, e) {
   if (b.state === "in") {
     if (!e.active) return takeOff(b, e);
     b.t = Math.min(1, b.t + 1 / FLY_IN);
-    const target = e.perch(b.perch);
+    const target = hoverPoint(b, e);
     const p = curveAt(curve(b.start, target, b.bend), easeOut(b.t));
     b.x = p.x;
     b.y = p.y;
@@ -134,16 +143,36 @@ function stepBird(b, e) {
     b.brake = b.t > 0.82;
     b.flap += b.brake ? 0.02 : 0.012; // 一直拍（影片裡拍一下約 1.5 秒），煞車時拍快一點
     if (b.t >= 1) {
+      // 飛到降落點了：接著播「倒著的起飛影片」，鳥自己從上方降到桿子上
+      const at = e.perch(b.perch);
+      b.state = "landing";
+      b.clipT = 0;
       b.brake = false;
-      b.landed = 0;
+      b.x = at.x;
+      b.y = at.y;
+      b.facing = at.face;
+    }
+    return;
+  }
+  if (b.state === "landing" || b.state === "takeoff") {
+    const at = e.perch(b.perch);
+    b.x = at.x;
+    b.y = at.y;
+    b.clipT += 1;
+    if (b.clipT < clipLength(e)) return;
+    if (b.state === "landing") {
       b.state = "perched";
-      b.x = target.x;
-      b.y = target.y;
-      b.facing = target.face;
       b.pose = "perch";
       b.anim = null;
+      b.landed = 0;
       b.rest = REST_MIN + e.random() * (REST_MAX - REST_MIN);
       b.look = 120 + e.random() * 180;
+    } else {
+      // 起飛影片播完：鳥在桿子上方，從那裡接一般的飛行飛走
+      const h = hoverPoint(b, e);
+      b.x = h.x;
+      b.y = h.y;
+      takeOff(b, e);
     }
     return;
   }
@@ -155,7 +184,12 @@ function stepBird(b, e) {
     const scared = m.speed > SCARE_SPEED && Math.hypot(m.x - b.x, m.y - b.y) < SCARE_R;
     b.rest -= 1;
     b.landed += 1;
-    if (!e.active || scared || b.rest <= 0) return takeOff(b, e);
+    if (!e.active || scared || b.rest <= 0) {
+      b.state = "takeoff"; // 先播起飛影片，播完才飛走
+      b.clipT = 0;
+      b.anim = null;
+      return;
+    }
     // 轉身是跳一下：跳到一半（最高點）才轉過去
     if (b.hop < HOP) {
       b.hop += 1;

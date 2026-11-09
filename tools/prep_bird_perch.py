@@ -20,7 +20,12 @@ from PIL import Image
 
 # (名稱, 檔案, 每幾格取一格, 只取前幾格)
 # 原地拍翅那支最後沒回到原本的站姿，所以只取前 37 格（張開、拍），網頁上再倒著播回來
-CLIPS = [("head", "assets/raw/video/head.mp4", 4, None), ("flutter", "assets/raw/video/perch-flap.mp4", 2, 37)]
+# 起飛那支取前 41 格（蹲下、張翅、飛到桿子上方）：正著播 = 起飛，倒著播 = 降落
+CLIPS = [
+    ("head", "assets/raw/video/head.mp4", 4, None),
+    ("flutter", "assets/raw/video/perch-flap.mp4", 2, 37),
+    ("takeoff", "assets/raw/video/takeoff.mp4", 2, 41),
+]
 OUT = Path("assets/birds")
 BIRD_H = 140  # 停著的鳥（頭冠到腳）縮到幾像素高
 COLS = 10
@@ -106,8 +111,13 @@ for name, fs in keyed.items():
         idx.append(len(cells))
         cells.append(Image.fromarray(f, "RGBA").crop(box).resize((cw, ch), Image.LANCZOS))
     step = next(c[2] for c in CLIPS if c[0] == name)
+    # 最後一格鳥的位置（相對於腳踩的接點）：降落時，飛行要先飛到這一點，再接倒著播的起飛
+    last = fs[-1][..., 3] > 128
+    ly, lx = np.nonzero(last)
+    end_offset = [round((lx.mean() - feet[0]) * k, 1), round((ly.mean() - feet[1]) * k, 1)]
     meta_clips[name] = {
         "frames": idx,
+        "endOffset": end_offset,
         "fps": 24 / step,
         "pingpong": name == "flutter",  # 播完再倒著播回第一格
         "pivot": [round((feet[0] - box[0]) * k, 1), round((feet[1] - box[1]) * k, 1)],

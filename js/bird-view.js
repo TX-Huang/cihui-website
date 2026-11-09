@@ -5,7 +5,6 @@ import { createFlock, stepFlock } from "./birds.js";
 
 const FLY_LEN = 190; // 飛行時整隻鳥多長（大門設計座標）
 const PERCH_H = 70; // 停著時頭冠到腳多高（大門設計座標）
-const SETTLE = 12; // 落地後幾格內輕輕一沉再站直
 
 export class BirdView {
   constructor(canvas, kit, gate, gateEl) {
@@ -65,7 +64,15 @@ export class BirdView {
         return x > 40 && x < this.w - 40;
       },
       random: Math.random,
-      animLength: (name) => this.animLength(name)
+      animLength: (name) => this.animLength(name),
+      clipLength: () => this.animLength("takeoff"),
+      // 降落前先飛到的點＝起飛影片最後一格鳥的位置（照停的方向左右翻）
+      hover: (i) => {
+        const at = env.perch(i);
+        const off = this.kit.perch.clips.takeoff.endOffset;
+        const s = (PERCH_H * k) / this.kit.perch.height;
+        return { x: at.x + off[0] * s * at.face, y: at.y + off[1] * s };
+      }
     };
     stepFlock(this.flock, env);
     this.mouse.speed *= 0.8;
@@ -81,7 +88,7 @@ export class BirdView {
         this.bob.delete(b);
         continue;
       }
-      if (b.state !== "perched") this.drawFlying(b, k);
+      if (b.state === "in" || b.state === "out") this.drawFlying(b, k);
       else this.drawPerched(b, k);
     }
   }
@@ -105,12 +112,18 @@ export class BirdView {
 
   // 停：平常是轉頭影片的第一格（兩段影片都從這個姿勢開始，所以接得起來）；
   // 轉頭／原地拍翅時播那段影片（拍翅播完倒著播回來，才會回到原本的站姿）；
-  // 剛落地輕輕一沉再站直；平常微微呼吸；轉身時跳一下
+  // 起飛／降落：播起飛影片（降落倒著播）；平常微微呼吸；轉身時跳一下
   drawPerched(b, k) {
     const perch = this.kit.perch;
     let clip = perch.clips.head;
     let frame = clip.frames[0];
-    if (b.anim) {
+    if (b.state === "landing" || b.state === "takeoff") {
+      // 起飛影片：起飛時正著播；降落時倒著播（鳥從上方降下來，最後剛好是站姿）
+      clip = perch.clips.takeoff;
+      const n = clip.frames.length;
+      const i = Math.min(n - 1, Math.floor((b.clipT / 60) * clip.fps));
+      frame = clip.frames[b.state === "takeoff" ? i : n - 1 - i];
+    } else if (b.anim) {
       clip = perch.clips[b.anim];
       const n = clip.frames.length;
       const seq = clip.pingpong ? n * 2 - 1 : n;
@@ -119,16 +132,10 @@ export class BirdView {
       frame = clip.frames[i];
     }
     const s = (PERCH_H * k) / perch.height;
-    let sx = 1;
     let sy = 1;
-    if (b.landed < SETTLE) {
-      const t = 1 - (1 - b.landed / SETTLE) ** 3;
-      sy = 0.88 + 0.12 * t;
-      sx = 1.06 - 0.06 * t;
-    }
-    if (!b.anim) sy *= 1 + 0.012 * Math.sin(b.age * 0.09);
+    if (b.state === "perched" && !b.anim) sy = 1 + 0.012 * Math.sin(b.age * 0.09); // 微微呼吸
     const hopY = b.hop < 14 ? Math.sin((Math.PI * b.hop) / 14) * 0.08 * PERCH_H * k : 0;
-    this.sprite(this.kit.perchImg, perch.rects[frame], b.x, b.y - hopY, b.facing, 0, s * sx, s * sy, clip.pivot);
+    this.sprite(this.kit.perchImg, perch.rects[frame], b.x, b.y - hopY, b.facing, 0, s, s * sy, clip.pivot);
   }
 
   // 動作影片要播多久（換成 60 格 = 1 秒的單位），給 birds.js 判斷什麼時候播完

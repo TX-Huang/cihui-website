@@ -30,6 +30,8 @@ function env(over = {}) {
     perch: (i) => PERCHES[i],
     perchCount: PERCHES.length,
     random: seeded(7),
+    hover: (i) => ({ x: PERCHES[i].x + 20 * PERCHES[i].face, y: PERCHES[i].y - 50 }), // 降落前先飛到的點（起飛影片最後一格的位置）
+    clipLength: () => 80,
     ...over
   };
 }
@@ -51,35 +53,41 @@ function runUntil(flock, e, pred, max = 5000) {
   return -1;
 }
 
-test("birds: fly in, land exactly on a perch, slowing down at the end", () => {
+test("birds: fly in to the hover point (slowing down), then the landing clip puts its feet on the perch", () => {
   const flock = createFlock({ firstIn: 0 });
   const e = env();
   stepFlock(flock, e);
   assert.ok(flock.birds.length >= 1 && flock.birds.length <= 2);
   const b = flock.birds[0];
-  const target = PERCHES[b.perch];
+  const hover = e.hover(b.perch);
   const track = [];
-  for (let i = 0; i < FLY_IN + 5 && b.state === "in"; i++) {
+  while (b.state === "in") {
     track.push({ x: b.x, y: b.y });
     stepFlock(flock, e);
   }
-  assert.equal(b.state, "perched");
-  assert.ok(dist(b, target) < 1e-6, "feet on the perch");
-  // 最後 10% 的時間走的距離，比平均速度慢很多（減速降落）
+  assert.equal(b.state, "landing", "after flying in it plays the landing clip");
+  assert.ok(dist(track[track.length - 1], hover) < 3, "arrives at the hover point");
+  // 最後 10% 的時間走的距離，比平均速度慢很多（減速）
   const n = track.length;
   const last = dist(track[n - 1], track[Math.floor(n * 0.9)]);
   let total = 0;
   for (let i = 1; i < n; i++) total += dist(track[i], track[i - 1]);
-  assert.ok(last < total * 0.1 * 0.5, `landing too fast: ${last.toFixed(1)} of ${total.toFixed(1)}`);
+  assert.ok(last < total * 0.1 * 0.5, `arriving too fast: ${last.toFixed(1)} of ${total.toFixed(1)}`);
+  // 降落影片播的時候，位置就是停的地方（影片自己會讓鳥從上方降下來）
+  while (b.state === "landing") {
+    assert.ok(dist(b, PERCHES[b.perch]) < 1e-6);
+    stepFlock(flock, e);
+  }
+  assert.equal(b.state, "perched");
 });
 
 test("birds: after resting a while they fly off screen and are gone", () => {
   const flock = createFlock({ firstIn: 0 });
   const e = env();
-  const t = runUntil(flock, e, (f) => f.birds.length > 0 && f.birds.every((b) => b.state === "gone" || b.state === "out"));
+  const t = runUntil(flock, e, (f) => f.birds.length > 0 && f.birds.every((b) => ["gone", "out", "takeoff"].includes(b.state)));
   assert.ok(t > FLY_IN, "they rested first");
-  const leaving = flock.birds.filter((b) => b.state === "out");
-  runUntil(flock, e, () => leaving.every((b) => b.state === "gone"), FLY_OUT + 10);
+  const leaving = flock.birds.filter((b) => b.state !== "gone");
+  runUntil(flock, e, () => leaving.every((b) => b.state === "gone"), FLY_OUT + 200);
   for (const b of leaving) {
     assert.equal(b.state, "gone");
     assert.ok(b.x < -50 || b.x > 1490 || b.y < -50, `ended on screen at ${b.x | 0},${b.y | 0}`);
@@ -96,7 +104,9 @@ test("birds: a fast mouse near a resting bird scares it away; a slow one does no
   assert.equal(b.state, "perched", "slow mouse: stays");
   e.mouse = { x: b.x + 30, y: b.y - 20, speed: 40 };
   stepFlock(flock, e);
-  assert.equal(b.state, "out", "fast mouse: flies away");
+  assert.equal(b.state, "takeoff", "fast mouse: takes off (plays the take-off clip, then flies away)");
+  runUntil(flock, e, () => b.state !== "takeoff");
+  assert.equal(b.state, "out");
 });
 
 test("birds: when the page moves to another deity, resting birds leave and no new ones come", () => {
@@ -105,7 +115,7 @@ test("birds: when the page moves to another deity, resting birds leave and no ne
   runUntil(flock, e, (f) => f.birds.length && f.birds.every((b) => b.state === "perched"));
   e.active = false;
   stepFlock(flock, e);
-  assert.ok(flock.birds.every((b) => b.state === "out"));
+  assert.ok(flock.birds.every((b) => b.state === "takeoff"));
   runUntil(flock, e, (f) => f.birds.every((b) => b.state === "gone"));
   for (let i = 0; i < 4000; i++) stepFlock(flock, e);
   assert.ok(flock.birds.every((b) => b.state === "gone"), "nobody comes while inactive");
@@ -153,6 +163,7 @@ test("birds: just before landing the bird brakes (wings up), and it settles afte
   const n = brakeAt.length;
   assert.ok(brakeAt.slice(Math.floor(n * 0.88)).every(Boolean), "brakes in the last stretch");
   assert.ok(!brakeAt.slice(0, Math.floor(n * 0.5)).some(Boolean), "does not brake early");
+  while (b.state === "landing") stepFlock(flock, e);
   assert.equal(b.landed, 0);
   stepFlock(flock, e);
   assert.equal(b.landed, 1, "counts frames since touchdown (for the settle)");
@@ -163,6 +174,8 @@ test("birds: turning around is a little hop — it flips facing in mid-air, not 
   const e = env({ random: () => 0.9 }); // 0.9 → 轉身（不是轉正面）
   runUntil(flock, e, (f) => f.birds.length && f.birds[0].state === "perched");
   const b = flock.birds[0];
+  b.look = 9999;
+  for (let i = 0; i < 20; i++) stepFlock(flock, e); // 先讓剛落地的狀態過去
   const before = b.facing;
   b.look = 1;
   stepFlock(flock, e); // 開始跳
@@ -190,4 +203,22 @@ test("birds: while resting they sometimes turn the head or flutter their wings, 
   }
   assert.ok(seen.has("head"), "never turned its head");
   assert.ok(seen.has("flutter"), "never fluttered");
+});
+
+test("birds: taking off plays the clip forward from the perch, then flies away from where the clip ended", () => {
+  const flock = createFlock({ firstIn: 0 });
+  const e = env();
+  runUntil(flock, e, (f) => f.birds.length && f.birds[0].state === "perched");
+  const b = flock.birds[0];
+  const at = PERCHES[b.perch];
+  b.rest = 1;
+  stepFlock(flock, e);
+  assert.equal(b.state, "takeoff");
+  while (b.state === "takeoff") {
+    assert.ok(dist(b, at) < 1e-6, "stays on the perch while the clip plays");
+    stepFlock(flock, e);
+  }
+  assert.equal(b.state, "out");
+  const hover = e.hover(b.perch);
+  assert.ok(dist(b, hover) < 12, `flight starts where the clip left the bird (${dist(b, hover).toFixed(1)}px off)`);
 });
