@@ -213,3 +213,10 @@ ChatGPT 改圖時位置可能會跑掉一點點，沒關係，我會用程式對
 > Animate the attached bird flying in from the left side of the frame, slowing down with wings raised, and landing gently on a thin straight plain dark-grey bar at the bottom center, then folding its wings and standing still, side view facing RIGHT. About 3 seconds. Background: solid flat pure magenta (#FF00FF) — no gradient, no shadow, no other objects. Same bird design, colors and proportions. Locked-off static camera.
 
 **檢查一下再丟：** 鳥的樣子跟參考圖一樣、背景整片是洋紅、鏡頭沒動、鳥沒有被畫面切掉。不合格就再生一次。
+
+### 5-5. `bird-takeoff.mp4` — 從桿子上起飛（代替 5-4 降落）
+參考圖：`docs/video-start/start-perch.png`（當第一格），**影片比例選正方形 1:1**。
+
+5-4 的降落影片，落地後的站姿跟其他停著的影片不一樣（身體橫的），接起來會跳。
+改成「從同一個站姿起飛」：正著播 = 起飛，倒著播 = 降落，兩個都會剛好接上停著的樣子。
+> Use the attached image as the exact FIRST FRAME: keep the bird at exactly this small size and position, keep the grey bar and the magenta background. The perched bird crouches slightly, spreads its wings and takes off, flying up and away to the RIGHT with strong wingbeats until it leaves the frame at the top right. About 3 seconds. The whole bird stays inside the frame until it flies out at the top right. Background: solid flat pure magenta (#FF00FF) — no gradient, no shadow, no other objects. Same bird design, colors and proportions. Locked-off static camera, soft even lighting.

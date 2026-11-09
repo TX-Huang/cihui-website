@@ -171,3 +171,23 @@ test("birds: turning around is a little hop — it flips facing in mid-air, not 
   for (let i = 0; i < 10; i++) stepFlock(flock, e);
   assert.equal(b.facing, -before, "flipped by the middle of the hop");
 });
+
+test("birds: while resting they sometimes turn the head or flutter their wings, one thing at a time", () => {
+  const seen = new Set();
+  for (let seed = 1; seed <= 15; seed++) {
+    const flock = createFlock({ firstIn: 0 });
+    const e = env({ random: seeded(seed), animLength: (name) => (name === "head" ? 240 : 185) });
+    runUntil(flock, e, (f) => f.birds.length && f.birds[0].state === "perched");
+    const b = flock.birds[0];
+    for (let i = 0; i < 2000 && b.state === "perched"; i++) {
+      stepFlock(flock, e);
+      if (b.anim) {
+        seen.add(b.anim);
+        assert.ok(b.hop >= 14 || b.hop === 99, "no hop while a clip is playing");
+        assert.ok(b.animT <= e.animLength(b.anim), "clip runs past its end");
+      }
+    }
+  }
+  assert.ok(seen.has("head"), "never turned its head");
+  assert.ok(seen.has("flutter"), "never fluttered");
+});

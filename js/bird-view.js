@@ -1,17 +1,17 @@
 // 畫青鳥（js/birds.js 決定牠們在哪、在做什麼，這裡只負責畫）。
 // 飛的時候：影片拆出來的 36 格依序播（tools/prep_bird_video.py），一直拍，身體跟著起伏。
-// 停著：側面那張；偶爾換成正面（像轉過來看你）；轉身時跳一下。
+// 停著：轉頭、原地拍翅都是影片拆出來的（tools/prep_bird_perch.py）；轉身時跳一下。
 import { createFlock, stepFlock } from "./birds.js";
 
 const FLY_LEN = 190; // 飛行時整隻鳥多長（大門設計座標）
-const PERCH_H = 115; // 停著時多高（大門設計座標）
+const PERCH_H = 70; // 停著時頭冠到腳多高（大門設計座標）
 const SETTLE = 12; // 落地後幾格內輕輕一沉再站直
 
 export class BirdView {
   constructor(canvas, kit, gate, gateEl) {
     this.c = canvas;
     this.ctx = canvas.getContext("2d");
-    this.kit = kit; // { meta, img：停著的圖, fly, flyImg：拍翅膀的 36 格 }
+    this.kit = kit; // { fly, flyImg：飛行 36 格；perch, perchImg：停著的動作影片 }
     this.gate = gate;
     this.gateEl = gateEl;
     this.flock = createFlock();
@@ -64,7 +64,8 @@ export class BirdView {
         const x = r.left + perches[i].x * k;
         return x > 40 && x < this.w - 40;
       },
-      random: Math.random
+      random: Math.random,
+      animLength: (name) => this.animLength(name)
     };
     stepFlock(this.flock, env);
     this.mouse.speed *= 0.8;
@@ -75,15 +76,13 @@ export class BirdView {
     const { ctx } = this;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.clearRect(0, 0, this.w, this.h);
-    const { meta, img } = this.kit;
-    const P = meta.parts;
     for (const b of this.flock.birds) {
       if (b.state === "gone" || b.state === "wait") {
         this.bob.delete(b);
         continue;
       }
       if (b.state !== "perched") this.drawFlying(b, k);
-      else this.drawPerched(b, k, P, meta);
+      else this.drawPerched(b, k);
     }
   }
 
@@ -104,9 +103,22 @@ export class BirdView {
     this.sprite(this.kit.flyImg, fly.frames[idx], b.x, b.y - bob, b.facing, b.facing > 0 ? bank : -bank, s, s, fly.pivot);
   }
 
-  // 停：剛落地輕輕一沉再站直；平常微微呼吸；轉身時跳一下
-  drawPerched(b, k, P, meta) {
-    const s = (PERCH_H * k) / meta.perchHeight;
+  // 停：平常是轉頭影片的第一格（兩段影片都從這個姿勢開始，所以接得起來）；
+  // 轉頭／原地拍翅時播那段影片（拍翅播完倒著播回來，才會回到原本的站姿）；
+  // 剛落地輕輕一沉再站直；平常微微呼吸；轉身時跳一下
+  drawPerched(b, k) {
+    const perch = this.kit.perch;
+    let clip = perch.clips.head;
+    let frame = clip.frames[0];
+    if (b.anim) {
+      clip = perch.clips[b.anim];
+      const n = clip.frames.length;
+      const seq = clip.pingpong ? n * 2 - 1 : n;
+      let i = Math.min(seq - 1, Math.floor((b.animT / 60) * clip.fps));
+      if (i >= n) i = seq - 1 - i; // 倒著播回來
+      frame = clip.frames[i];
+    }
+    const s = (PERCH_H * k) / perch.height;
     let sx = 1;
     let sy = 1;
     if (b.landed < SETTLE) {
@@ -114,10 +126,16 @@ export class BirdView {
       sy = 0.88 + 0.12 * t;
       sx = 1.06 - 0.06 * t;
     }
-    sy *= 1 + 0.012 * Math.sin(b.age * 0.09);
-    const hopY = b.hop < 14 ? Math.sin((Math.PI * b.hop) / 14) * 0.06 * PERCH_H * k : 0;
-    const p = b.pose === "front" ? P.front : P.perch;
-    this.sprite(this.kit.img, p.rect, b.x, b.y - hopY, b.facing, 0, s * sx, s * sy, p.pivot);
+    if (!b.anim) sy *= 1 + 0.012 * Math.sin(b.age * 0.09);
+    const hopY = b.hop < 14 ? Math.sin((Math.PI * b.hop) / 14) * 0.08 * PERCH_H * k : 0;
+    this.sprite(this.kit.perchImg, perch.rects[frame], b.x, b.y - hopY, b.facing, 0, s * sx, s * sy, clip.pivot);
+  }
+
+  // 動作影片要播多久（換成 60 格 = 1 秒的單位），給 birds.js 判斷什麼時候播完
+  animLength(name) {
+    const clip = this.kit.perch.clips[name];
+    const n = clip.pingpong ? clip.frames.length * 2 - 1 : clip.frames.length;
+    return Math.ceil((n / clip.fps) * 60);
   }
 
   sprite(img, rect, x, y, facing, angle, sx, sy, pivot) {
@@ -146,13 +164,13 @@ export async function loadBirdKit(name) {
       im.src = u;
     });
   try {
-    const [meta, fly, perchImg, flyImg] = await Promise.all([
-      fetch(`assets/birds/${name}.json`).then((r) => r.json()),
+    const [fly, perch, flyImg, perchImg] = await Promise.all([
       fetch(`assets/birds/${name}-fly.json`).then((r) => r.json()),
-      img(`assets/birds/${name}.webp`),
-      img(`assets/birds/${name}-fly.webp`)
+      fetch(`assets/birds/${name}-perch.json`).then((r) => r.json()),
+      img(`assets/birds/${name}-fly.webp`),
+      img(`assets/birds/${name}-perch.webp`)
     ]);
-    return { meta, img: perchImg, fly, flyImg };
+    return { fly, perch, flyImg, perchImg };
   } catch (_) {
     return null;
   }

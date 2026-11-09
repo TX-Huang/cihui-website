@@ -85,6 +85,8 @@ function spawn(flock, e) {
       landed: 0, // 降落後過了幾格（落地時輕輕一沉）
       hop: 99, // 轉身的小跳躍進行到第幾格
       flipPending: false,
+      anim: null, // 停著時正在播的動作影片："head"（轉頭）或 "flutter"（原地拍翅）
+      animT: 0,
       age: 0
     });
   }
@@ -139,6 +141,7 @@ function stepBird(b, e) {
       b.y = target.y;
       b.facing = target.face;
       b.pose = "perch";
+      b.anim = null;
       b.rest = REST_MIN + e.random() * (REST_MAX - REST_MIN);
       b.look = 120 + e.random() * 180;
     }
@@ -161,17 +164,27 @@ function stepBird(b, e) {
         b.flipPending = false;
       }
     }
-    // 休息時偶爾轉過來看你（正面），或跳一下轉身
+    // 正在播動作影片：播完才做下一件事
+    if (b.anim) {
+      b.animT += 1;
+      if (b.animT >= (e.animLength?.(b.anim) ?? 200)) {
+        b.anim = null;
+        b.animT = 0;
+      }
+      return;
+    }
+    // 休息時偶爾：轉頭看看、原地拍拍翅膀、或跳一下轉身
     b.look -= 1;
-    if (b.look <= 0) {
+    if (b.look <= 0 && b.hop >= HOP) {
       const r = e.random();
-      if (b.pose === "front") b.pose = "perch";
-      else if (r < 0.5) b.pose = "front";
+      if (r < 0.4) b.anim = "head";
+      else if (r < 0.7) b.anim = "flutter";
       else {
         b.hop = 0;
         b.flipPending = true;
       }
-      b.look = 120 + e.random() * 240;
+      b.animT = 0;
+      b.look = 150 + e.random() * 240;
     }
     return;
   }
