@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { curve, curveAt, createFlock, stepFlock, FLY_IN, FLY_OUT } from "../js/birds.js";
+import { curve, curveAt, createFlock, stepFlock, FLY_IN, FLY_OUT_MAX } from "../js/birds.js";
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -87,7 +87,7 @@ test("birds: after resting a while they fly off screen and are gone", () => {
   const t = runUntil(flock, e, (f) => f.birds.length > 0 && f.birds.every((b) => ["gone", "out", "takeoff"].includes(b.state)));
   assert.ok(t > FLY_IN, "they rested first");
   const leaving = flock.birds.filter((b) => b.state !== "gone");
-  runUntil(flock, e, () => leaving.every((b) => b.state === "gone"), FLY_OUT + 200);
+  runUntil(flock, e, () => leaving.every((b) => b.state === "gone"), FLY_OUT_MAX + 200);
   for (const b of leaving) {
     assert.equal(b.state, "gone");
     assert.ok(b.x < -50 || b.x > 1490 || b.y < -50, `ended on screen at ${b.x | 0},${b.y | 0}`);
@@ -152,6 +152,28 @@ test("birds: fly calmly — never faster than 6 px per frame, coming in or going
       }
     }
     assert.ok(max <= 6, `seed ${seed}: ${max.toFixed(1)} px/frame`);
+  }
+});
+
+test("birds: never flip around in the air — they arrive facing the perch's way and leave the way they face", () => {
+  for (let seed = 1; seed <= 20; seed++) {
+    const flock = createFlock({ firstIn: 0 });
+    const e = env({ random: seeded(seed) });
+    const seen = new Map(); // 每隻鳥：這一段（飛來＋降落、起飛＋飛走）的方向
+    for (let i = 0; i < 6000; i++) {
+      stepFlock(flock, e);
+      for (const b of flock.birds) {
+        const leg = b.state === "in" || b.state === "landing" ? "arrive" : b.state === "takeoff" || b.state === "out" ? "leave" : null;
+        if (!leg) {
+          seen.delete(b);
+          continue;
+        }
+        const s = seen.get(b);
+        if (s && s.leg === leg) assert.equal(b.facing, s.facing, `seed ${seed}: flipped during ${b.state}`);
+        else seen.set(b, { leg, facing: b.facing });
+        if (b.state === "landing") assert.equal(b.facing, PERCHES[b.perch].face, `seed ${seed}: lands facing the wrong way`);
+      }
+    }
   }
 });
 

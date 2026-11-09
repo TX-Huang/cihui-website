@@ -1,13 +1,14 @@
 // 三青鳥：金母的使者（《山海經》三青鳥為西王母取食；《漢武故事》青鳥先飛來報信）。
 // 純計算（方便測試），畫面在 js/bird-view.js。時間單位是「格」（60 格 ≈ 1 秒）。
 //
-// 一群 1～2 隻：從畫面外飛進來 → 降落（倒播起飛影片）停在大門上（屋脊、匾額上緣）→ 休息一陣子（偶爾轉過來看你、轉身）
+// 一群 1～2 隻：從畫面外飛進來（從停的方向後面來，一路不轉身） → 降落（倒播起飛影片）停在大門上（屋脊、匾額上緣）→ 休息一陣子（偶爾轉過來看你、轉身）
 // → 起飛（起飛影片）飛走。滑鼠在旁邊揮太快會被嚇飛；切到其他神明時也會飛走。每隔 20～40 秒來一群。
 
 export const FLY_IN = 360; // 飛進來最少幾格（約 6 秒）；路遠就飛久一點，速度維持差不多
 const FLY_IN_MAX = 660;
 const CRUISE = 2.3; // 飛進來的平均速度（每格幾像素）
-export const FLY_OUT = 400; // 飛走要幾格（約 7 秒）
+export const FLY_OUT = 300; // 飛走最少幾格（約 5 秒）；路遠就飛久一點
+export const FLY_OUT_MAX = 600;
 const REST_MIN = 480; // 停多久（8～17 秒）
 const REST_MAX = 1020;
 const GAP_MIN = 1200; // 一群走了之後，下一群隔多久來（20～40 秒）
@@ -62,10 +63,11 @@ function spawn(flock, e) {
   for (let i = 0; i < e.perchCount; i++) if (!e.visible || e.visible(i)) free.push(i); // 手機上兩側屋頂在畫面外，不停那裡
   const n = Math.min(free.length, 1 + Math.floor(e.random() * 2)); // 一次 1～2 隻
   if (!n) return;
-  const fromLeft = e.random() < 0.5;
   flock.birds = [];
   for (let k = 0; k < n; k++) {
     const perch = free.splice(Math.floor(e.random() * free.length), 1)[0];
+    // 從停的方向的「後面」飛來（朝右停 → 從左邊來），一路朝同一邊，落地不用轉身
+    const fromLeft = e.perch(perch).face > 0;
     const start = {
       x: fromLeft ? -120 - k * 60 : e.w + 120 + k * 60,
       y: e.h * (0.08 + e.random() * 0.3)
@@ -112,7 +114,7 @@ function takeOff(b, e) {
   b.t = 0;
   b.pose = "fly";
   b.brake = false;
-  const toLeft = b.x < e.w / 2;
+  const toLeft = b.facing < 0; // 朝哪邊起飛就往哪邊飛走，不用在空中轉身
   b.outCurve = curve(
     { x: b.x, y: b.y },
     { x: toLeft ? -160 : e.w + 160, y: -120 - e.random() * 80 },
@@ -120,6 +122,9 @@ function takeOff(b, e) {
   );
   // 起飛：往上的曲線，所以 p2 不要「從上方滑下來」，改成直接往目標
   b.outCurve.p2 = { x: (b.x + b.outCurve.p3.x) / 2, y: Math.min(b.y, b.outCurve.p3.y) - 40 };
+  // 飛走要幾格：照路長算（結束時速度約平均的 1.6 倍，平均 2.8 → 最快約 4.5 像素／格）
+  const len = Math.hypot(b.outCurve.p3.x - b.x, b.outCurve.p3.y - b.y) * 1.15;
+  b.outLen = Math.max(FLY_OUT, Math.min(FLY_OUT_MAX, len / 2.8));
 }
 
 function stepBird(b, e) {
@@ -143,7 +148,7 @@ function stepBird(b, e) {
     b.x = p.x;
     b.y = p.y;
     b.angle = p.angle;
-    b.facing = Math.cos(p.angle) >= 0 ? 1 : -1;
+    // 方向固定（spawn 時已照停的方向決定），不跟著曲線一下翻過去
     // 最後一段：翅膀舉高、拍得急，像在煞車
     b.brake = b.t > 0.82;
     b.flap += b.brake ? 0.02 : 0.012; // 一直拍（影片裡拍一下約 1.5 秒），煞車時拍快一點
@@ -155,7 +160,6 @@ function stepBird(b, e) {
       b.brake = false;
       b.x = at.x;
       b.y = at.y;
-      b.facing = at.face;
     }
     return;
   }
@@ -228,12 +232,11 @@ function stepBird(b, e) {
     return;
   }
   if (b.state === "out") {
-    b.t = Math.min(1, b.t + 1 / FLY_OUT);
+    b.t = Math.min(1, b.t + 1 / b.outLen);
     const p = curveAt(b.outCurve, easeIn(b.t));
     b.x = p.x;
     b.y = p.y;
     b.angle = p.angle;
-    b.facing = Math.cos(p.angle) >= 0 ? 1 : -1;
     b.flap += b.t < 0.3 ? 0.022 : 0.014; // 起飛時拍得最急
     if (b.t >= 1) b.state = "gone";
   }
