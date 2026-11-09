@@ -138,3 +138,57 @@ test("birds: never two birds on the same perch, never more than three", () => {
     }
   }
 });
+
+test("birds: flight mixes flapping with gliding (not a metronome)", () => {
+  const flock = createFlock({ firstIn: 0 });
+  const e = env();
+  stepFlock(flock, e);
+  const b = flock.birds[0];
+  let still = 0;
+  let longestGlide = 0;
+  let flapped = 0;
+  let last = b.flap;
+  while (b.state === "in") {
+    stepFlock(flock, e);
+    if (b.flap === last) longestGlide = Math.max(longestGlide, ++still);
+    else {
+      still = 0;
+      flapped++;
+    }
+    last = b.flap;
+  }
+  assert.ok(longestGlide >= 20, `never glided (longest ${longestGlide} frames)`);
+  assert.ok(flapped >= 40, "it still flaps most of the way");
+});
+
+test("birds: just before landing the bird brakes (wings up), and it settles after touching down", () => {
+  const flock = createFlock({ firstIn: 0 });
+  const e = env();
+  stepFlock(flock, e);
+  const b = flock.birds[0];
+  const brakeAt = [];
+  while (b.state === "in") {
+    brakeAt.push(b.brake);
+    stepFlock(flock, e);
+  }
+  const n = brakeAt.length;
+  assert.ok(brakeAt.slice(Math.floor(n * 0.88)).every(Boolean), "brakes in the last stretch");
+  assert.ok(!brakeAt.slice(0, Math.floor(n * 0.5)).some(Boolean), "does not brake early");
+  assert.equal(b.landed, 0);
+  stepFlock(flock, e);
+  assert.equal(b.landed, 1, "counts frames since touchdown (for the settle)");
+});
+
+test("birds: turning around is a little hop — it flips facing in mid-air, not instantly", () => {
+  const flock = createFlock({ firstIn: 0 });
+  const e = env({ random: () => 0.9 }); // 0.9 → 轉身（不是轉正面）
+  runUntil(flock, e, (f) => f.birds.length && f.birds[0].state === "perched");
+  const b = flock.birds[0];
+  const before = b.facing;
+  b.look = 1;
+  stepFlock(flock, e); // 開始跳
+  assert.equal(b.hop, 0);
+  assert.equal(b.facing, before, "not flipped at take-off of the hop");
+  for (let i = 0; i < 10; i++) stepFlock(flock, e);
+  assert.equal(b.facing, -before, "flipped by the middle of the hop");
+});

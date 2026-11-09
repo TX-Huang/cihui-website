@@ -90,8 +90,34 @@ function spawn(flock, e) {
       facing: fromLeft ? 1 : -1,
       pose: "fly",
       rest: 0,
-      look: 0
+      look: 0,
+      glide: 0, // 還要滑翔幾格（翅膀張開不拍）
+      beats: 2 + Math.floor(e.random() * 3), // 再拍幾下就滑翔一段
+      brake: false, // 快降落：翅膀舉高煞車
+      landed: 0, // 降落後過了幾格（落地時輕輕一沉）
+      hop: 99, // 轉身的小跳躍進行到第幾格
+      flipPending: false,
+      age: 0
     });
+  }
+}
+
+const HOP = 14; // 轉身跳一下要幾格
+
+// 拍翅膀或滑翔：拍幾下就張開翅膀滑一段（真的鳥不會一直用同樣速度拍）
+function flapOrGlide(b, rate, canGlide, random) {
+  if (b.glide > 0) {
+    b.glide -= 1;
+    return;
+  }
+  const before = Math.floor(b.flap);
+  b.flap += rate;
+  if (Math.floor(b.flap) > before) {
+    b.beats -= 1;
+    if (b.beats <= 0 && canGlide) {
+      b.glide = 30 + random() * 40;
+      b.beats = 2 + Math.floor(random() * 3);
+    }
   }
 }
 
@@ -99,6 +125,8 @@ function takeOff(b, e) {
   b.state = "out";
   b.t = 0;
   b.pose = "fly";
+  b.brake = false;
+  b.glide = 0;
   const toLeft = b.x < e.w / 2;
   b.outCurve = curve(
     { x: b.x, y: b.y },
@@ -111,6 +139,7 @@ function takeOff(b, e) {
 
 function stepBird(b, e) {
   if (b.state === "gone") return;
+  b.age = (b.age || 0) + 1;
   if (b.state === "wait") {
     if (!e.active) {
       b.state = "gone";
@@ -129,8 +158,13 @@ function stepBird(b, e) {
     b.y = p.y;
     b.angle = p.angle;
     b.facing = Math.cos(p.angle) >= 0 ? 1 : -1;
-    b.flap += b.t > 0.75 ? 0.07 : 0.04; // 快降落時拍得比較急
+    // 最後一段：翅膀舉高、拍得急，像在煞車
+    b.brake = b.t > 0.82;
+    if (b.brake) b.glide = 0;
+    flapOrGlide(b, b.brake ? 0.075 : 0.045, b.t > 0.1 && b.t < 0.7, e.random);
     if (b.t >= 1) {
+      b.brake = false;
+      b.landed = 0;
       b.state = "perched";
       b.x = target.x;
       b.y = target.y;
@@ -148,14 +182,26 @@ function stepBird(b, e) {
     const m = e.mouse;
     const scared = m.speed > SCARE_SPEED && Math.hypot(m.x - b.x, m.y - b.y) < SCARE_R;
     b.rest -= 1;
+    b.landed += 1;
     if (!e.active || scared || b.rest <= 0) return takeOff(b, e);
-    // 休息時偶爾轉過來看你（正面），或轉身換方向
+    // 轉身是跳一下：跳到一半（最高點）才轉過去
+    if (b.hop < HOP) {
+      b.hop += 1;
+      if (b.flipPending && b.hop >= HOP / 2) {
+        b.facing = -b.facing;
+        b.flipPending = false;
+      }
+    }
+    // 休息時偶爾轉過來看你（正面），或跳一下轉身
     b.look -= 1;
     if (b.look <= 0) {
       const r = e.random();
       if (b.pose === "front") b.pose = "perch";
       else if (r < 0.5) b.pose = "front";
-      else b.facing = -b.facing;
+      else {
+        b.hop = 0;
+        b.flipPending = true;
+      }
       b.look = 120 + e.random() * 240;
     }
     return;
@@ -167,7 +213,7 @@ function stepBird(b, e) {
     b.y = p.y;
     b.angle = p.angle;
     b.facing = Math.cos(p.angle) >= 0 ? 1 : -1;
-    b.flap += b.t < 0.3 ? 0.08 : 0.05; // 起飛時拍得最急
+    flapOrGlide(b, b.t < 0.3 ? 0.08 : 0.05, b.t > 0.35, e.random); // 起飛時拍得最急，飛遠了才滑翔
     if (b.t >= 1) b.state = "gone";
   }
 }

@@ -15,9 +15,30 @@ FLY_W = 420  # 飛行圖縮到多寬（像素）
 PERCH_H = 330  # 停著的圖縮到多高
 PAD = 4
 
-# 飛行三格放在同一張畫布上（頭的位置本來就對齊），用同一個裁切框才不會跳
+# 飛行三格放在同一張畫布上，用同一個裁切框才不會跳
 fly_names = [("up", "bluebird-wing-up.png"), ("mid", "bluebird.png"), ("down", "bluebird-wing-down.png")]
 fly = [(k, Image.open(SRC / n).convert("RGBA")) for k, n in fly_names]
+
+
+def head_of(im):
+    """頭的位置：最右邊 8% 那些像素的中心（鳥頭朝右）"""
+    a = np.asarray(im)[..., 3] > 30
+    ys, xs = np.nonzero(a)
+    x0 = xs.max() - int(0.08 * (xs.max() - xs.min()))
+    hy, hx = np.nonzero(a[:, x0:])
+    return hx.mean() + x0, hy.mean()
+
+
+# 三格的頭對齊在「展翅」那格的頭（往下那格 ChatGPT 畫得低了一點，不對齊的話換格時整隻會跳）
+ref = head_of(fly[1][1])
+aligned = []
+for k, im in fly:
+    hx, hy = head_of(im)
+    canvas = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    canvas.paste(im, (int(round(ref[0] - hx)), int(round(ref[1] - hy))), im)  # 可以是負的位移，超出的會被切掉
+    print(k, "head shift", round(ref[0] - hx), round(ref[1] - hy))
+    aligned.append((k, canvas))
+fly = aligned
 alpha = np.zeros(np.asarray(fly[0][1]).shape[:2], bool)
 for _, im in fly:
     alpha |= np.asarray(im)[..., 3] > 30
