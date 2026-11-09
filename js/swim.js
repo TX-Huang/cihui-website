@@ -69,8 +69,8 @@ export function steer(f, env) {
 
   f.x += Math.cos(f.angle) * f.speed;
   f.y += Math.sin(f.angle) * f.speed;
-  // 擺尾的速度跟游速有關
-  f.phase += 0.06 + f.speed * 0.09;
+  // 擺尾的速度跟游速有關：平常大約 2 秒擺一次（慢慢的），被嚇到時快很多
+  f.phase += 0.03 + f.speed * 0.04;
 }
 
 // 換一個目標點。給的時間 = 照平常速度游過去要多久再多一些（太短的話游到一半就換、掉頭）
