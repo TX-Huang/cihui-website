@@ -183,6 +183,9 @@ ChatGPT 改圖時位置可能會跑掉一點點，沒關係，我會用程式對
 用影片做「拍翅膀、轉頭、轉身」，我再切成一格一格的畫面，去背後接上網頁。
 
 **共通規則（很重要）：**
+- **改用起始圖（第二次修正）**：文字說「留空」影片 AI 不太聽。改成上傳我做好的起始圖當「第一格」：
+  拍翅膀用 `docs/video-start/start-flap.png`，轉頭／轉身用 `docs/video-start/start-perch.png`（鳥已經很小、背景已經是洋紅）。
+- **影片比例選正方形 1:1**（翅膀上下拍，正方形上下空間多）。
 - **鳥要小、四周留很多空**：翅膀、尾巴任何時候都不能碰到畫面邊緣（被切掉的部分補不回來）。
 - **先上傳參考圖**（每段寫了用哪張），讓牠是同一隻鳥。
 - **背景要純洋紅色（#FF00FF）**：我用這個顏色去背。青鳥是藍綠、白、金色，洋紅最好去。不行的話改「純黑色背景」。
@@ -190,18 +193,18 @@ ChatGPT 改圖時位置可能會跑掉一點點，沒關係，我會用程式對
 - 下載影片原檔（mp4），檔名照下面寫，丟進同一個雲端硬碟資料夾。
 
 ### 5-1. `bird-flap.mp4` — 原地拍翅膀（最重要）
-參考圖：`bluebird.png`
+參考圖：`docs/video-start/start-flap.png`（當第一格）
 
 （第一次生的兩支：鳥太大，往下拍時翅膀尖、尾巴超出畫面被切掉，不能用。這版要求鳥小一點、四周留很多空。）
-> Animate the attached bird. Side view: the bird faces RIGHT and flaps its wings in place, as if flying forward while staying in the center of the frame — no travel, no camera movement. Two full, slow, graceful wingbeats in about 4 seconds; the long tail feathers flow gently behind. IMPORTANT: the bird is small in the frame — the whole bird, including the raised wing tips, the lowest point of the downstroke and the end of the tail, must stay completely inside the frame at all times, with a wide empty margin on every side (the bird uses only about the middle half of the frame). The last frame must match the first frame (seamless loop). Background: solid flat pure magenta (#FF00FF) from the very first frame — no fade-in, no gradient, no shadow, no clouds, no other objects. Keep exactly the same bird design, colors and proportions as the image. Locked-off static camera, soft even lighting.
+> Use the attached image as the exact FIRST FRAME: keep the bird at exactly this small size and position and keep the magenta background. Animate the bird. Side view: the bird faces RIGHT and flaps its wings in place, as if flying forward while staying in the center of the frame — no travel, no camera movement. Two full, slow, graceful wingbeats in about 4 seconds; the long tail feathers flow gently behind. IMPORTANT: the bird is small in the frame — the whole bird, including the raised wing tips, the lowest point of the downstroke and the end of the tail, must stay completely inside the frame at all times, with a wide empty margin on every side (the bird uses only about the middle half of the frame). The last frame must match the first frame (seamless loop). Background: solid flat pure magenta (#FF00FF) from the very first frame — no fade-in, no gradient, no shadow, no clouds, no other objects. Keep exactly the same bird design, colors and proportions as the image. Locked-off static camera, soft even lighting.
 
 ### 5-2. `bird-head.mp4` — 停著轉頭看你
-參考圖：`bluebird-perch.png`
-> Animate the attached bird perched, side view facing RIGHT, standing on a thin straight plain dark-grey bar in the lower part of the frame. The bird is small in the frame — head crest, tail tip and feet always stay fully inside the frame with a wide empty margin on every side. It slowly turns its head to look toward the camera, pauses, blinks once, then turns its head back to the original side view. Body, feet and tail stay still except tiny natural feather movement. About 4 seconds; the last frame matches the first frame (seamless loop). Background: solid flat pure magenta (#FF00FF) — no gradient, no shadow, no other objects. Same bird design, colors and proportions as the image. Locked-off static camera, soft even lighting.
+參考圖：`docs/video-start/start-perch.png`（當第一格）
+> Use the attached image as the exact FIRST FRAME: keep the bird at exactly this small size and position, keep the grey bar and the magenta background. Animate the bird perched, side view facing RIGHT, standing on a thin straight plain dark-grey bar in the lower part of the frame. The bird is small in the frame — head crest, tail tip and feet always stay fully inside the frame with a wide empty margin on every side. It slowly turns its head to look toward the camera, pauses, blinks once, then turns its head back to the original side view. Body, feet and tail stay still except tiny natural feather movement. About 4 seconds; the last frame matches the first frame (seamless loop). Background: solid flat pure magenta (#FF00FF) — no gradient, no shadow, no other objects. Same bird design, colors and proportions as the image. Locked-off static camera, soft even lighting.
 
 ### 5-3. `bird-turn.mp4` — 停著跳一下轉身
-參考圖：`bluebird-perch.png`
-> Animate the attached bird perched, side view facing RIGHT, standing on a thin straight plain dark-grey bar in the lower part of the frame. The bird is small in the frame — head crest, tail tip and feet always stay fully inside the frame with a wide empty margin on every side. It gives one small hop, turns around in the air to face LEFT, lands back on the same spot and settles its feathers. About 3 seconds. Background: solid flat pure magenta (#FF00FF) — no gradient, no shadow, no other objects. Same bird design, colors and proportions as the image. Locked-off static camera, soft even lighting.
+參考圖：`docs/video-start/start-perch.png`（當第一格）
+> Use the attached image as the exact FIRST FRAME: keep the bird at exactly this small size and position, keep the grey bar and the magenta background. Animate the bird perched, side view facing RIGHT, standing on a thin straight plain dark-grey bar in the lower part of the frame. The bird is small in the frame — head crest, tail tip and feet always stay fully inside the frame with a wide empty margin on every side. It gives one small hop, turns around in the air to face LEFT, lands back on the same spot and settles its feathers. About 3 seconds. Background: solid flat pure magenta (#FF00FF) — no gradient, no shadow, no other objects. Same bird design, colors and proportions as the image. Locked-off static camera, soft even lighting.
 
 （往左轉回右邊不用另外生，我把影片左右翻過來用。）
 
