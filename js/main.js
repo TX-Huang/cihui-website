@@ -8,6 +8,7 @@ import { Petals } from "./petals.js";
 import { KoiPond, loadKoiKits } from "./koi.js";
 import { IntroView } from "./intro-view.js";
 import { BirdView, loadBirdKit } from "./bird-view.js";
+import { RibbonView, loadRibbonImage } from "./ribbon-view.js";
 
 // ── 珠簾尺寸（拱門圖的設計座標，圖寬 1000） ──
 const D = GATE.door;
@@ -39,6 +40,7 @@ const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const koiCanvas = $("koi");
 let koi = null;
 let birds = null;
+let ribbon = null; // 混天綾（中壇元帥）
 let cloth = null;
 let deity = null;
 let currentIndex = -1;
@@ -285,6 +287,11 @@ function loop(now = performance.now()) {
     // 青鳥只在金母這一頁出現；換頁（走進門）時飛走
     birds.active = deity?.id === "jinmu" && !moving;
     birds.tick();
+  }
+  if (ribbon) {
+    // 混天綾只在中壇元帥這一頁飄；換頁時慢慢淡掉
+    ribbon.active = deity?.id === "nezha" && !moving;
+    ribbon.tick();
   }
   perfMark("鯉魚", t2);
   const t3 = performance.now();
@@ -602,6 +609,9 @@ async function start() {
   // 三青鳥：停在大門上（減少動畫時不出現）
   const birdKit = reduceMotion ? null : await loadBirdKit("bluebird");
   if (birdKit) birds = new BirdView($("birds"), birdKit, GATE, $("gateImg"));
+  const ribbonImg = reduceMotion ? null : await loadRibbonImage();
+  if (ribbonImg) ribbon = new RibbonView($("ribbon"), ribbonImg);
+  window.__debug.ribbon = ribbon;
 }
 
 // 除錯用：在主控台打 __debug.cloth 可以看珠簾狀態
