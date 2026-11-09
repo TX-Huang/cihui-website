@@ -238,7 +238,7 @@ test("birds: while resting they sometimes turn the head or flutter their wings, 
       stepFlock(flock, e);
       if (b.anim) {
         seen.add(b.anim);
-        assert.ok(b.hop >= 14 || b.hop === 99, "no hop while a clip is playing");
+        assert.ok(b.hop >= 20 || b.hop === 99, "no hop while a clip is playing");
         assert.ok(b.animT <= e.animLength(b.anim), "clip runs past its end");
       }
     }
@@ -263,4 +263,20 @@ test("birds: taking off plays the clip forward from the perch, then flies away f
   assert.equal(b.state, "out");
   const hover = e.hover(b.perch);
   assert.ok(dist(b, hover) < 12, `flight starts where the clip left the bird (${dist(b, hover).toFixed(1)}px off)`);
+});
+
+test("birds: calm motion — a wing beat takes 2+ seconds while cruising, the turn-around hop takes 1/3 second", async () => {
+  const { HOP, CLIP_SPEED } = await import("../js/birds.js");
+  const flock = createFlock({ firstIn: 0 });
+  const e = env();
+  stepFlock(flock, e);
+  const b = flock.birds[0];
+  let last = b.flap;
+  while (b.state === "in") {
+    stepFlock(flock, e);
+    if (b.state === "in" && !b.brake) assert.ok(b.flap - last <= 1 / 120 + 1e-9, `beat too fast: ${(b.flap - last).toFixed(4)} per frame`);
+    last = b.flap;
+  }
+  assert.ok(HOP >= 20, `hop is ${HOP} frames`);
+  assert.ok(CLIP_SPEED <= 0.75, "video clips (head turn, flutter, take-off) play slower than recorded");
 });

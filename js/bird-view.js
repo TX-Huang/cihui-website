@@ -1,7 +1,7 @@
 // 畫青鳥（js/birds.js 決定牠們在哪、在做什麼，這裡只負責畫）。
 // 飛的時候：影片拆出來的 36 格依序播（tools/prep_bird_video.py），一直拍，身體跟著起伏。
 // 停著：轉頭、原地拍翅都是影片拆出來的（tools/prep_bird_perch.py）；轉身時跳一下。
-import { createFlock, stepFlock } from "./birds.js";
+import { createFlock, stepFlock, HOP, CLIP_SPEED } from "./birds.js";
 
 const FLY_LEN = 190; // 飛行時整隻鳥多長（大門設計座標）
 const PERCH_H = 70; // 停著時頭冠到腳多高（大門設計座標）
@@ -121,20 +121,20 @@ export class BirdView {
       // 起飛影片：起飛時正著播；降落時倒著播（鳥從上方降下來，最後剛好是站姿）
       clip = perch.clips.takeoff;
       const n = clip.frames.length;
-      const i = Math.min(n - 1, Math.floor((b.clipT / 60) * clip.fps));
+      const i = Math.min(n - 1, Math.floor((b.clipT / 60) * clip.fps * CLIP_SPEED));
       frame = clip.frames[b.state === "takeoff" ? i : n - 1 - i];
     } else if (b.anim) {
       clip = perch.clips[b.anim];
       const n = clip.frames.length;
       const seq = clip.pingpong ? n * 2 - 1 : n;
-      let i = Math.min(seq - 1, Math.floor((b.animT / 60) * clip.fps));
+      let i = Math.min(seq - 1, Math.floor((b.animT / 60) * clip.fps * CLIP_SPEED));
       if (i >= n) i = seq - 1 - i; // 倒著播回來
       frame = clip.frames[i];
     }
     const s = (PERCH_H * k) / perch.height;
     let sy = 1;
     if (b.state === "perched" && !b.anim) sy = 1 + 0.012 * Math.sin(b.age * 0.09); // 微微呼吸
-    const hopY = b.hop < 14 ? Math.sin((Math.PI * b.hop) / 14) * 0.08 * PERCH_H * k : 0;
+    const hopY = b.hop < HOP ? Math.sin((Math.PI * b.hop) / HOP) * 0.08 * PERCH_H * k : 0;
     this.sprite(this.kit.perchImg, perch.rects[frame], b.x, b.y - hopY, b.facing, 0, s, s * sy, clip.pivot);
   }
 
@@ -142,7 +142,7 @@ export class BirdView {
   animLength(name) {
     const clip = this.kit.perch.clips[name];
     const n = clip.pingpong ? clip.frames.length * 2 - 1 : clip.frames.length;
-    return Math.ceil((n / clip.fps) * 60);
+    return Math.ceil((n / (clip.fps * CLIP_SPEED)) * 60);
   }
 
   sprite(img, rect, x, y, facing, angle, sx, sy, pivot) {

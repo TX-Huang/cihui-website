@@ -99,7 +99,9 @@ function spawn(flock, e) {
   }
 }
 
-const HOP = 14; // 轉身跳一下要幾格
+export const HOP = 20; // 轉身跳一下要幾格（1/3 秒）
+// 停著的動作影片（轉頭、原地拍翅、起飛／降落）播放速度：比原本影片慢，比較從容
+export const CLIP_SPEED = 0.7;
 
 // 降落前要先飛到的點＝起飛影片最後一格鳥的位置（畫面那邊依影片算好給我；測試或沒給時用上方 40px）
 function hoverPoint(b, e) {
@@ -151,7 +153,7 @@ function stepBird(b, e) {
     // 方向固定（spawn 時已照停的方向決定），不跟著曲線一下翻過去
     // 最後一段：翅膀舉高、拍得急，像在煞車
     b.brake = b.t > 0.82;
-    b.flap += b.brake ? 0.02 : 0.012; // 一直拍（影片裡拍一下約 1.5 秒），煞車時拍快一點
+    b.flap += b.brake ? 0.013 : 0.008; // 一直拍（拍一下約 2 秒），煞車時拍快一點
     if (b.t >= 1) {
       // 飛到降落點了：接著播「倒著的起飛影片」，鳥自己從上方降到桿子上
       const at = e.perch(b.perch);
@@ -237,7 +239,7 @@ function stepBird(b, e) {
     b.x = p.x;
     b.y = p.y;
     b.angle = p.angle;
-    b.flap += b.t < 0.3 ? 0.022 : 0.014; // 起飛時拍得最急
+    b.flap += b.t < 0.3 ? 0.015 : 0.009; // 起飛時拍得最急
     if (b.t >= 1) b.state = "gone";
   }
 }
