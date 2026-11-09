@@ -220,3 +220,40 @@ ChatGPT 改圖時位置可能會跑掉一點點，沒關係，我會用程式對
 5-4 的降落影片，落地後的站姿跟其他停著的影片不一樣（身體橫的），接起來會跳。
 改成「從同一個站姿起飛」：正著播 = 起飛，倒著播 = 降落，兩個都會剛好接上停著的樣子。
 > Use the attached image as the exact FIRST FRAME: keep the bird at exactly this small size and position, keep the grey bar and the magenta background. The perched bird crouches slightly, spreads its wings and takes off, flying up and away to the RIGHT with strong wingbeats until it leaves the frame at the top right. About 3 seconds. The whole bird stays inside the frame until it flies out at the top right. Background: solid flat pure magenta (#FF00FF) — no gradient, no shadow, no other objects. Same bird design, colors and proportions. Locked-off static camera, soft even lighting.
+
+## 6. 丹鳳動畫（九天玄女頁，做法照三青鳥）
+
+做法跟青鳥一樣：先有兩張靜態圖 → 我做「第一格」起始圖 → 你拿起始圖生影片 → 我切成一格一格、去背、接上網頁。
+
+**跟青鳥不一樣的地方（很重要）：**
+- **背景改純綠色（#00FF00），不要洋紅。** 丹鳳是朱紅、粉橘色，洋紅去背會把羽毛一起去掉。
+- **飛行影片比例選 16:9（橫的）**：三根長尾羽很長，橫的才放得下。停著的影片選 **1:1（正方形）**。
+- **動作要慢、優雅**：比青鳥更慢（拍一下約 2.5 秒）。
+- 其他規則照第 5 節：鳥要小、四周留很多空、鏡頭不能動、尾羽尖任何時候都不能碰到畫面邊緣。
+
+### 6-0. `phoenix-perch.png` — 停著的樣子（靜態圖，先生這張）
+先上傳 `phoenix.png`（就是你生好的那張），讓牠是同一隻鳥：
+> Use the attached phoenix as the exact same character (same feathers, colors, proportions, same three long ribbon-like tail plumes). Show it PERCHED, seen from the side, facing RIGHT, wings neatly folded against the body, the three long tail plumes draping down and trailing back behind it in a graceful, compact S-curve, feet gripping as if standing on a ledge. Size 1024x1024. Transparent background PNG. The whole bird, including the tips of the tail plumes, fits inside the canvas with a margin on every side. Only the bird — no branch, no ledge, no background, no shadow, no text.
+
+生好放雲端硬碟，**我會再做一張停著的起始圖** `docs/video-start/start-phoenix-perch.png`（有灰色橫桿、綠色背景），6-2～6-4 用那張。
+
+### 6-1. `phoenix-flap.mp4` — 飛行拍翅（最重要，可以先生）
+參考圖：`docs/video-start/start-phoenix-fly.png`（當第一格，已經做好），**比例 16:9**。
+> Use the attached image as the exact FIRST FRAME: keep the phoenix at exactly this small size and position and keep the pure green background. Animate the phoenix. Side view: it faces RIGHT and flaps its wings in place, as if flying forward while staying in the center of the frame — no travel, no camera movement. Two full, very slow, graceful wingbeats in about 5 seconds; the three long tail plumes flow softly behind like silk ribbons, rippling gently. IMPORTANT: the phoenix is small in the frame — the whole bird, including the raised wing tips, the lowest point of the downstroke and the tips of all three tail plumes, must stay completely inside the frame at all times, with a wide empty margin on every side. The last frame must match the first frame (seamless loop). Background: solid flat pure green (#00FF00) from the very first frame — no fade-in, no gradient, no shadow, no clouds, no other objects. Keep exactly the same phoenix design, colors and proportions as the image. Locked-off static camera, soft even lighting.
+
+### 6-2. `phoenix-head.mp4` — 停著轉頭看你
+參考圖：`docs/video-start/start-phoenix-perch.png`（我做好再給你），**比例 1:1**。
+> Use the attached image as the exact FIRST FRAME: keep the phoenix at exactly this small size and position, keep the grey bar and the pure green background. Animate the phoenix perched, side view facing RIGHT, standing on a thin straight plain dark-grey bar. The phoenix is small in the frame — its crest, feet and the tips of all three tail plumes always stay fully inside the frame with a wide empty margin on every side. It slowly and gracefully turns its head to look toward the camera, pauses, blinks once, then turns its head back to the original side view. Body, feet and wings stay still; the long tail plumes sway very gently. About 5 seconds; the last frame matches the first frame (seamless loop). Background: solid flat pure green (#00FF00) — no gradient, no shadow, no other objects. Same phoenix design, colors and proportions as the image. Locked-off static camera, soft even lighting.
+
+### 6-3. `phoenix-perch-flap.mp4` — 停著慢慢展翅
+參考圖：`docs/video-start/start-phoenix-perch.png`，**比例 1:1**。
+（青鳥那支最後沒回到原本的站姿，所以這次特別要求「最後一格跟第一格一樣」。）
+> Use the attached image as the exact FIRST FRAME: keep the phoenix at exactly this small size and position, keep the grey bar and the pure green background. The perched phoenix slowly and elegantly opens its wings wide, holds them open for a moment, then slowly folds them back exactly as they were, feet staying on the bar. The long tail plumes sway softly. The phoenix stays small — open wing tips, crest and the tips of all three tail plumes stay fully inside the frame with a wide empty margin. About 5 seconds. The LAST FRAME must be exactly the same pose as the first frame (wings folded, same position). Background: solid flat pure green (#00FF00) — no gradient, no shadow, no other objects. Same phoenix design, colors and proportions. Locked-off static camera, soft even lighting.
+
+### 6-4. `phoenix-takeoff.mp4` — 從桿子上起飛（倒著播 = 降落）
+參考圖：`docs/video-start/start-phoenix-perch.png`，**比例 1:1**。
+> Use the attached image as the exact FIRST FRAME: keep the phoenix at exactly this small size and position, keep the grey bar and the pure green background. The perched phoenix crouches slightly, spreads its wings and takes off gracefully, rising up and away to the RIGHT with slow, powerful wingbeats, its three long tail plumes trailing behind like silk ribbons, until it leaves the frame at the top right. About 4 seconds. The whole phoenix stays inside the frame until it flies out at the top right. Background: solid flat pure green (#00FF00) — no gradient, no shadow, no other objects. Same phoenix design, colors and proportions. Locked-off static camera, soft even lighting.
+
+（轉身不用生影片，跟青鳥一樣用程式跳一下轉身。）
+
+**檢查一下再丟：** 鳥的樣子跟參考圖一樣、背景整片是綠色、鏡頭沒動、翅膀和三根尾羽都沒被畫面切掉。不合格就再生一次。檔名照上面寫，丟進同一個雲端硬碟資料夾。
