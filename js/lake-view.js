@@ -16,8 +16,8 @@ void main() {
 }`;
 
 // v_pos：這一點在 .sky-img 裡的位置（CSS 像素）。水平線以下：
-// 1. 倒影慢慢晃：兩道很慢的波，越近（越下面）越大、越遠（靠水平線）越細越密
-// 2. 水光：幾條很淡的橫向亮線慢慢閃
+// 1. 倒影慢慢晃：很慢的長浪讓倒影上下錯開，越近（越下面）越大、越遠（靠水平線）越細越密
+// 2. 微風：一塊一塊被吹皺的水面慢慢飄過，那裡倒影比較霧（霧天沒有太陽，所以不做閃光點）
 // 3. 漣漪：一圈一圈往外推（上下壓扁成橢圓，像從斜上方看水面）
 const FS = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -33,26 +33,39 @@ uniform float u_top;
 uniform float u_hz; // 水平線在圖上的高度（取顏色時水面不能取到水平線以上的天空）
 uniform vec4 u_ph; // 各道波的相位（在 JS 算好、繞 2π，時間再久也不會失去精度）
 uniform float u_ph2;
+uniform float u_drift; // 微風那幾塊往旁邊飄了多遠（繞 64 一圈；雜訊左右每 64 格重複，所以接得起來）
 uniform vec4 u_rip[${MAX_RIPPLES}];
 varying vec2 v_pos;
+float hash(vec2 i) {
+  i = mod(i, 64.0);
+  return fract(sin(dot(i, vec2(12.9898, 78.233))) * 43758.5453);
+}
+// 柔和的雜訊（0～1）：一格一格的隨機值，中間平滑接起來
+float noise(vec2 q) {
+  vec2 i = floor(q);
+  vec2 f = fract(q);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
 void main() {
   vec2 p = v_pos;
   vec2 off = vec2(0.0);
   float light = 0.0;
+  float wind = 0.0;
   float depth = (p.y - u_top) / max(1.0, u_res.y - u_top);
   if (depth > 0.0) {
     float fade = smoothstep(0.0, 0.06, depth);
     float persp = 0.25 + depth;
-    float w1 = sin(p.y / persp * 0.09 - u_ph.x + sin(p.x * 0.004 + u_ph.y) * 1.5);
-    float w2 = sin(p.y / persp * 0.031 + p.x * 0.006 - u_ph.z);
-    off.x += (w1 * 3.2 + w2 * 2.4) * persp * fade;
-    off.y += w2 * 1.4 * persp * fade;
-    // 波的明暗：波峰亮一點、波谷暗一點（背景很柔，只扭動看不太出來，加上明暗才看得到在晃）
-    light += (w1 * 0.018 + w2 * 0.012) * fade;
-    float g = sin(p.y / persp * 0.22 + sin(p.x * 0.01 - u_ph.w) * 2.0 - u_ph2);
-    // 切成一小段一小段、每一列錯開（不然會變成一條條整齊的白線）
-    float brk = sin(p.x * 0.012 / persp + p.y / persp * 0.7 + u_ph.y * 3.0) * 0.5 + 0.5;
-    light += smoothstep(0.86, 1.0, g) * smoothstep(0.5, 0.95, brk) * 0.09 * fade * (1.0 - depth * 0.5);
+    // 長浪：倒影主要被「上下」打碎（從斜上方看水面，浪是讓倒影上下錯開，不是左右扭）
+    float s1 = sin(p.y / persp * 0.08 - u_ph.x + sin(p.x * 0.003 + u_ph.y) * 1.2);
+    float s2 = sin(p.y / persp * 0.17 + p.x / persp * 0.008 - u_ph.z);
+    off.y += (s1 * 5.0 + s2 * 2.6) * persp * fade;
+    off.x += s1 * 0.8 * persp * fade;
+    // 微風吹皺的水面：一塊一塊慢慢飄過去，裡面有細碎的小波，倒影變得比較霧
+    float n = noise(vec2(p.x / persp * 0.004 + u_drift, p.y / persp * 0.016));
+    n = n * 0.65 + noise(vec2(p.x / persp * 0.011 - u_drift * 2.0,p.y / persp * 0.04)) * 0.35;
+    wind = smoothstep(0.5, 0.75, n) * fade;
+    off.y += sin(p.y / persp * 0.55 + p.x / persp * 0.04 - u_ph2 * 2.0) * 1.8 * persp * wind;
     for (int i = 0; i < ${MAX_RIPPLES}; i++) {
       vec4 r = u_rip[i];
       if (r.w <= 0.0) continue;
@@ -69,6 +82,9 @@ void main() {
   vec2 uv = (p + off - u_map.yz) / (u_map.x * u_isize);
   if (depth > 0.0) uv.y = max(uv.y, u_hz);
   vec3 c = texture2D(u_img, uv).rgb;
+  // 被風吹皺的地方不像鏡子：倒影淡一點，混進水平線那裡的霧色
+  vec3 haze = texture2D(u_img, vec2(uv.x, u_hz + 0.012)).rgb;
+  c = mix(c, haze, wind * 0.5);
   gl_FragColor = vec4(c + light, 1.0);
 }`;
 
@@ -124,7 +140,7 @@ export class LakeView {
     if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return false;
     gl.useProgram(prog);
     this.u = {};
-    for (const n of ["u_vres", "u_res", "u_map", "u_isize", "u_top", "u_hz", "u_ph", "u_ph2", "u_rip"]) this.u[n] = gl.getUniformLocation(prog, n);
+    for (const n of ["u_vres", "u_res", "u_map", "u_isize", "u_top", "u_hz", "u_ph", "u_ph2", "u_drift", "u_rip"]) this.u[n] = gl.getUniformLocation(prog, n);
     const buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW);
@@ -219,8 +235,9 @@ export class LakeView {
     gl.uniform1f(this.u.u_top, this.top);
     const t = this.frame / 60;
     const ph = (k) => (t * k) % (Math.PI * 2);
-    gl.uniform4f(this.u.u_ph, ph(0.6), ph(0.1), ph(0.35), ph(0.3));
+    gl.uniform4f(this.u.u_ph, ph(0.9), ph(0.1), ph(0.6), ph(0.3));
     gl.uniform1f(this.u.u_ph2, ph(0.8));
+    gl.uniform1f(this.u.u_drift, (t * 0.08) % 64);
     this.rip.fill(0);
     this.lake.ripples.forEach((r, i) => this.rip.set([r.x, r.y, rippleRadius(r), rippleAmp(r)], i * 4));
     gl.uniform4fv(this.u.u_rip, this.rip);
