@@ -193,3 +193,32 @@ test("fadeOutAll (used when the window is resized): every flower fades out slowl
   }
   assert.ok(n >= 45 && n <= 90, `fades out over ${n} frames (about a second, not its whole life)`);
 });
+
+// 7. 開花要自然：花苞和開好的花不會兩張半透明疊在一起很久（看起來像鬼影）；
+//    花是從花苞的大小慢慢張開（spread 0→1），不是在原地淡入
+test("blooming looks natural: no long ghostly double image, the flower spreads open from the bud", () => {
+  const pond = createPond();
+  const e = env();
+  stepPond(pond, { ...e, click: { x: 200, y: 600 } });
+  const l = pond.lotus[0];
+  const poses = [];
+  for (let i = 0; i < 60 * 10; i++) {
+    poses.push(lotusPose(l));
+    stepPond(pond, e);
+  }
+  const half = (v) => v > 0.15 && v < 0.85;
+  const ghost = poses.filter((p) => half(p.budA) && half(p.flowerA)).length;
+  assert.ok(ghost <= 40, `bud and flower are both half see-through for ${ghost} frames`);
+  const shown = poses.findIndex((p) => p.flowerA > 0.05);
+  const wide = poses.findIndex((p) => p.spread >= 0.99);
+  assert.ok(poses[shown].spread < 0.1, "the flower first shows at the bud's size");
+  assert.ok(poses[shown].scale >= 0.99, "by then the bud is fully grown (so the sizes match)");
+  assert.ok(wide - shown >= 60 * 2, `then opens slowly (${((wide - shown) / 60).toFixed(1)} s)`);
+  for (let i = 1; i < poses.length; i++) {
+    assert.ok(poses[i].spread >= poses[i - 1].spread, "only opens, never closes");
+    for (const k of ["budA", "flowerA", "spread"]) {
+      assert.ok(Math.abs(poses[i][k] - poses[i - 1][k]) <= 1 / 40, `${k} changes slowly`);
+    }
+  }
+  assert.ok(poses.at(-1).budA === 0 && poses.at(-1).flowerA === 1, "ends as just the open flower");
+});

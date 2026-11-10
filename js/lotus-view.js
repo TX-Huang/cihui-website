@@ -85,20 +85,23 @@ export class LotusView {
     const lh = lw * 0.45 * (leaf.height / leaf.width);
     ctx.globalAlpha = p.alpha * p.leaf * 0.92;
     ctx.drawImage(leaf, x - lw / 2, y - lh / 2, lw, lh);
-    // 花苞：從荷葉中間長出來（越長越高），開花時慢慢淡出
-    const budA = p.bud * (1 - p.open);
-    if (budA > 0) {
-      const bh = s * 0.95 * p.scale;
-      const bw = bh * (bud.width / bud.height);
-      ctx.globalAlpha = p.alpha * budA;
-      ctx.drawImage(bud, x - bw / 2, y - bh + lh * 0.1, bw, bh);
+    // 花苞：從荷葉中間長出來（越長越高）
+    const base = y + lh * 0.1; // 花苞、花的底都踩在這裡
+    const bh = s * 0.95 * p.scale;
+    const bw = bh * (bud.width / bud.height);
+    if (p.budA > 0) {
+      ctx.globalAlpha = p.alpha * p.budA;
+      ctx.drawImage(bud, x - bw / 2, base - bh, bw, bh);
     }
-    // 開好的花：坐在荷葉中間
-    if (p.open > 0) {
-      const fw = s * (0.8 + 0.2 * p.open) * Math.max(p.scale, 0.8);
-      const fh = fw * (open.height / open.width);
-      ctx.globalAlpha = p.alpha * p.open;
-      ctx.drawImage(open, x - fw / 2, y - fh * 0.78, fw, fh);
+    // 開好的花：一開始收得跟花苞差不多窄、差不多高，再慢慢往外張開
+    if (p.flowerA > 0) {
+      const fullW = s;
+      const fullH = fullW * (open.height / open.width);
+      const fw = bw * 1.25 + (fullW - bw * 1.25) * p.spread;
+      const fh = bh * 0.92 + (fullH - bh * 0.92) * p.spread;
+      const drop = fullH * 0.22 * p.spread; // 全開時下面的花瓣垂到荷葉上
+      ctx.globalAlpha = p.alpha * p.flowerA;
+      ctx.drawImage(open, x - fw / 2, base - lh * 0.1 + drop - fh, fw, fh);
     }
   }
 }

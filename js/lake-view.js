@@ -16,7 +16,7 @@ void main() {
 }`;
 
 // v_pos：這一點在 .sky-img 裡的位置（CSS 像素）。水平線以下：
-// 1. 倒影慢慢晃：很慢的長浪讓倒影上下錯開，越近（越下面）越大、越遠（靠水平線）越細越密
+// 1. 倒影輕輕抖：每一小塊水面各自微微晃（整片倒影不會一起移動），越近（越下面）越大、越遠越細
 // 2. 微風：一塊一塊被吹皺的水面慢慢飄過，那裡倒影比較霧（霧天沒有太陽，所以不做閃光點）
 // 3. 漣漪：一圈一圈往外推（上下壓扁成橢圓，像從斜上方看水面）
 const FS = `
@@ -31,9 +31,8 @@ uniform vec3 u_map;
 uniform vec2 u_isize;
 uniform float u_top;
 uniform float u_hz; // 水平線在圖上的高度（取顏色時水面不能取到水平線以上的天空）
-uniform vec4 u_ph; // 各道波的相位（在 JS 算好、繞 2π，時間再久也不會失去精度）
-uniform float u_ph2;
-uniform float u_drift; // 微風那幾塊往旁邊飄了多遠（繞 64 一圈；雜訊左右每 64 格重複，所以接得起來）
+uniform float u_ph2; // 小波的相位（在 JS 算好、繞 2π，時間再久也不會失去精度）
+uniform float u_drift; // 雜訊流了多遠（繞 64 一圈；雜訊每 64 格重複，而且下面都乘整數，所以接得起來）
 uniform vec4 u_rip[${MAX_RIPPLES}];
 varying vec2 v_pos;
 float hash(vec2 i) {
@@ -56,11 +55,13 @@ void main() {
   if (depth > 0.0) {
     float fade = smoothstep(0.0, 0.06, depth);
     float persp = 0.25 + depth;
-    // 長浪：倒影主要被「上下」打碎（從斜上方看水面，浪是讓倒影上下錯開，不是左右扭）
-    float s1 = sin(p.y / persp * 0.08 - u_ph.x + sin(p.x * 0.003 + u_ph.y) * 1.2);
-    float s2 = sin(p.y / persp * 0.17 + p.x / persp * 0.008 - u_ph.z);
-    off.y += (s1 * 5.0 + s2 * 2.6) * persp * fade;
-    off.x += s1 * 0.8 * persp * fade;
+    // 細碎的小波：兩層柔和的雜訊往相反方向慢慢流，相減之後每一小塊水面各自輕輕晃。
+    // 每一小塊晃的方向都不一樣，所以山的倒影只是邊緣微微抖動，整座山不會跟著移動
+    vec2 q = vec2(p.x / persp * 0.011, p.y / persp * 0.045);
+    float wy = noise(q + vec2(u_drift * 5.0, u_drift * 4.0)) - noise(q * 1.3 + vec2(17.0 - u_drift * 4.0, 9.0 + u_drift * 5.0));
+    float wx = noise(q * 0.8 + vec2(31.0 - u_drift * 5.0, 5.0 + u_drift * 3.0)) - noise(q * 1.1 + vec2(3.0 + u_drift * 4.0, 23.0 - u_drift * 4.0));
+    off.y += wy * 12.0 * persp * fade;
+    off.x += wx * 8.0 * persp * fade;
     // 微風吹皺的水面：一塊一塊慢慢飄過去，裡面有細碎的小波，倒影變得比較霧
     float n = noise(vec2(p.x / persp * 0.004 + u_drift, p.y / persp * 0.016));
     n = n * 0.65 + noise(vec2(p.x / persp * 0.011 - u_drift * 2.0,p.y / persp * 0.04)) * 0.35;
@@ -140,7 +141,7 @@ export class LakeView {
     if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return false;
     gl.useProgram(prog);
     this.u = {};
-    for (const n of ["u_vres", "u_res", "u_map", "u_isize", "u_top", "u_hz", "u_ph", "u_ph2", "u_drift", "u_rip"]) this.u[n] = gl.getUniformLocation(prog, n);
+    for (const n of ["u_vres", "u_res", "u_map", "u_isize", "u_top", "u_hz", "u_ph2", "u_drift", "u_rip"]) this.u[n] = gl.getUniformLocation(prog, n);
     const buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW);
@@ -235,7 +236,6 @@ export class LakeView {
     gl.uniform1f(this.u.u_top, this.top);
     const t = this.frame / 60;
     const ph = (k) => (t * k) % (Math.PI * 2);
-    gl.uniform4f(this.u.u_ph, ph(0.9), ph(0.1), ph(0.6), ph(0.3));
     gl.uniform1f(this.u.u_ph2, ph(0.8));
     gl.uniform1f(this.u.u_drift, (t * 0.08) % 64);
     this.rip.fill(0);

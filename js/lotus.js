@@ -19,16 +19,25 @@ export function createPond() {
 }
 
 // 一朵蓮花現在的樣子（都是 0～1）：
-// leaf＝荷葉、bud＝花苞、open＝開好的花（花苞淡出、花淡入）、scale＝花多大、alpha＝整朵的透明度、dx/dy＝漂浮
+// leaf＝荷葉、bud＝花苞長出來了沒、scale＝花苞多大、alpha＝整朵的透明度、dx/dy＝漂浮
+// 開花：花苞長到最大後，開好的花先縮成花苞那麼窄，在花苞的位置接手（budA 淡出、flowerA 淡入，1 秒），
+// 再慢慢往外張開（spread 0→1）。這樣不會有「兩張半透明的圖疊在一起」的鬼影
+const HANDOFF = 200; // 花苞長好、開始開花
 export function lotusPose(l) {
   const a = l.age;
   const alpha = Math.min(smooth(a / 70), 1 - smooth((a - LIFE) / END)) * l.stay;
+  const bud = smooth((a - 40) / 60);
+  const flowerA = smooth((a - HANDOFF) / 60);
+  const spread = smooth((a - HANDOFF - 10) / 220);
   return {
     alpha,
     leaf: smooth(a / 70),
-    bud: smooth((a - 40) / 110),
-    open: smooth((a - 170) / 150),
-    scale: 0.35 + 0.65 * smooth((a - 40) / 280),
+    bud,
+    budA: bud * (1 - smooth((a - HANDOFF - 20) / 60)),
+    flowerA,
+    spread,
+    open: spread,
+    scale: 0.35 + 0.65 * smooth((a - 40) / 160),
     dx: 3 * Math.sin(a * 0.013 + l.seed),
     dy: 2.5 * Math.sin(a * 0.017 + l.seed * 2)
   };
