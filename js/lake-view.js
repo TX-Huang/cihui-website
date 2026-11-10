@@ -56,10 +56,10 @@ void main() {
       d.y *= 2.6;
       float dist = length(d);
       float x = dist - r.z;
-      float env = exp(-x * x / 392.0);
-      float wave = sin(x * 0.35) * env * r.w;
-      off += (dist > 0.0 ? d / dist : vec2(0.0)) * wave * 3.0 * fade;
-      light += wave * 0.035 * fade;
+      float env = exp(-x * x / 648.0);
+      float wave = sin(x * 0.3) * env * r.w;
+      off += (dist > 0.0 ? d / dist : vec2(0.0)) * wave * 6.0 * fade;
+      light += wave * 0.075 * fade;
     }
   }
   vec2 uv = (p + off - u_map.yz) / (u_map.x * u_isize);

@@ -8,7 +8,7 @@ export const RIPPLE_LIFE = 300; // 一圈漣漪 5 秒
 
 const SPEED = 0.8; // 漣漪擴散速度（每格像素）：慢慢散開
 const RISE = 18; // 從 0 慢慢出現（0.3 秒）
-const STRENGTH = { click: 1, move: 0.3, drop: 0.3 }; // 點擊最明顯；滑鼠滑過、花瓣落水比較輕
+const STRENGTH = { click: 1, move: 0.4, drop: 0.38 }; // 點擊最明顯；滑鼠滑過、花瓣落水比較輕
 const MOVE_GAP = 18; // 滑鼠滑過：至少隔幾格
 const MOVE_DIST = 50; // 而且至少隔多遠，才再冒一圈
 
@@ -63,7 +63,7 @@ export function rippleRadius(r) {
 
 // 漣漪現在多明顯（0～1）：慢慢出現，越散越淡，最後完全看不到才拿掉
 export function rippleAmp(r) {
-  return r.strength * smooth(r.age / RISE) * (1 - r.age / RIPPLE_LIFE) ** 2;
+  return r.strength * smooth(r.age / RISE) * (1 - r.age / RIPPLE_LIFE) ** 1.5;
 }
 
 // 調整視窗大小：背景圖的鋪法變了，漣漪照「在圖上的同一點」搬過去（不會跑到天上或突然消失）
