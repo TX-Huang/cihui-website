@@ -11,6 +11,7 @@ import { BirdView, loadBirdKit } from "./bird-view.js";
 import { RibbonView, loadRibbonImage } from "./ribbon-view.js";
 import { PhoenixView, loadPhoenixKit } from "./phoenix-view.js";
 import { TudiView, loadTudiKit } from "./tudi-view.js";
+import { LotusView, loadLotusKit } from "./lotus-view.js";
 
 // ── 珠簾尺寸（拱門圖的設計座標，圖寬 1000） ──
 const D = GATE.door;
@@ -45,6 +46,7 @@ let birds = null;
 let ribbon = null; // 混天綾（中壇元帥）
 let phoenix = null; // 丹鳳（九天玄女）
 let tudi = null; // 稻穗和虎爺（福德正神）
+let lotus = null; // 蓮花（中壇元帥）
 let cloth = null;
 let deity = null;
 let currentIndex = -1;
@@ -306,6 +308,11 @@ function loop(now = performance.now()) {
     // 稻穗和虎爺只在福德正神這一頁；換頁時慢慢淡掉
     tudi.active = deity?.id === "tudi" && !moving;
     tudi.tick();
+  }
+  if (lotus) {
+    // 蓮花只在中壇元帥這一頁；換頁時慢慢淡掉
+    lotus.active = deity?.id === "nezha" && !moving;
+    lotus.tick();
   }
   perfMark("鯉魚", t2);
   const t3 = performance.now();
@@ -632,6 +639,9 @@ async function start() {
   const tudiKit = reduceMotion ? null : await loadTudiKit();
   if (tudiKit) tudi = new TudiView($("tudi"), tudiKit);
   window.__debug.tudi = tudi;
+  const lotusKit = reduceMotion ? null : await loadLotusKit();
+  if (lotusKit) lotus = new LotusView($("lotus"), lotusKit, GATE, $("gateImg"));
+  window.__debug.lotus = lotus;
 }
 
 // 除錯用：在主控台打 __debug.cloth 可以看珠簾狀態
