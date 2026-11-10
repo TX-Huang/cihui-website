@@ -1,6 +1,7 @@
 """把仙佛元素的圖（透明背景 PNG）裁掉多餘的透明邊、縮小，存成網頁用的 webp。
 用法: python -I tools/prep_elements.py
 輸入: assets/raw/chatgpt2/rice.png、lotus-open.png、lotus-bud.png、lotus-leaf.png、tiger.png
+注意: 蓮花三張之後改用 tools/gold_lotus.py apply B 做成金蓮（這支會蓋回粉紅色，跑完要再跑一次 gold_lotus）
 輸出: assets/elements/*.webp，和 elements.json（每張多大、稻穗莖的底部在哪）
 """
 import json
