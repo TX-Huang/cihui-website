@@ -495,6 +495,19 @@ body {
   z-index: 14;
   pointer-events: none;
 }
+.tudi {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 15;
+  pointer-events: none;
+}
+/* 滑鼠移到虎爺身上：手指游標（提示可以點） */
+body.over-tiger,
+body.over-tiger * {
+  cursor: pointer !important;
+}
 .phoenix {
   position: absolute;
   inset: 0;
