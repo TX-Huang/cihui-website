@@ -117,11 +117,18 @@ ChatGPT 改圖時位置可能會跑掉一點點，沒關係，我會用程式對
 
 ### 4-1. 蓮花（3 張）
 
-`lotus-bud.png`、`lotus-open.png`、`lotus-leaf.png`
-> Create an image. Size 1024x1024. Transparent background PNG.
-> [A closed lotus bud on a short stem / A fully open lotus flower seen from slightly above / A single round lotus leaf seen from directly above], very pale pink fading to white, soft and refined, painterly realism, fine detail. Only the object — no water, no background, no shadow, no text.
+三張分開生（花是粉白色，葉子是綠色，不能用同一句）。**先生花**，花苞再上傳花的圖，讓兩張是同一種蓮花。
 
-（每次只選中括號裡的一種，生三次。）
+`lotus-open.png`（盛開的花）
+> Create an image. Size 1024x1024. Transparent background PNG.
+> A single fully open lotus flower seen from slightly above, petals very pale pink fading to white, a soft yellow-green seed pod in the center with fine golden stamens. Soft and refined, quiet and calm, painterly realism, fine detail. Only the flower — no stem, no leaf, no water, no background, no shadow, no text.
+
+`lotus-bud.png`（花苞，先上傳 `lotus-open.png`）
+> Use the attached lotus as the same flower (same petal colors and style). Show a single closed lotus bud on a short straight stem, petals tightly closed into a pointed teardrop shape, pale pink at the tip fading to white at the base; the stem is a muted soft green. Size 1024x1024. Transparent background PNG. Only the bud and stem — no leaf, no water, no background, no shadow, no text.
+
+`lotus-leaf.png`（荷葉）
+> Create an image. Size 1024x1024. Transparent background PNG.
+> A single round lotus leaf seen from directly above, floating flat, muted soft sage green (not bright), slightly lighter toward the center, with delicate pale veins radiating out from the center and gently wavy edges. Refined and calm, painterly realism, fine detail. Only the leaf — no flower, no water, no background, no shadow, no text.
 
 ### 4-2. 稻穗 `rice.png`
 
