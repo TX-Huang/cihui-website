@@ -7,7 +7,7 @@
 // 6. 換到別的神明：全部慢慢淡掉，不會再開
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createPond, stepPond, lotusPose, MAX_LOTUS } from "../js/lotus.js";
+import { createPond, stepPond, lotusPose, fadeOutAll, MAX_LOTUS } from "../js/lotus.js";
 
 const W = 1440;
 const H = 900;
@@ -135,4 +135,61 @@ test("leaving the page: all fade out slowly and no new ones bloom", () => {
   assert.ok(n >= 45, `fades over ${n} frames`);
   run(pond, e, 60 * 60);
   assert.equal(pond.lotus.length, 0, "none while away");
+});
+
+test("blooming by itself also respects the no-go areas", () => {
+  const pond = createPond();
+  const e = env({ free: () => false });
+  for (let i = 0; i < 60 * 90; i++) {
+    stepPond(pond, e);
+    assert.equal(pond.lotus.length, 0, `frame ${i}`);
+  }
+});
+
+test("clicking on the petals of an open flower does not stack a new one", () => {
+  const pond = createPond();
+  const e = env();
+  stepPond(pond, { ...e, click: { x: 200, y: 600 } });
+  run(pond, e, 60 * 6);
+  stepPond(pond, { ...e, click: { x: 200, y: 525 } }); // 花瓣上方
+  stepPond(pond, { ...e, click: { x: 290, y: 610 } }); // 荷葉邊
+  assert.equal(pond.lotus.length, 1);
+});
+
+test("a young lotus leaving the page only fades (never brightens first)", () => {
+  for (const age of [5, 20, 60, 150]) {
+    const pond = createPond();
+    const e = env();
+    stepPond(pond, { ...e, click: { x: 200, y: 600 } });
+    run(pond, e, age);
+    const l = pond.lotus[0];
+    e.active = false;
+    const seen = (p) => [p.alpha * p.leaf, p.alpha * p.bud, p.alpha * p.open];
+    let last = seen(lotusPose(l));
+    while (pond.lotus.includes(l)) {
+      stepPond(pond, e);
+      const now = seen(lotusPose(l));
+      now.forEach((v, k) => assert.ok(v <= last[k] + 1e-9, `age ${age}: part ${k} only fades`));
+      last = now;
+    }
+  }
+});
+
+test("fadeOutAll (used when the window is resized): every flower fades out slowly while staying on the page", () => {
+  const pond = createPond();
+  const e = env();
+  stepPond(pond, { ...e, click: { x: 200, y: 600 } });
+  stepPond(pond, { ...e, click: { x: 1250, y: 600 } });
+  run(pond, e, 400);
+  fadeOutAll(pond);
+  let n = 0;
+  let last = pond.lotus.map((l) => lotusPose(l).alpha);
+  while (pond.lotus.length && n < 500) {
+    const ls = [...pond.lotus];
+    stepPond(pond, e);
+    ls.forEach((l, k) => assert.ok(lotusPose(l).alpha <= last[k] + 1e-9, "only fades"));
+    last = pond.lotus.map((l) => lotusPose(l).alpha);
+    n++;
+  }
+  assert.ok(n >= 45 && n <= 90, `fades out over ${n} frames (about a second, not its whole life)`);
 });

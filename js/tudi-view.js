@@ -1,7 +1,7 @@
 // 畫福德正神頁的稻穗和虎爺（js/rice.js、js/tiger.js 決定怎麼動，這裡只負責畫）。
 // 稻子用一張直的稻穗圖（assets/elements/rice.webp），切成一段一段，每段照彎的程度斜一點，接起來就是彎的稻子。
 // 順序：後排稻子 → 虎爺 → 前排稻子（虎爺像躲在稻穗裡）。
-import { createField, stepField } from "./rice.js";
+import { createField, stepField, resizeField } from "./rice.js";
 import { createTiger, stepTiger, tigerBox, tigerPose } from "./tiger.js";
 
 const SLICES = 10; // 每根稻子切幾段
@@ -26,7 +26,11 @@ export class TudiView {
       this.mouse.y = e.clientY;
       this.hoverCursor();
     });
-    window.addEventListener("pointerdown", (e) => (this.click = { x: e.clientX, y: e.clientY }));
+    window.addEventListener("pointerdown", (e) => {
+      // 按鈕、連結、選單上的點擊不算（例如底下的字型出處連結剛好在虎爺旁邊）
+      if (e.target.closest && e.target.closest("button, a, nav, header")) return;
+      this.click = { x: e.clientX, y: e.clientY };
+    });
     this.resize();
     window.addEventListener("resize", () => this.resize());
   }
@@ -37,10 +41,9 @@ export class TudiView {
     this.h = window.innerHeight;
     this.c.width = this.w * this.dpr;
     this.c.height = this.h * this.dpr;
-    // 換畫面大小：重新種一片田（淡入淡出的狀態留著）
-    const alpha = this.field?.alpha ?? 0;
-    this.field = createField({ w: this.w, h: this.h, random: Math.random });
-    this.field.alpha = alpha;
+    // 第一次：種一片田；之後換畫面大小：同一片稻子照比例搬過去（不重新種，畫面才不會跳）
+    if (this.field) resizeField(this.field, this.w, this.h);
+    else this.field = createField({ w: this.w, h: this.h, random: Math.random });
   }
 
   // 滑鼠移到虎爺身上：游標變成手指（提示可以點）
@@ -58,6 +61,7 @@ export class TudiView {
     stepField(this.field, e);
     stepTiger(this.tiger, e);
     this.click = null;
+    this.hoverCursor(); // 換頁時游標也要變回來（就算滑鼠沒動）
     this.mouse.vx *= 0.6;
     this.mouse.vy *= 0.6;
     this.age += 1;

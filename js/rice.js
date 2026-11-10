@@ -24,6 +24,9 @@ export function createField({ w, h, random }) {
       const depth = random(); // 0＝最後排、1＝最前排
       const sh = h * (0.15 + 0.15 * depth * (0.7 + 0.3 * random())); // 後排比較矮
       stalks.push({
+        side, // 0＝左下、1＝右下
+        dFrac: d / w, // 離畫面邊緣多遠（佔畫面寬的比例）：調整視窗大小時照比例搬
+        hFrac: sh / h,
         x: side ? w - d : d,
         base: h + 4 + depth * h * 0.03, // 前排的根在比較下面（近大遠小）
         h: sh,
@@ -71,4 +74,13 @@ function brush(s, m) {
   const d = Math.hypot(m.x - hx, m.y - hy);
   if (d >= r) return 0;
   return (clamp(m.vx, -40, 40) / s.h) * PUSH * (1 - d / r);
+}
+
+// 調整視窗大小：同一片稻子照比例搬到新位置（不重新種，畫面才不會跳）
+export function resizeField(f, w, h) {
+  for (const s of f.stalks) {
+    s.x = s.side ? w - s.dFrac * w : s.dFrac * w;
+    s.h = s.hFrac * h;
+    s.base = h + 4 + s.depth * h * 0.03;
+  }
 }

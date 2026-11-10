@@ -38,19 +38,15 @@ export function stepPond(pond, e) {
   if (!e.active) {
     // 不在這一頁：全部慢慢淡掉，不會再開
     pond.visit = false;
-    for (const l of pond.lotus) {
-      l.age += 1;
-      l.stay = Math.max(0, l.stay - LEAVE);
-    }
-    pond.lotus = pond.lotus.filter((l) => l.stay > 0);
+    fadeOutAll(pond);
+    age(pond);
     return;
   }
   if (!pond.visit) {
     pond.visit = true;
     pond.timer = 60 * (5 + e.random() * 5); // 進來幾秒後自己開第一朵
   }
-  for (const l of pond.lotus) l.age += 1;
-  pond.lotus = pond.lotus.filter((l) => l.age < LIFE + END);
+  age(pond);
   if (e.click && e.free(e.click.x, e.click.y)) bloom(pond, e, e.click.x, e.click.y);
   pond.timer -= 1;
   if (pond.timer <= 0) {
@@ -58,6 +54,24 @@ export function stepPond(pond, e) {
     pond.timer = 60 * (AMBIENT_GAP[0] + e.random() * (AMBIENT_GAP[1] - AMBIENT_GAP[0]));
   }
 }
+
+// 讓每一朵都慢慢淡掉（換頁、調整視窗大小時用）
+export function fadeOutAll(pond) {
+  for (const l of pond.lotus) l.leaving = true;
+}
+
+// 過一格：正在淡掉的停在現在的樣子（不再長大、開花，才不會淡的時候反而變亮），其他的照常長
+function age(pond) {
+  for (const l of pond.lotus) {
+    if (l.leaving) l.stay = Math.max(0, l.stay - LEAVE);
+    else l.age += 1;
+  }
+  pond.lotus = pond.lotus.filter((l) => l.stay > 0 && l.age < LIFE + END);
+}
+
+// 一朵蓮花佔的範圍：荷葉左右、花往上長
+const area = (x, y, s) => ({ x0: x - 0.75 * s, x1: x + 0.75 * s, y0: y - 0.85 * s, y1: y + 0.4 * s });
+const overlap = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
 
 export function lotusSize(w) {
   return Math.max(70, Math.min(130, w * 0.085)); // 開好的花多寬（像素）
@@ -67,7 +81,8 @@ export function lotusSize(w) {
 function bloom(pond, e, x, y) {
   if (pond.lotus.length >= MAX_LOTUS) return false;
   const size = lotusSize(e.w);
-  if (pond.lotus.some((l) => Math.hypot(l.x - x, l.y - y) < size * 0.6)) return false;
+  const box = area(x, y, size);
+  if (pond.lotus.some((l) => overlap(box, area(l.x, l.y, l.size)))) return false;
   pond.lotus.push({ x, y, size, age: 0, stay: 1, seed: e.random() * 10 });
   return true;
 }
@@ -78,6 +93,6 @@ function ambient(pond, e) {
     const left = e.random() < 0.5;
     const x = e.w * (left ? 0.04 + e.random() * 0.13 : 0.83 + e.random() * 0.13);
     const y = e.h * (0.6 + e.random() * 0.2);
-    if (bloom(pond, e, x, y)) return;
+    if (e.free(x, y) && bloom(pond, e, x, y)) return;
   }
 }

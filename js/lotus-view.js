@@ -1,6 +1,6 @@
 // 畫中壇元帥頁的蓮花（js/lotus.js 決定什麼時候開、開到哪，這裡只負責畫）。
 // 荷葉是從正上方看的圓葉，壓扁一點像平躺在水面上；花苞從荷葉中間長出來，再換成開好的花。
-import { createPond, stepPond, lotusPose } from "./lotus.js";
+import { createPond, stepPond, lotusPose, fadeOutAll } from "./lotus.js";
 
 export class LotusView {
   constructor(canvas, kit, gate, gateEl) {
@@ -22,11 +22,15 @@ export class LotusView {
   }
 
   resize() {
+    const old = { w: this.w, h: this.h };
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
     this.w = window.innerWidth;
     this.h = window.innerHeight;
     this.c.width = this.w * this.dpr;
     this.c.height = this.h * this.dpr;
+    // 畫面大小真的變了（不算手機捲動時網址列伸縮那一點點），原本的位置可能跑進門洞或字上：
+    // 已經開的慢慢淡掉
+    if (old.w && (old.w !== this.w || Math.abs(old.h - this.h) > old.h * 0.1)) fadeOutAll(this.pond);
   }
 
   // 珠簾門洞裡不放蓮花（那裡是拉珠簾、敲風鈴的地方）；標題、說明文字上也不放（會擋住字）

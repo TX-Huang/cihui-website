@@ -7,7 +7,7 @@
 // 6. 換到別的神明：慢慢淡掉；回來：慢慢出現
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createField, stepField, MAX_BEND } from "../js/rice.js";
+import { createField, stepField, resizeField, MAX_BEND } from "../js/rice.js";
 
 const W = 1440;
 const H = 900;
@@ -154,4 +154,22 @@ test("leaving the page fades the field out slowly; coming back fades it in", () 
     n++;
   }
   assert.ok(n >= 45, `fades in over ${n} frames`);
+});
+
+test("resizing the window keeps the same stalks (no re-planting jump), just moved to fit", () => {
+  const f = createField({ w: W, h: H, random: seeded(7) });
+  for (let i = 0; i < 100; i++) stepField(f, env());
+  const before = f.stalks.map((s) => ({ ...s }));
+  resizeField(f, 1000, 700);
+  assert.equal(f.stalks.length, before.length);
+  f.stalks.forEach((s, i) => {
+    const o = before[i];
+    assert.equal(s.flip, o.flip);
+    assert.equal(s.b, o.b, "keeps its sway");
+    assert.ok(Math.abs(s.h / 700 - o.h / H) < 1e-9, "same height relative to the screen");
+    const d = (q, w) => Math.min(q.x, w - q.x);
+    assert.ok(Math.abs(d(s, 1000) / 1000 - d(o, W) / W) < 1e-9, "same place relative to its corner");
+    assert.ok(s.x < 1000 * 0.3 || s.x > 1000 * 0.7);
+    assert.ok(s.base >= 700);
+  });
 });
