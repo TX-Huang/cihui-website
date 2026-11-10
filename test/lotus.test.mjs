@@ -222,3 +222,31 @@ test("blooming looks natural: no long ghostly double image, the flower spreads o
   }
   assert.ok(poses.at(-1).budA === 0 && poses.at(-1).flowerA === 1, "ends as just the open flower");
 });
+
+// 8. 蓮花長在湖裡：圖層在大門後面（鯉魚上面），只在看得到湖水的地方開
+//    （點在門上、天空、珠簾門洞都不會開——這由 free(x, y) 決定，view 用湖面的 visibleWater）
+test("the lotus layer sits behind the gate (in the lake), above the koi", async () => {
+  const { readFileSync } = await import("node:fs");
+  const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+  const html = read("index.html");
+  const stageStart = html.indexOf('<div class="stage"');
+  const canvas = html.indexOf('id="lotus"');
+  assert.ok(canvas > 0 && canvas < stageStart, "the lotus canvas is not inside the stage (the stage holds the gate)");
+  const css = read("style.css");
+  const block = css.match(/\n\.lotus\s*\{[^}]*\}/)?.[0] ?? "";
+  assert.match(block, /position:\s*fixed/);
+  const z = Number(block.match(/z-index:\s*(\d+)/)?.[1]);
+  assert.ok(z > 5 && z < 10, `between the koi (5) and the gate stage (10): ${z}`);
+});
+
+test("blooming by itself still happens when only a little water is visible (keeps looking instead of giving up)", () => {
+  const pond = createPond();
+  const e = env({ free: (x, y) => (x < W * 0.045 || x > W * 0.955) && y > H * 0.6 });
+  let births = 0;
+  const seen = new Set();
+  for (let i = 0; i < 60 * 120; i++) {
+    stepPond(pond, e);
+    for (const l of pond.lotus) if (!seen.has(l)) (seen.add(l), births++);
+  }
+  assert.ok(births >= 3, `${births} bloomed in 2 minutes`);
+});

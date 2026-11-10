@@ -506,11 +506,11 @@ body {
   height: 100%;
 }
 .lotus {
-  position: absolute;
+  position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
-  z-index: 15;
+  z-index: 6; /* 長在湖裡：鯉魚（5）上面、大門（舞台 10）後面 */
   pointer-events: none;
 }
 .tudi {

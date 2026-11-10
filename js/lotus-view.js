@@ -3,12 +3,11 @@
 import { createPond, stepPond, lotusPose, fadeOutAll } from "./lotus.js";
 
 export class LotusView {
-  constructor(canvas, kit, gate, gateEl) {
+  constructor(canvas, kit, water) {
     this.c = canvas;
     this.ctx = canvas.getContext("2d");
     this.kit = kit; // { open, bud, leaf }：三張圖
-    this.gate = gate;
-    this.gateEl = gateEl;
+    this.water = water; // (x, y) → 這裡看得到湖水嗎（水平線以下、不在大門和門洞後面）
     this.pond = createPond();
     this.active = false;
     this.click = null;
@@ -33,14 +32,10 @@ export class LotusView {
     if (old.w && (old.w !== this.w || Math.abs(old.h - this.h) > old.h * 0.1)) fadeOutAll(this.pond);
   }
 
-  // 珠簾門洞裡不放蓮花（那裡是拉珠簾、敲風鈴的地方）；標題、說明文字上也不放（會擋住字）
+  // 蓮花長在湖裡：只開在看得到湖水的地方（點在門上、天空、珠簾門洞都不開）；
+  // 標題、說明文字上也不放（會擋住字）
   free(x, y) {
-    const r = this.gateEl.getBoundingClientRect();
-    if (r.width) {
-      const k = r.width / this.gate.w;
-      const d = this.gate.door;
-      if (x > r.left + d.x0 * k && x < r.left + d.x1 * k && y > r.top + d.y0 * k && y < r.top + d.y1 * k) return false;
-    }
+    if (!this.water(x, y)) return false;
     const pad = 70; // 花的半徑左右：花邊也不要蓋到字
     for (const el of document.querySelectorAll("#copy .heading, #copy .aside")) {
       const t = el.getBoundingClientRect();

@@ -59,8 +59,8 @@ export function stepPond(pond, e) {
   if (e.click && e.free(e.click.x, e.click.y)) bloom(pond, e, e.click.x, e.click.y);
   pond.timer -= 1;
   if (pond.timer <= 0) {
-    ambient(pond, e);
-    pond.timer = 60 * (AMBIENT_GAP[0] + e.random() * (AMBIENT_GAP[1] - AMBIENT_GAP[0]));
+    // 開成了：等 20～40 秒再開下一朵；沒找到位置（看得到的湖水很少）：1 秒後再找
+    pond.timer = ambient(pond, e) ? 60 * (AMBIENT_GAP[0] + e.random() * (AMBIENT_GAP[1] - AMBIENT_GAP[0])) : 60;
   }
 }
 
@@ -96,12 +96,13 @@ function bloom(pond, e, x, y) {
   return true;
 }
 
-// 自己開一朵：在兩旁低低的地方（像水面），找一個沒有別朵的位置
+// 自己開一朵：在兩旁低低的地方（湖面），找一個沒有別朵的位置；開成了回傳 true
 function ambient(pond, e) {
   for (let i = 0; i < 6; i++) {
     const left = e.random() < 0.5;
     const x = e.w * (left ? 0.04 + e.random() * 0.13 : 0.83 + e.random() * 0.13);
     const y = e.h * (0.6 + e.random() * 0.2);
-    if (e.free(x, y) && bloom(pond, e, x, y)) return;
+    if (e.free(x, y) && bloom(pond, e, x, y)) return true;
   }
+  return false;
 }
