@@ -45,10 +45,14 @@ void main() {
     float persp = 0.25 + depth;
     float w1 = sin(p.y / persp * 0.09 - u_ph.x + sin(p.x * 0.004 + u_ph.y) * 1.5);
     float w2 = sin(p.y / persp * 0.031 + p.x * 0.006 - u_ph.z);
-    off.x += (w1 * 1.4 + w2 * 1.0) * persp * fade;
-    off.y += w2 * 0.6 * persp * fade;
+    off.x += (w1 * 3.2 + w2 * 2.4) * persp * fade;
+    off.y += w2 * 1.4 * persp * fade;
+    // 波的明暗：波峰亮一點、波谷暗一點（背景很柔，只扭動看不太出來，加上明暗才看得到在晃）
+    light += (w1 * 0.018 + w2 * 0.012) * fade;
     float g = sin(p.y / persp * 0.22 + sin(p.x * 0.01 - u_ph.w) * 2.0 - u_ph2);
-    light += smoothstep(0.93, 1.0, g) * 0.03 * fade * (1.0 - depth * 0.5);
+    // 切成一小段一小段、每一列錯開（不然會變成一條條整齊的白線）
+    float brk = sin(p.x * 0.012 / persp + p.y / persp * 0.7 + u_ph.y * 3.0) * 0.5 + 0.5;
+    light += smoothstep(0.86, 1.0, g) * smoothstep(0.5, 0.95, brk) * 0.09 * fade * (1.0 - depth * 0.5);
     for (int i = 0; i < ${MAX_RIPPLES}; i++) {
       vec4 r = u_rip[i];
       if (r.w <= 0.0) continue;
