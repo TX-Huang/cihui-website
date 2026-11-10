@@ -135,7 +135,6 @@ body {
   font-size: 13px;
 }
 .pill a,
-.pill .soon,
 .pill button {
   padding: 7px 14px;
   border-radius: 999px;
@@ -155,10 +154,6 @@ body {
   font-weight: 900;
   color: var(--gold);
   letter-spacing: 0.1em;
-}
-.pill .soon {
-  opacity: 0.45;
-  cursor: default;
 }
 .pill .sound-btn {
   background: var(--text);
@@ -452,9 +447,17 @@ body {
 
 /* ── 手機 ── */
 @media (max-width: 720px) {
-  .pill a:not(.brand),
-  .pill .soon {
-    display: none;
+  .pill {
+    gap: 0;
+    padding: 4px;
+  }
+  .pill a,
+  .pill button {
+    padding: 7px 10px;
+    white-space: nowrap;
+  }
+  .pill .brand {
+    letter-spacing: 0.04em;
   }
   .copy {
     flex-direction: column;

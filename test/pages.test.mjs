@@ -127,3 +127,16 @@ test("a typo in a festival date is caught instead of printing a wrong date", () 
     assert.throws(() => lunarDate(m, d), RangeError, `${m}/${d}`);
   }
 });
+
+// 7. 首頁的選單跟內頁一樣：慈惠道場、關於道場、法會活動、服務（首頁另外保留風鈴開關）；
+//    手機上也看得到這三個連結
+test("the home page menu matches the inner pages (plus the wind-chime switch), on phones too", () => {
+  const html = read("index.html");
+  const nav = html.match(/<nav class="pill"[\s\S]*?<\/nav>/)?.[0] ?? "";
+  const links = [...nav.matchAll(/<a[^>]*>([^<]*)<\/a>/g)].map((m) => m[1]);
+  assert.deepEqual(links, ["慈惠道場", ...Object.values(PAGES)]);
+  for (const [f, l] of Object.entries(PAGES)) assert.ok(nav.includes(`<a href="${f}">${l}</a>`), `links to ${l}`);
+  assert.match(nav, /id="soundBtn"/, "the wind-chime switch stays");
+  assert.doesNotMatch(nav, /class="soon"/, "no greyed-out placeholder tab");
+  assert.doesNotMatch(read("style.css"), /\.pill a:not\(\.brand\)/, "links are not hidden on phones");
+});
