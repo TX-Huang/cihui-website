@@ -1,0 +1,355 @@
+/* 內頁（關於道場、法會活動、服務）：跟首頁同樣的月白素雅，但是一般的捲動頁面，好讀為主 */
+:root {
+  --paper: #ece8e3;
+  --card: rgba(255, 255, 255, 0.55);
+  --line: rgba(47, 42, 37, 0.1);
+  --text: #2f2a25;
+  --text-soft: #6b625a; /* 次要的字（對比 4.8） */
+  --gold: #a8844a; /* 只拿來畫線、框 */
+  --gold-text: #7a5c2c; /* 金色的字（對比 5.0） */
+  --serif: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --ease: cubic-bezier(0.65, 0, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--paper);
+}
+
+body {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.9;
+  background: var(--paper);
+  overflow-x: hidden;
+}
+
+a {
+  color: var(--gold-text);
+}
+
+/* ── 頂部玻璃膠囊選單（跟首頁一樣） ── */
+.topbar {
+  position: fixed;
+  inset: 18px 0 auto 0;
+  z-index: 30;
+  display: flex;
+  justify-content: center;
+  padding: 0 12px;
+  pointer-events: none;
+}
+.pill {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 24px rgba(60, 50, 40, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.pill a {
+  padding: 7px 14px;
+  border-radius: 999px;
+  color: var(--text-soft);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 400ms var(--ease), color 400ms var(--ease);
+}
+.pill a:hover {
+  color: var(--text);
+  background: rgba(47, 42, 37, 0.06);
+}
+.pill a[aria-current="page"] {
+  color: #f7f4ef;
+  background: var(--text);
+}
+.pill .brand {
+  font-family: var(--serif);
+  font-weight: 900;
+  color: var(--gold-text);
+  letter-spacing: 0.1em;
+}
+
+/* ── 頁首：瑤池畫面淡淡地當背景 ── */
+.hero {
+  position: relative;
+  height: 46vh;
+  min-height: 320px;
+  max-height: 520px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  text-align: center;
+}
+.hero-img {
+  position: absolute;
+  inset: 0;
+  background: url("assets/bg-yaochi.webp") center 60% / cover no-repeat;
+  opacity: 0.75;
+  animation: settle 2600ms var(--ease) both; /* 進來時畫面慢慢往後退一點 */
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(236, 232, 227, 0.2), var(--paper) 92%);
+}
+.hero-text {
+  position: relative;
+  z-index: 1;
+  padding: 0 20px 28px;
+}
+.eyebrow {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  color: var(--gold-text);
+}
+.hero h1 {
+  margin: 6px 0 4px;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: clamp(34px, 6vw, 52px);
+  letter-spacing: 0.18em;
+  line-height: 1.3;
+}
+.lead {
+  margin: 0;
+  color: var(--text-soft);
+  letter-spacing: 0.08em;
+}
+
+/* ── 內容 ── */
+.content {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 8px 20px 96px;
+}
+section {
+  margin-top: 56px;
+}
+h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: 0.12em;
+}
+h2::before {
+  content: "";
+  width: 22px;
+  height: 1px;
+  background: var(--gold);
+}
+p {
+  margin: 0 0 14px;
+}
+.small {
+  font-size: 14px;
+  color: var(--text-soft);
+}
+
+/* 道場還沒給的內容：虛線框，一看就知道是「待填」，不會被當成真的資料 */
+.todo {
+  padding: 16px 20px;
+  border: 1px dashed rgba(168, 132, 74, 0.6);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.35);
+  color: var(--text-soft);
+  font-size: 15px;
+}
+.todo-tag {
+  display: inline-block;
+  margin-right: 10px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(168, 132, 74, 0.1);
+  color: var(--gold-text);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+}
+
+/* 供奉神明：四張卡片 */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+.card {
+  display: block;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--text);
+  text-decoration: none;
+  transition: background-color 600ms var(--ease), box-shadow 600ms var(--ease);
+}
+.js .card.reveal {
+  transition: background-color 600ms var(--ease), box-shadow 600ms var(--ease), opacity 1000ms var(--ease),
+    transform 1000ms var(--ease);
+}
+.card:hover {
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 28px rgba(60, 50, 40, 0.08);
+}
+.card-role {
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: var(--gold-text);
+  color: color-mix(in srgb, var(--mark, #7a5c2c) 55%, #2f2a25); /* 神明的顏色，調深到讀得清楚 */
+}
+.card-name {
+  display: block;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: 0.12em;
+}
+.card-sub {
+  display: block;
+  font-size: 14px;
+  color: var(--text-soft);
+}
+.card-more {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--gold-text);
+}
+
+/* 法會：一列一場 */
+.events {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+.event {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--line);
+}
+.event-date {
+  min-width: 7.5em;
+  font-family: var(--serif);
+  font-weight: 600;
+  color: var(--gold-text);
+  letter-spacing: 0.06em;
+}
+.event-name {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 18px;
+}
+.event-note {
+  font-size: 14px;
+  color: var(--text-soft);
+}
+.pending {
+  padding: 0 10px;
+  border: 1px dashed rgba(168, 132, 74, 0.7);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--gold-text);
+}
+
+footer {
+  padding: 28px 20px 40px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-soft);
+  border-top: 1px solid var(--line);
+}
+footer a {
+  color: var(--text-soft);
+}
+
+/* 慢慢浮上來（js/page.js 捲到時加 is-in）；沒有 JS 就直接顯示 */
+.js .reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 1000ms var(--ease), transform 1000ms var(--ease);
+}
+.js .reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes settle {
+  from {
+    transform: scale(1.06);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+}
+
+/* ── 手機 ── */
+@media (max-width: 520px) {
+  .topbar {
+    inset: 12px 0 auto 0;
+  }
+  .pill {
+    gap: 0;
+    padding: 4px;
+  }
+  .pill a {
+    padding: 7px 10px;
+  }
+  .pill .brand {
+    letter-spacing: 0.04em;
+  }
+  .cards {
+    grid-template-columns: 1fr;
+  }
+  .event-date {
+    min-width: 0;
+  }
+  .event-name {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .hero-img {
+    animation: none;
+  }
+}
+
+/* 列印、存成 PDF：全部顯示 */
+@media print {
+  .js .reveal {
+    opacity: 1;
+    transform: none;
+  }
+  .topbar {
+    display: none;
+  }
+}
