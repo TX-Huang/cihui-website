@@ -9,6 +9,7 @@ import { KoiPond, loadKoiKits } from "./koi.js";
 import { IntroView } from "./intro-view.js";
 import { BirdView, loadBirdKit } from "./bird-view.js";
 import { RibbonView, loadRibbonImage } from "./ribbon-view.js";
+import { PhoenixView, loadPhoenixKit } from "./phoenix-view.js";
 
 // ── 珠簾尺寸（拱門圖的設計座標，圖寬 1000） ──
 const D = GATE.door;
@@ -41,6 +42,7 @@ const koiCanvas = $("koi");
 let koi = null;
 let birds = null;
 let ribbon = null; // 混天綾（中壇元帥）
+let phoenix = null; // 丹鳳（九天玄女）
 let cloth = null;
 let deity = null;
 let currentIndex = -1;
@@ -292,6 +294,11 @@ function loop(now = performance.now()) {
     // 混天綾只在中壇元帥這一頁飄；換頁時慢慢淡掉
     ribbon.active = deity?.id === "nezha" && !moving;
     ribbon.tick();
+  }
+  if (phoenix) {
+    // 丹鳳只在九天玄女這一頁；換頁時慢慢淡掉
+    phoenix.active = deity?.id === "xuannu" && !moving;
+    phoenix.tick();
   }
   perfMark("鯉魚", t2);
   const t3 = performance.now();
@@ -612,6 +619,9 @@ async function start() {
   const ribbonImg = reduceMotion ? null : await loadRibbonImage();
   if (ribbonImg) ribbon = new RibbonView($("ribbon"), ribbonImg);
   window.__debug.ribbon = ribbon;
+  const phoenixKit = reduceMotion ? null : await loadPhoenixKit();
+  if (phoenixKit) phoenix = new PhoenixView($("phoenix"), phoenixKit, GATE, $("gateImg"));
+  window.__debug.phoenix = phoenix;
 }
 
 // 除錯用：在主控台打 __debug.cloth 可以看珠簾狀態
