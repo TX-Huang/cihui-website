@@ -647,7 +647,13 @@ async function start() {
   window.__debug.tudi = tudi;
   const lotusKit = reduceMotion ? null : await loadLotusKit();
   // 湖面還沒建好或顯示卡不支援：沒有湖就不開（蓮花在大門後面，開在門上會被擋住）
-  if (lotusKit) lotus = new LotusView($("lotus"), lotusKit, (x, y) => !!lake && lake.visibleWater(x, y));
+  if (lotusKit)
+    lotus = new LotusView(
+      $("lotus"),
+      lotusKit,
+      (x, y) => !!lake && lake.visibleWater(x, y),
+      (x, y) => !!lake && y > lake.screenWaterTop() + 4
+    );
   window.__debug.lotus = lotus;
   // 瑤池湖面：背景圖下半部的湖輕輕晃、點了有漣漪；花瓣落水也有小漣漪
   const lakeImg = reduceMotion ? null : await loadLakeImage();

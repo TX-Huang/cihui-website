@@ -3,11 +3,12 @@
 import { createPond, stepPond, lotusPose, fadeOutAll } from "./lotus.js";
 
 export class LotusView {
-  constructor(canvas, kit, water) {
+  constructor(canvas, kit, water, onLake) {
     this.c = canvas;
     this.ctx = canvas.getContext("2d");
     this.kit = kit; // { open, bud, leaf }：三張圖
-    this.water = water; // (x, y) → 這裡看得到湖水嗎（水平線以下、不在大門和門洞後面）
+    this.water = water; // (x, y) → 這裡看得到湖水嗎（水平線以下、不在大門和門洞後面）：點擊用
+    this.onLake = onLake; // (x, y) → 這裡在湖上嗎（被大門擋住也算）：自己開花用
     this.pond = createPond();
     this.active = false;
     this.click = null;
@@ -35,7 +36,10 @@ export class LotusView {
   // 蓮花長在湖裡：只開在看得到湖水的地方（點在門上、天空、珠簾門洞都不開）；
   // 標題、說明文字上也不放（會擋住字）
   free(x, y) {
-    if (!this.water(x, y)) return false;
+    return this.water(x, y) && this.clearOfText(x, y);
+  }
+
+  clearOfText(x, y) {
     const pad = 70; // 花的半徑左右：花邊也不要蓋到字
     for (const el of document.querySelectorAll("#copy .heading, #copy .aside")) {
       const t = el.getBoundingClientRect();
@@ -53,6 +57,7 @@ export class LotusView {
       active: this.active,
       click: this.click,
       free: (x, y) => this.free(x, y),
+      onLake: (x, y) => this.onLake(x, y) && this.clearOfText(x, y),
       random: Math.random
     });
     this.click = null;

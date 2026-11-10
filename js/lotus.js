@@ -96,13 +96,14 @@ function bloom(pond, e, x, y) {
   return true;
 }
 
-// 自己開一朵：在兩旁低低的地方（湖面），找一個沒有別朵的位置；開成了回傳 true
+// 自己開一朵：在兩旁低低的地方（湖面），找一個沒有別朵的位置；開成了回傳 true。
+// e.onLake：湖上任何地方都可以（被大門擋住也沒關係，像真的湖）；沒給就用 e.free
 function ambient(pond, e) {
   for (let i = 0; i < 6; i++) {
     const left = e.random() < 0.5;
     const x = e.w * (left ? 0.04 + e.random() * 0.13 : 0.83 + e.random() * 0.13);
     const y = e.h * (0.6 + e.random() * 0.2);
-    if (e.free(x, y) && bloom(pond, e, x, y)) return true;
+    if ((e.onLake || e.free)(x, y) && bloom(pond, e, x, y)) return true;
   }
   return false;
 }

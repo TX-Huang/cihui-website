@@ -250,3 +250,14 @@ test("blooming by itself still happens when only a little water is visible (keep
   }
   assert.ok(births >= 3, `${births} bloomed in 2 minutes`);
 });
+
+// 9. 自己開的蓮花可以開在湖上任何地方，包括被大門擋住的地方（像真的湖，有些花本來就看不到）；
+//    點的時候還是要點在看得到的湖水上（點門不會開）
+test("by itself it may bloom anywhere on the lake, even hidden behind the gate; a click still needs visible water", () => {
+  const pond = createPond();
+  const e = env({ free: () => false, onLake: (x, y) => y > H * 0.55 });
+  stepPond(pond, { ...e, click: { x: 200, y: 700 } });
+  assert.equal(pond.lotus.length, 0, "clicking where no water is visible does nothing");
+  run(pond, e, 60 * 12);
+  assert.ok(pond.lotus.length >= 1, "but one blooms by itself on the hidden part of the lake");
+});
