@@ -142,7 +142,8 @@ function crownPoints(img) {
   for (let y = 0; y < h * 0.66; y++)
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4;
-      if (d[i + 3] > 200) pts.push({ x: (x + 0.5) / w, y: (y + 0.5) / h, color: [d[i], d[i + 1], d[i + 2]] });
+      // 只要樹本身（樹冠外那圈很淡的光暈不算）
+      if (d[i + 3] > 245) pts.push({ x: (x + 0.5) / w, y: (y + 0.5) / h, color: [d[i], d[i + 1], d[i + 2]] });
     }
   return pts.length ? pts : [{ x: 0.5, y: 0.3, color: [90, 120, 90] }];
 }

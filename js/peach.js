@@ -77,7 +77,8 @@ export function particlePose(p, t, tree, box) {
     x: ax + (bx - ax) * e,
     y: ay + (by - ay) * e - lift * Math.sin(Math.PI * e),
     size: box.m * (0.7 + 0.3 * e),
-    color: p.color.map((v, k) => Math.round(v + (dark[k] - v) * e)),
+    // 前半段保持原本的花、葉顏色，快到格子時才慢慢變成深玉綠
+    color: p.color.map((v, k) => Math.round(v + (dark[k] - v) * smooth((e - 0.45) / 0.55))),
     e
   };
 }
