@@ -12,6 +12,7 @@ import { RibbonView, loadRibbonImage } from "./ribbon-view.js";
 import { PhoenixView, loadPhoenixKit } from "./phoenix-view.js";
 import { TudiView, loadTudiKit } from "./tudi-view.js";
 import { LotusView, loadLotusKit } from "./lotus-view.js";
+import { PeachView, loadPeachImage } from "./peach-view.js";
 import { LakeView, loadLakeImage } from "./lake-view.js";
 
 // ── 珠簾尺寸（拱門圖的設計座標，圖寬 1000） ──
@@ -48,6 +49,7 @@ let ribbon = null; // 混天綾（中壇元帥）
 let phoenix = null; // 丹鳳（九天玄女）
 let tudi = null; // 稻穗和虎爺（福德正神）
 let lotus = null; // 蓮花（中壇元帥）
+let peach = null; // 蟠桃樹（瑤池金母）：點了變成道場 LINE 的 QR code
 let lake = null; // 瑤池湖面（背景）
 let cloth = null;
 let deity = null;
@@ -311,6 +313,11 @@ function loop(now = performance.now()) {
     tudi.active = deity?.id === "tudi" && !moving;
     tudi.tick();
   }
+  if (peach) {
+    // 蟠桃樹只在金母這一頁；換頁時慢慢淡掉、變回樹
+    peach.active = deity?.id === "jinmu" && !moving;
+    peach.tick();
+  }
   if (lotus) {
     // 蓮花只在中壇元帥這一頁；換頁時慢慢淡掉
     lotus.active = deity?.id === "nezha" && !moving;
@@ -366,6 +373,8 @@ document.addEventListener("pointermove", (e) => {
   }
 
   if (!cloth || moving) return;
+  // 手指在蟠桃樹的 QR 卡片上（手機上卡片蓋在珠簾前面）：珠簾不動、風鈴不響
+  if (!grabbed && peach && peach.blocks(e.clientX, e.clientY)) return;
   const { x, y } = local(e);
   if (grabbed) {
     grabbed.x = grabbed.ox = x;
@@ -378,6 +387,7 @@ document.addEventListener("pointermove", (e) => {
 document.addEventListener("pointerdown", (e) => {
   chimes.unlock();
   if (!cloth || moving || e.target.closest("button, a")) return;
+  if (peach && peach.blocks(e.clientX, e.clientY)) return; // 點的是蟠桃樹或 QR 卡片
   const { x, y } = local(e);
   const hit = nearest(cloth, x, y, GRAB_R2);
   if (hit && !hit.p.pinned) {
@@ -645,6 +655,10 @@ async function start() {
   const tudiKit = reduceMotion ? null : await loadTudiKit();
   if (tudiKit) tudi = new TudiView($("tudi"), tudiKit);
   window.__debug.tudi = tudi;
+  // 蟠桃樹：要求減少動畫也要有（它是加 LINE 的入口），只是點了直接換，不飄
+  const peachImg = await loadPeachImage();
+  if (peachImg) peach = new PeachView($("peach"), peachImg, { box: $("peachUi"), hint: $("peachHint"), link: $("peachLink") }, { still: reduceMotion });
+  window.__debug.peach = peach;
   const lotusKit = reduceMotion ? null : await loadLotusKit();
   // 湖面還沒建好或顯示卡不支援：沒有湖就不開（蓮花在大門後面，開在門上會被擋住）
   if (lotusKit)

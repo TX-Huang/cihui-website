@@ -120,6 +120,7 @@ export class LakeView {
     });
     window.addEventListener("pointermove", (e) => this.poke("move", e));
     window.addEventListener("pointerdown", (e) => {
+      if (e.peachTaken) return; // 點的是蟠桃樹（在水的前面）
       if (e.target.closest && e.target.closest("button, a, nav, header")) return;
       this.poke("click", e);
     });

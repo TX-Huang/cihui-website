@@ -217,3 +217,12 @@ ChatGPT 改圖時位置可能會跑掉一點點，沒關係，我會用程式對
 > Use the attached image as the exact FIRST FRAME: keep the phoenix at exactly this small size and position and keep the pure green background. The phoenix faces the camera and hovers in place with its wings spread. Two very slow, majestic wingbeats in about 5 seconds: the wings sweep down and rise back up to the same open pose. The tail plumes ripple softly below like silk. It does NOT move toward the camera, does NOT get bigger, does NOT turn. The last frame must match the first frame (seamless loop). Wing tips and tail tips stay fully inside the frame with a wide empty margin on every side. Background: solid flat pure green (#00FF00) from the very first frame — no fade-in, no gradient, no shadow, no other objects. Same phoenix design, colors and proportions as the image. Locked-off static camera, soft even lighting.
 
 **檢查一下再丟：** 鳥的樣子跟參考圖一樣、背景整片是綠色、鏡頭沒動、鳥沒有變大或靠近、翅膀和三根尾羽都沒被畫面切掉。不合格就再生一次。檔名照上面寫，丟進同一個雲端硬碟資料夾。
+
+## 7. 蟠桃樹（瑤池金母頁）— 點樹，葉子和花飄散排成 LINE 的 QR code
+
+只要 **1 張**。生好存成 `assets/raw/chatgpt2/peach-tree.png`。
+樹冠要飽滿一點（葉子和花會飄起來排成 QR，樹冠太稀的話飄起來的東西太少）。
+
+`peach-tree.png`
+> Create an image. Size 1024x1536 (portrait). Transparent background PNG.
+> A single small celestial peach tree (蟠桃樹) shown whole from the base of the trunk to the top of the crown. A graceful, gently twisting trunk in soft grey-brown. A full, rounded, airy crown of deep jade-green leaves mixed with pale pink peach blossoms, and five or six ripe peaches with a cream-to-blush gradient hanging among the leaves. Soft and refined, quiet and calm, painterly realism, fine detail; colours harmonised with ivory, champagne gold and celadon. Only the tree — no ground, no grass, no rocks, no roots spreading out, no pot, no shadow, no background, no text.
