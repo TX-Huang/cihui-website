@@ -38,13 +38,20 @@ export function treeRect(vw, vh, aspect) {
 }
 
 // QR 卡片：桌機浮在樹冠上，手機在畫面中間；每格是整數像素，四邊留 4 格白
-export function qrBox(n, tree, vw, vh) {
+// beside：卡片放在樹的左邊（花瓣、卷軸兩種做法用：樹要看得到），不蓋到珠簾門洞；手機一樣放中間
+export function qrBox(n, tree, vw, vh, { beside = false } = {}) {
   const total = n + QUIET * 2;
   const phone = vw <= 720;
   const target = Math.min(phone ? Math.min(vw * 0.8, 300) : 280, vh - TOP - BELOW); // 橫拿的手機很矮：卡片跟著變小
-  const m = Math.max(4, Math.floor(target / total));
+  let m = Math.max(4, Math.floor(target / total));
+  let cx = phone ? vw / 2 : tree.x + tree.w / 2;
+  if (beside && !phone) {
+    const left = doorRight(vw, vh) + 12;
+    // 卡片右邊最多蓋到樹寬的六成；放不下就把格子縮小一點
+    while (m > 4 && Math.max(left, tree.x - total * m * 0.65) + total * m - tree.x > tree.w * 0.6) m--;
+    cx = Math.max(left, tree.x - total * m * 0.65) + (total * m) / 2;
+  }
   const size = total * m;
-  const cx = phone ? vw / 2 : tree.x + tree.w / 2;
   const cy = phone ? vh * 0.45 : tree.y + tree.h * 0.35;
   const x = Math.round(clamp(cx - size / 2, 12, vw - 12 - size)); // 整數像素：格子之間不會有細縫
   const y = Math.round(clamp(cy - size / 2, TOP, vh - BELOW - size));
@@ -104,4 +111,72 @@ export function stepPeach(s, { active }) {
 export function hitPeach(s, x, y, tree, box) {
   const r = s.t > 0.5 ? box.card : tree;
   return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+}
+
+// ── 做法一「花瓣飄落、墨點暈開」(petals) ──
+const FLIGHT = 0.45; // 每片花瓣飛多久（佔整段的比例）
+const SOAK = 0.2; // 落下後暈開多久（MAX_DELAY + FLIGHT + SOAK = 1，最後一片剛好暈完）
+
+// 樹輕輕搖一下（弧度）：一開始像一陣風，0.6 秒內停下來
+export function treeSway(t) {
+  const end = 0.22;
+  if (t <= 0 || t >= end) return 0;
+  const k = t / end;
+  return 0.022 * Math.sin(k * Math.PI * 2) * (1 - k) * (1 - k);
+}
+
+// 一片花瓣在 t 的樣子：x, y, angle（翻轉）, size, alpha（花瓣本身）, ink（墨暈開了多少 0～1）, drift（離直線多遠）
+export function petalPose(p, t, tree, box) {
+  const u = clamp((t - p.delay) / FLIGHT, 0, 1);
+  const e = smooth(u);
+  const ink = smooth((t - p.delay - FLIGHT) / SOAK);
+  const ax = tree.x + p.sx * tree.w;
+  const ay = tree.y + p.sy * tree.h;
+  const bx = box.x0 + (p.col + 0.5) * box.m;
+  const by = box.y0 + (p.row + 0.5) * box.m;
+  // 先被風往上、往外吹起來，再飄下來（二次曲線），一路左右擺
+  const seed = p.sx * 37 + p.sy * 53;
+  const cx = (ax + bx) / 2 + 40 + 30 * Math.sin(seed);
+  const cy = Math.min(ay, by) - 50 - 0.2 * Math.abs(bx - ax);
+  const q = 1 - e;
+  const drift = 10 * Math.sin(seed + u * Math.PI * 4) * Math.sin(Math.PI * e);
+  return {
+    x: q * q * ax + 2 * q * e * cx + e * e * bx + drift,
+    y: q * q * ay + 2 * q * e * cy + e * e * by,
+    angle: seed + e * Math.PI * 3,
+    size: box.m,
+    alpha: smooth(u / 0.08) * (1 - ink),
+    ink,
+    drift: Math.abs(drift)
+  };
+}
+
+// ── 做法二「蟠桃化成卷軸」(scroll) ──
+// 樹頂那顆蟠桃在樹圖上的位置（比例，用 tools 量的；r 是半徑佔樹寬的比例）
+export const PEACH_SPOT = { x: 0.565, y: 0.18, r: 0.075 };
+
+// t 時：浮起來的桃子、卷軸攤開多少、紙和兩根軸的位置
+export function scrollPose(t, tree, box) {
+  const c = box.card;
+  const ax = tree.x + PEACH_SPOT.x * tree.w;
+  const ay = tree.y + PEACH_SPOT.y * tree.h;
+  const bx = c.x + c.w / 2;
+  const by = c.y;
+  const fly = smooth(t / 0.3); // 0～0.3：桃子浮起來飄到卡片上緣
+  const morph = smooth((t - 0.3) / 0.12); // 0.3～0.42：桃子化成卷軸
+  const open = smooth((t - 0.38) / 0.62); // 0.38～1：往下攤開
+  const lift = 40 * Math.sin(Math.PI * fly);
+  const pr = PEACH_SPOT.r * tree.w * (1 + 0.5 * fly);
+  const rodH = Math.max(6, Math.round(box.m * 1.2));
+  const roll = rodH * 1.6; // 捲起來時紙的厚度
+  const h = Math.max(roll * morph, c.h * open);
+  // 軸完全在紙外面（上軸在紙上緣之上、下軸在紙下緣之下）：QR 四邊的留白不能被蓋到
+  const rod = (y) => ({ x: c.x - 8, y: Math.round(y), w: c.w + 16, h: rodH });
+  return {
+    peach: { x: ax + (bx - ax) * fly, y: ay + (by - ay) * fly - lift, r: pr, alpha: smooth(t / 0.06) * (1 - morph), glow: fly * (1 - morph) },
+    open,
+    roll: morph, // 卷軸出現了多少
+    paper: { x: c.x, y: c.y, w: c.w, h: open >= 1 ? c.h : h },
+    rods: [rod(c.y - rodH), rod(c.y + (open >= 1 ? c.h : h))]
+  };
 }
