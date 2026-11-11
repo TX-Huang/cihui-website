@@ -39,37 +39,44 @@ export function treeRect(vw, vh, aspect) {
 }
 
 // QR 卡片：桌機放在樹的左邊（樹大部分看得到，才看得出花瓣從樹上飄過去），不蓋到珠簾門洞；
-// 手機放畫面中間。每格是整數像素，四邊留 4 格白
-export function qrBox(n, tree, vw, vh) {
+// 手機、或放在樹旁邊會蓋掉太多樹（平板）：放畫面中間。right：右邊神明選單的左緣，卡片不蓋過去。
+// 每格是整數像素，四邊留 4 格白
+export function qrBox(n, tree, vw, vh, { right = vw - 12 } = {}) {
   const total = n + QUIET * 2;
   const phone = vw <= 720;
-  const target = Math.min(phone ? Math.min(vw * 0.8, 300) : 280, vh - TOP - BELOW); // 橫拿的手機很矮：卡片跟著變小
+  const target = Math.min(phone ? Math.min(vw * 0.8, 300) : 280, vh - TOP - BELOW, right - 12); // 矮或窄的畫面：卡片跟著變小
   let m = Math.max(4, Math.floor(target / total));
-  let cx = phone ? vw / 2 : tree.x + tree.w / 2;
+  let cx = vw / 2;
+  let cy = vh * 0.45;
   if (!phone) {
     const left = doorRight(vw, vh) + 12;
-    // 卡片右邊最多蓋到樹寬的六成；放不下就把格子縮小一點
-    while (m > 4 && Math.max(left, tree.x - total * m * 0.65) + total * m - tree.x > tree.w * 0.6) m--;
-    cx = Math.max(left, tree.x - total * m * 0.65) + (total * m) / 2;
+    const place = (mm) => Math.min(Math.max(left, tree.x - total * mm * 0.65), right - total * mm);
+    const covers = (mm) => Math.min(place(mm) + total * mm, tree.x + tree.w) - Math.max(place(mm), tree.x);
+    // 卡片最多蓋到樹寬的六成；放不下就把格子縮小一點
+    let mm = m;
+    while (mm > 4 && covers(mm) > tree.w * 0.6) mm--;
+    if (covers(mm) <= tree.w * 0.6 && place(mm) >= left) {
+      m = mm;
+      cx = place(m) + (total * m) / 2;
+      cy = tree.y + tree.h * 0.35;
+    }
   }
   const size = total * m;
-  const cy = phone ? vh * 0.45 : tree.y + tree.h * 0.35;
-  const x = Math.round(clamp(cx - size / 2, 12, vw - 12 - size)); // 整數像素：格子之間不會有細縫
+  const x = Math.round(clamp(cx - size / 2, 12, right - size)); // 整數像素
   const y = Math.round(clamp(cy - size / 2, TOP, vh - BELOW - size));
   return { m, n, card: { x, y, w: size, h: size }, x0: x + QUIET * m, y0: y + QUIET * m };
 }
 
 // 每個深色格子配一片花瓣：樹冠左邊的花瓣飛到 QR 左邊的格子（路線不會亂交叉），出發時間錯開
-// rows：QR 格子（"0101…" 字串）；pts：樹冠上的點 {x, y（0～1，圖上的比例）, color: [r, g, b]}
+// rows：QR 格子（"0101…" 字串）；pts：樹冠上的點 {x, y}（0～1，圖上的比例）
 export function assignParticles(rows, pts, random) {
-  const n = rows.length;
   const cells = [];
   rows.forEach((r, row) => [...r].forEach((v, col) => v === "1" && cells.push({ row, col, k: col + row * 0.3 + random() * 3 })));
   cells.sort((a, b) => a.k - b.k);
   const order = [...pts].sort((a, b) => a.x + a.y * 0.3 - (b.x + b.y * 0.3));
   return cells.map((c, i) => {
     const q = order[Math.floor((i * order.length) / cells.length)];
-    return { row: c.row, col: c.col, sx: q.x, sy: q.y, color: q.color, delay: random() * MAX_DELAY, n };
+    return { row: c.row, col: c.col, sx: q.x, sy: q.y, delay: random() * MAX_DELAY };
   });
 }
 
@@ -89,10 +96,29 @@ export function stepPeach(s, { active }) {
   else s.t = s.t < s.target ? Math.min(s.target, s.t + 1 / DURATION) : Math.max(s.target, s.t - 1 / DURATION);
 }
 
-// (x, y) 點到桃樹了嗎；QR 出來的時候點卡片也算（卡片在樹旁邊，兩個都可以點回去）
+// 卡片有多清楚（0～1）：一點樹就慢慢浮現
+export function cardAlpha(t) {
+  return smooth(t / 0.3);
+}
+
+// (x, y) 點到桃樹了嗎；卡片看得到的時候點卡片也算（卡片在樹旁邊，兩個都可以點回去）
 export function hitPeach(s, x, y, tree, box) {
   const inside = (r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
-  return inside(tree) || (s.t > 0.5 && inside(box.card));
+  return inside(tree) || (cardAlpha(s.t) > 0.1 && inside(box.card));
+}
+
+// 說明文字的位置和透明度：從樹下慢慢滑到卡片下；剛好在中間（透明）的時候換字；「打開 LINE」最後才浮現
+export function hintPose(t, tree, box, vh) {
+  const k = smooth(t);
+  const a = { cx: tree.x + tree.w / 2, top: Math.min(vh - 40, tree.y + tree.h - 8) };
+  const b = { cx: box.card.x + box.card.w / 2, top: box.card.y + box.card.h + 12 };
+  return {
+    cx: a.cx + (b.cx - a.cx) * k,
+    top: a.top + (b.top - a.top) * k,
+    qr: t > 0.5,
+    textAlpha: smooth(Math.abs(t - 0.5) / 0.15),
+    linkAlpha: smooth((t - 0.55) / 0.3)
+  };
 }
 
 // ── 花瓣飄落、墨點暈開 ──

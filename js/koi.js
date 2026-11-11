@@ -53,7 +53,10 @@ export class KoiPond {
     this.resize();
     window.addEventListener("resize", () => this.resize());
     window.addEventListener("pointermove", (e) => this.onMove(e));
-    window.addEventListener("pointerdown", (e) => this.splash(e.clientX, e.clientY));
+    window.addEventListener("pointerdown", (e) => {
+      if (e.peachTaken) return; // 點的是蟠桃樹或 QR 卡片，不是水
+      this.splash(e.clientX, e.clientY);
+    });
   }
 
   resize() {

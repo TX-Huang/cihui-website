@@ -78,3 +78,21 @@ test("on desktops the card sits beside the tree (most of the tree stays visible)
   const phone = qrBox(LINE_QR.length, treeRect(390, 844, ASPECT), 390, 844);
   assert.ok(Math.abs(phone.card.x + phone.card.w / 2 - 195) <= 1, "phones: centred (to the whole pixel)");
 });
+
+// 5. 卡片不蓋到右邊的神明選單（橫拿的手機很窄）；
+//    中型螢幕（平板）放在樹旁邊會蓋掉太多樹，就改放畫面中間（跟手機一樣）
+test("the card keeps clear of the deity menu on the right, and on tablets it moves to the middle instead of hiding the tree", () => {
+  for (const [vw, vh, right] of [[844, 390, 780], [896, 414, 830], [1440, 900, 1370]]) {
+    const b = qrBox(LINE_QR.length, treeRect(vw, vh, ASPECT), vw, vh, { right });
+    assert.ok(b.card.x + b.card.w <= right, `${vw}x${vh}: card ends at ${b.card.x + b.card.w}, menu starts at ${right}`);
+    assert.ok(b.card.x >= 0 && b.card.y >= 64 && b.card.y + b.card.h <= vh, `${vw}x${vh}: on screen`);
+  }
+  for (const [vw, vh] of [[768, 1024], [820, 1180], [1024, 768], [1180, 820]]) {
+    const tr = treeRect(vw, vh, ASPECT);
+    const b = qrBox(LINE_QR.length, tr, vw, vh);
+    const covered = Math.max(0, Math.min(b.card.x + b.card.w, tr.x + tr.w) - Math.max(b.card.x, tr.x));
+    const centred = Math.abs(b.card.x + b.card.w / 2 - vw / 2) <= 1;
+    assert.ok(covered <= tr.w * 0.6 || centred, `${vw}x${vh}: beside the tree (covers ${Math.round((covered / tr.w) * 100)}%) or centred`);
+    assert.ok(b.card.x >= 0 && b.card.x + b.card.w <= vw && b.card.y >= 64 && b.card.y + b.card.h <= vh, `${vw}x${vh}: on screen`);
+  }
+});

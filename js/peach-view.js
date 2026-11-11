@@ -11,15 +11,12 @@ import {
   stepPeach,
   togglePeach,
   hitPeach,
+  cardAlpha,
+  hintPose,
   QR_DARK,
   QR_LIGHT
 } from "./peach.js";
 import { LINE_QR, LINE_URL } from "./line-qr.js";
-
-const smooth = (t) => {
-  const x = Math.max(0, Math.min(1, t));
-  return x * x * (3 - 2 * x);
-};
 
 export class PeachView {
   constructor(canvas, img, ui, { still = false } = {}) {
@@ -63,16 +60,21 @@ export class PeachView {
 
   resize() {
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
-    this.w = window.innerWidth;
+    // 不含捲軸的寬度：畫布（position: fixed、寬 100%）實際就這麼寬，QR 才不會被擠扁
+    this.w = document.documentElement.clientWidth;
     this.h = window.innerHeight;
     this.c.width = Math.round(this.w * this.dpr);
     this.c.height = Math.round(this.h * this.dpr);
     this.tree = treeRect(this.w, this.h, this.img.width / this.img.height);
-    this.box = qrBox(LINE_QR.length, this.tree, this.w, this.h, );
+    // 右邊的神明選單：卡片不蓋過去（蓋到的話點卡片會換頁）
+    const rail = document.getElementById("rail");
+    const r = rail ? rail.getBoundingClientRect() : null;
+    const right = r && r.width && r.left > this.w / 2 ? Math.min(this.w - 12, r.left - 8) : this.w - 12;
+    this.box = qrBox(LINE_QR.length, this.tree, this.w, this.h, { right });
   }
 
   tick() {
-    if (this.w !== window.innerWidth || this.h !== window.innerHeight) this.resize();
+    if (this.w !== document.documentElement.clientWidth || this.h !== window.innerHeight) this.resize();
     if (this.click) togglePeach(this.s);
     this.click = null;
     stepPeach(this.s, { active: this.active });
@@ -125,22 +127,27 @@ export class PeachView {
   drawPetals() {
     const { ctx, s, tree, box } = this;
     this.drawTree(1, treeSway(s.t));
-    this.drawCard(smooth(s.t / 0.3));
+    this.drawCard(cardAlpha(s.t));
     if (s.t <= 0) return;
     const m = box.m;
     // 先畫墨（在下面），再畫還在飄的花瓣（在上面）
     ctx.fillStyle = QR_DARK;
+    // 已經暈好的格子一起畫成一個形狀：相鄰的格子之間不會有細縫（螢幕縮放 125%、150% 時）
+    const done = new Path2D();
     for (const p of this.parts) {
       const q = (p.q = petalPose(p, s.t, tree, box));
       if (q.ink <= 0) continue;
-      ctx.globalAlpha = s.alpha * q.ink;
-      if (q.ink >= 1) ctx.fillRect(q.x - m / 2, q.y - m / 2, m, m);
-      else {
-        const sz = m * (0.35 + 0.65 * q.ink);
-        roundRect(ctx, q.x - sz / 2, q.y - sz / 2, sz, sz, (sz / 2) * (1 - q.ink));
-        ctx.fill();
+      if (q.ink >= 1) {
+        done.rect(q.x - m / 2, q.y - m / 2, m, m);
+        continue;
       }
+      ctx.globalAlpha = s.alpha * q.ink;
+      const sz = m * (0.35 + 0.65 * q.ink);
+      roundRect(ctx, q.x - sz / 2, q.y - sz / 2, sz, sz, (sz / 2) * (1 - q.ink));
+      ctx.fill();
     }
+    ctx.globalAlpha = s.alpha;
+    ctx.fill(done);
     for (const p of this.parts) {
       const q = p.q;
       if (q.alpha <= 0) continue;
@@ -158,25 +165,27 @@ export class PeachView {
   }
 
   // 說明文字：樹的時候在樹下（「點蟠桃樹 · 道場 LINE」），QR 的時候在卡片下（「用手機掃描…」＋打開 LINE）
+  // 慢慢從樹下滑到卡片下（hintPose），換字時剛好是透明的，「打開 LINE」最後才浮現
   place() {
     const { ui, s, tree, box } = this;
-    const qr = s.t > 0.5;
+    const h = hintPose(s.t, tree, box, this.h);
     ui.box.style.opacity = String(s.alpha);
     ui.box.style.visibility = s.alpha > 0.02 ? "visible" : "hidden";
-    const want = qr ? "用手機掃描 · 加入道場 LINE" : "點蟠桃樹 · 道場 LINE";
+    const want = h.qr ? "用手機掃描 · 加入道場 LINE" : "點蟠桃樹 · 道場 LINE";
     if (ui.hint.textContent !== want) ui.hint.textContent = want;
-    ui.hint.setAttribute("aria-expanded", String(qr));
-    ui.link.hidden = !qr;
-    const cx = qr ? box.card.x + box.card.w / 2 : tree.x + tree.w / 2;
-    const top = qr ? box.card.y + box.card.h + 12 : Math.min(this.h - 40, tree.y + tree.h - 8);
-    // 置中對齊卡片或樹，但整行一定留在畫面裡（手機上樹很靠右）
-    const bw = ui.box.offsetWidth;
-    const left = Math.max(8, Math.min(this.w - 8 - bw, cx - bw / 2));
-    ui.box.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
+    ui.hint.style.opacity = String(h.textAlpha);
+    ui.hint.setAttribute("aria-expanded", String(h.qr));
+    // 「打開 LINE」掛在說明文字右邊（不撐寬整行，浮現的時候整行才不會跳）；看不到時也點不到、讀屏也跳過
+    ui.link.style.visibility = h.linkAlpha > 0 && s.alpha > 0.02 ? "visible" : "hidden";
+    ui.link.style.opacity = String(h.linkAlpha);
+    // 置中對齊，但整行一定留在畫面裡（手機上樹很靠右）。寬度只在換字那一刻（透明時）改變
+    const bw = ui.hint.offsetWidth + (h.qr ? ui.link.offsetWidth + 6 : 0);
+    const left = Math.max(8, Math.min(this.w - 8 - bw, h.cx - bw / 2));
+    ui.box.style.transform = `translate(${Math.round(left)}px, ${Math.round(h.top)}px)`;
   }
 }
 
-// 樹冠上的點（圖上的比例和顏色）：樹圖上半部、不透明的地方
+// 樹冠上的點（圖上的比例）：樹圖上半部、不透明的地方
 function crownPoints(img) {
   const w = 120;
   const h = Math.round((w * img.height) / img.width);
@@ -191,9 +200,9 @@ function crownPoints(img) {
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4;
       // 只要樹本身（樹冠外那圈很淡的光暈不算）
-      if (d[i + 3] > 245) pts.push({ x: (x + 0.5) / w, y: (y + 0.5) / h, color: [d[i], d[i + 1], d[i + 2]] });
+      if (d[i + 3] > 245) pts.push({ x: (x + 0.5) / w, y: (y + 0.5) / h });
     }
-  return pts.length ? pts : [{ x: 0.5, y: 0.3, color: [90, 120, 90] }];
+  return pts.length ? pts : [{ x: 0.5, y: 0.3 }];
 }
 
 function roundRect(ctx, x, y, w, h, r) {

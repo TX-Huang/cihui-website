@@ -15,6 +15,8 @@ import {
   stepPeach,
   togglePeach,
   hitPeach,
+  cardAlpha,
+  hintPose,
   QR_DARK,
   QR_LIGHT,
   DURATION
@@ -135,18 +137,44 @@ test("about 2.5 s each way; a second click mid-way turns back smoothly from wher
   assert.ok(s.t > mid, "heads back to the QR code");
 });
 
-test("clicking the tree (or the QR card) toggles; clicking elsewhere does nothing", () => {
+test("what counts as a click on the peach: the tree always; the card as soon as it can be seen", () => {
   const vw = 1440;
   const vh = 900;
   const tree = treeRect(vw, vh, ASPECT);
   const box = qrBox(LINE_QR.length, tree, vw, vh);
+  const onCard = [box.card.x + 5, box.card.y + 5]; // 卡片左上角（不在樹上）
   const s = createPeach();
   assert.ok(hitPeach(s, tree.x + tree.w / 2, tree.y + tree.h * 0.3, tree, box), "the crown");
+  assert.ok(!hitPeach(s, ...onCard, tree, box), "no card yet: that spot is not the peach");
   assert.ok(!hitPeach(s, 20, 20, tree, box), "far away");
+  for (const t of [0.1, 0.2, 0.3, 0.5, 1]) {
+    s.t = t;
+    if (cardAlpha(t) > 0.1) assert.ok(hitPeach(s, ...onCard, tree, box), `t=${t}: the card is visible (${cardAlpha(t).toFixed(2)}), so it takes the tap`);
+  }
+  assert.ok(cardAlpha(0.2) > 0.1, "the card is visible early on");
   s.t = 1;
-  s.target = 1;
-  assert.ok(hitPeach(s, box.card.x + 5, box.card.y + 5, tree, box), "the card, when the QR code is showing");
-  assert.ok(hitPeach(s, tree.x + tree.w - 10, tree.y + tree.h * 0.9, tree, box), "the tree too (the card sits beside it now)");
+  assert.ok(hitPeach(s, tree.x + tree.w - 10, tree.y + tree.h * 0.9, tree, box), "the tree too (the card sits beside it)");
+  assert.ok(!hitPeach(s, 20, 20, tree, box), "still nothing far away");
+});
+
+// 說明文字（樹下 ↔ 卡片下）：位置慢慢滑過去，換字的時候剛好是透明的，「打開 LINE」慢慢浮現
+test("the caption glides between the tree and the card; its text swaps while invisible; the LINE link fades in", () => {
+  for (const [vw, vh] of [[1440, 900], [390, 844]]) {
+    const tree = treeRect(vw, vh, ASPECT);
+    const box = qrBox(LINE_QR.length, tree, vw, vh);
+    let last = hintPose(0, tree, box, vh);
+    assert.equal(last.qr, false);
+    assert.equal(last.textAlpha, 1);
+    for (let f = 1; f <= DURATION; f++) {
+      const h = hintPose(f / DURATION, tree, box, vh);
+      assert.ok(Math.hypot(h.cx - last.cx, h.top - last.top) <= 8, `${vw}x${vh}: glides (${Math.hypot(h.cx - last.cx, h.top - last.top).toFixed(1)} px)`);
+      if (h.qr !== last.qr) assert.ok(h.textAlpha < 0.05 && last.textAlpha < 0.05, "text swaps only while invisible");
+      assert.ok(Math.abs(h.textAlpha - last.textAlpha) <= 0.12 && Math.abs(h.linkAlpha - last.linkAlpha) <= 0.12, "fades, no snaps");
+      if (f / DURATION <= 0.55) assert.equal(h.linkAlpha, 0, "no LINE link before the QR is there");
+      last = h;
+    }
+    assert.ok(last.qr && last.textAlpha === 1 && last.linkAlpha === 1, "ends under the card with the link");
+  }
 });
 
 test("leaving the 金母 page: fades out and goes back to being a tree; reduced motion switches at once", () => {

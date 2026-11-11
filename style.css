@@ -659,6 +659,9 @@ body.over-tiger * {
   color: var(--text);
 }
 .peach-link {
+  position: absolute;
+  left: calc(100% + 6px);
+  top: 0;
   background: var(--text);
   color: #f7f4ef;
 }
