@@ -140,3 +140,14 @@ test("the home page menu matches the inner pages (plus the wind-chime switch), o
   assert.doesNotMatch(nav, /class="soon"/, "no greyed-out placeholder tab");
   assert.doesNotMatch(read("style.css"), /\.pill a:not\(\.brand\)/, "links are not hidden on phones");
 });
+
+// 10. 匾額字型（崇羲篆體，CC BY-ND 3.0 TW）一定要標出處：首頁畫面不放（太干擾），改放在三個內頁的頁尾
+test("the plaque font credit is not on the home page, but every inner page footer credits it", () => {
+  assert.doesNotMatch(read("index.html"), /class="credit"/, "not on the home page");
+  for (const file of Object.keys(PAGES)) {
+    const footer = read(file).match(/<footer>[\s\S]*?<\/footer>/)?.[0] ?? "";
+    assert.match(footer, /崇羲篆體/, `${file}: names the font`);
+    assert.match(footer, /href="https:\/\/xiaoxue\.iis\.sinica\.edu\.tw\/chongxi\/"/, `${file}: links to its source`);
+    assert.match(footer, /CC BY-ND 3\.0 TW/, `${file}: states the licence`);
+  }
+});

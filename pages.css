@@ -283,6 +283,11 @@ footer {
 footer a {
   color: var(--text-soft);
 }
+/* 字型授權標示（崇羲篆體 CC BY-ND 3.0 TW 要求標示出處） */
+footer .credit {
+  margin-top: 10px;
+  font-size: 12px;
+}
 
 /* 慢慢浮上來（js/page.js 捲到時加 is-in）；沒有 JS 就直接顯示 */
 .js .reveal {
