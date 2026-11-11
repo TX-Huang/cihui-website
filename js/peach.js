@@ -10,6 +10,7 @@ const QUIET = 4; // QR 四邊至少留 4 格空白，手機才掃得到
 const TOP = 70; // 上面的選單列底下才開始（選單是半透明毛玻璃，蓋到 QR 會掃不到）
 const BELOW = 60; // 卡片下面留位子放說明文字和「打開 LINE」
 const MAX_DELAY = 0.35; // 每片出發的時間錯開（佔整段的比例）
+const FADE_IN = 1 / 36; // 進金母頁：0.6 秒浮現（使用者可能很快就滑走）
 const FADE = 1 / 60; // 換頁：1 秒淡掉
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -93,7 +94,7 @@ export function togglePeach(s) {
 
 // 過一格：active＝在金母這一頁。不在就慢慢淡掉，並且回到樹的樣子
 export function stepPeach(s, { active }) {
-  s.alpha = clamp(s.alpha + (active ? FADE : -FADE), 0, 1);
+  s.alpha = clamp(s.alpha + (active ? FADE_IN : -FADE), 0, 1);
   if (!active) s.target = 0;
   if (s.still) s.t = s.target;
   else s.t = s.t < s.target ? Math.min(s.target, s.t + 1 / DURATION) : Math.max(s.target, s.t - 1 / DURATION);

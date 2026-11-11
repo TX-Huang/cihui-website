@@ -212,3 +212,25 @@ test("falling petals never cover the QR code (the peach layer is above them)", a
   assert.ok(html.indexOf('id="peach"') < html.indexOf('<div class="stage"'), "not inside the stage");
   assert.ok(z("peach") > z("petals") && z("peach") > z("stage") && z("peach") < z("topbar"), `peach ${z("peach")}, petals ${z("petals")}`);
 });
+
+// 6. 一進金母頁就要看到樹（使用者可能幾秒就滑走）：
+//    樹的圖一開始就預先下載、開場一結束就建立（不排在鯉魚、青鳥、鳳凰…後面），淡入比淡出快（約 0.6 秒）
+test("the tree shows up right away: preloaded, set up before the other animations, quick fade-in", async () => {
+  const { readFileSync } = await import("node:fs");
+  const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+  const head = read("index.html").split("</head>")[0];
+  assert.match(head, /<link rel="preload" href="assets\/elements\/peach-tree\.webp" as="image"/, "preloaded");
+  const main = read("js/main.js");
+  const start = main.slice(main.indexOf("async function start()"));
+  const loadAt = start.indexOf("loadPeachImage()");
+  assert.ok(loadAt > 0 && loadAt < start.indexOf("await intro.revealed"), "starts loading before waiting for the intro");
+  const makeAt = start.indexOf("new PeachView(");
+  assert.ok(makeAt > 0 && makeAt < start.indexOf("loadKoiKits("), "set up before the koi, birds, phoenix…");
+  const s = createPeach();
+  let n = 0;
+  while (s.alpha < 1 && n < 200) {
+    stepPeach(s, { active: true });
+    n++;
+  }
+  assert.ok(n >= 30 && n <= 45, `fades in over ${n} frames`);
+});

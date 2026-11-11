@@ -612,6 +612,8 @@ function buildPage() {
 async function start() {
   // 開場（第一次進來才播）：在雲裡的時候網頁才開始，雲散開時珠簾剛好落下
   const intro = IntroView.create({ reduceMotion });
+  // 蟠桃樹的圖現在就開始載（開場動畫還在播），開場一結束就能出現
+  const peachLoading = loadPeachImage();
   window.__debug.intro = intro; // 除錯：__debug.intro.render(毫秒) 可以看任一格
   if (intro) intro.start();
   buildPage();
@@ -640,6 +642,12 @@ async function start() {
   applyDeity(DEITIES[ORDER[first]], { rolled: !reduceMotion });
   requestAnimationFrame(loop);
 
+  // 蟠桃樹（加 LINE 的入口）最先建立：使用者可能幾秒就滑到下一頁。
+  // 要求減少動畫也要有，只是點了直接換，不飄
+  const peachImg = await peachLoading;
+  if (peachImg) peach = new PeachView($("peach"), peachImg, { box: $("peachUi"), hint: $("peachHint"), link: $("peachLink") }, { still: reduceMotion });
+  window.__debug.peach = peach;
+
   const kits = await loadKoiKits(["red", "blue", "platinum"]);
   if (kits.length) koi = new KoiPond(koiCanvas, kits, kits.length); // 每種顏色一隻
 
@@ -655,10 +663,6 @@ async function start() {
   const tudiKit = reduceMotion ? null : await loadTudiKit();
   if (tudiKit) tudi = new TudiView($("tudi"), tudiKit);
   window.__debug.tudi = tudi;
-  // 蟠桃樹：要求減少動畫也要有（它是加 LINE 的入口），只是點了直接換，不飄
-  const peachImg = await loadPeachImage();
-  if (peachImg) peach = new PeachView($("peach"), peachImg, { box: $("peachUi"), hint: $("peachHint"), link: $("peachLink") }, { still: reduceMotion });
-  window.__debug.peach = peach;
   const lotusKit = reduceMotion ? null : await loadLotusKit();
   // 湖面還沒建好或顯示卡不支援：沒有湖就不開（蓮花在大門後面，開在門上會被擋住）
   if (lotusKit)
