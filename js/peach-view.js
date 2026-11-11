@@ -13,6 +13,8 @@ import {
   hitPeach,
   cardAlpha,
   hintPose,
+  isTap,
+  captionStack,
   QR_DARK,
   QR_LIGHT
 } from "./peach.js";
@@ -32,19 +34,38 @@ export class PeachView {
     for (const p of this.parts) p.pink = pinks[Math.floor(Math.random() * pinks.length)];
     ui.link.href = LINE_URL;
     ui.hint.addEventListener("click", () => togglePeach(this.s));
-    // 先接住點擊（capture）：點到樹就不要再冒漣漪
+    // 先接住（capture）：按在樹或卡片上，就不要再冒漣漪、嚇鯉魚、拉珠簾。
+    // 放開時才決定算不算「點」：手機用滑的換頁，從樹上開始滑不能打開 QR
+    this.down = null;
     window.addEventListener(
       "pointerdown",
       (e) => {
+        this.down = null;
         if (!this.active || this.s.alpha < 0.5) return;
+        if (e.target.closest && e.target.closest("#peachUi")) {
+          e.peachTaken = true; // 說明文字、「打開 LINE」：它們自己處理，水和鯉魚不要反應
+          return;
+        }
         if (e.target.closest && e.target.closest("button, a, nav, header")) return;
         if (hitPeach(this.s, e.clientX, e.clientY, this.tree, this.box)) {
-          this.click = true;
+          this.down = { x: e.clientX, y: e.clientY, time: e.timeStamp, id: e.pointerId };
           e.peachTaken = true;
         }
       },
       true
     );
+    window.addEventListener(
+      "pointerup",
+      (e) => {
+        const d = this.down;
+        this.down = null;
+        if (!d || d.id !== e.pointerId) return;
+        const up = { x: e.clientX, y: e.clientY, time: e.timeStamp };
+        if (isTap(d, up) && hitPeach(this.s, up.x, up.y, this.tree, this.box)) this.click = true;
+      },
+      true
+    );
+    window.addEventListener("pointercancel", () => (this.down = null), true);
     // 滑鼠移到樹上：手指游標（提示可以點）
     window.addEventListener("pointermove", (e) => {
       const on = this.active && this.s.alpha > 0.5 && hitPeach(this.s, e.clientX, e.clientY, this.tree, this.box);
@@ -178,8 +199,11 @@ export class PeachView {
     // 「打開 LINE」掛在說明文字右邊（不撐寬整行，浮現的時候整行才不會跳）；看不到時也點不到、讀屏也跳過
     ui.link.style.visibility = h.linkAlpha > 0 && s.alpha > 0.02 ? "visible" : "hidden";
     ui.link.style.opacity = String(h.linkAlpha);
+    // 窄手機一行放不下：「打開 LINE」疊到說明文字下面
+    const stack = h.qr && captionStack(ui.hint.offsetWidth, ui.link.offsetWidth, this.w);
+    ui.box.classList.toggle("stack", stack);
     // 置中對齊，但整行一定留在畫面裡（手機上樹很靠右）。寬度只在換字那一刻（透明時）改變
-    const bw = ui.hint.offsetWidth + (h.qr ? ui.link.offsetWidth + 6 : 0);
+    const bw = stack ? ui.hint.offsetWidth : ui.hint.offsetWidth + (h.qr ? ui.link.offsetWidth + 6 : 0);
     const left = Math.max(8, Math.min(this.w - 8 - bw, h.cx - bw / 2));
     ui.box.style.transform = `translate(${Math.round(left)}px, ${Math.round(h.top)}px)`;
   }

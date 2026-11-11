@@ -17,6 +17,8 @@ import {
   hitPeach,
   cardAlpha,
   hintPose,
+  isTap,
+  captionStack,
   QR_DARK,
   QR_LIGHT,
   DURATION
@@ -235,4 +237,33 @@ test("the tree shows up right away: preloaded, set up before the other animation
     n++;
   }
   assert.ok(n >= 30 && n <= 45, `fades in over ${n} frames`);
+});
+
+// 7. 手機上用滑的換頁：手指從樹上開始滑，不算「點樹」。只有按下、放開的位置很近，而且很快，才算點
+test("a swipe that starts on the tree is not a tap (phones scroll by swiping)", () => {
+  const down = { x: 300, y: 600, time: 1000 };
+  assert.ok(isTap(down, { x: 303, y: 604, time: 1150 }), "a real tap");
+  assert.ok(!isTap(down, { x: 300, y: 450, time: 1200 }), "a swipe up");
+  assert.ok(!isTap(down, { x: 314, y: 600, time: 1100 }), "moved more than ~10 px");
+  assert.ok(!isTap(down, { x: 300, y: 600, time: 1900 }), "a long press");
+  assert.ok(!isTap(null, { x: 300, y: 600, time: 1100 }), "no matching press");
+});
+
+// 8. 很矮的畫面（橫拿的小手機、瀏覽器列佔掉高度）：卡片和下面的說明文字、「打開 LINE」都要在畫面裡
+test("very short screens: the card and the caption with the LINE link both stay on screen", () => {
+  for (const [vw, vh] of [[568, 230], [568, 320], [667, 300], [320, 568]]) {
+    const tree = treeRect(vw, vh, ASPECT);
+    const box = qrBox(LINE_QR.length, tree, vw, vh);
+    const h = hintPose(1, tree, box, vh);
+    assert.ok(box.card.y >= 0 && box.card.y + box.card.h <= vh, `${vw}x${vh}: card on screen`);
+    assert.ok(h.top >= 0 && h.top + 34 <= vh, `${vw}x${vh}: caption on screen (top ${Math.round(h.top)})`);
+    assert.ok(box.m >= 2, `${vw}x${vh}: modules still ${box.m} px`);
+  }
+});
+
+// 9. 窄螢幕（320 寬）：說明文字和「打開 LINE」排一行放不下，就疊成兩行，不會被切掉
+test("narrow screens: caption and LINE link stack instead of being cut off", () => {
+  assert.equal(captionStack(210, 106, 1440), false, "wide: one line");
+  assert.equal(captionStack(210, 106, 320), true, "320 px: two lines");
+  assert.equal(captionStack(210, 106, 340), false, "just fits: one line");
 });

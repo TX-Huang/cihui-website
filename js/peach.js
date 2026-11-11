@@ -45,7 +45,8 @@ export function qrBox(n, tree, vw, vh, { right = vw - 12 } = {}) {
   const total = n + QUIET * 2;
   const phone = vw <= 720;
   const target = Math.min(phone ? Math.min(vw * 0.8, 300) : 280, vh - TOP - BELOW, right - 12); // 矮或窄的畫面：卡片跟著變小
-  let m = Math.max(4, Math.floor(target / total));
+  // 每格至少 4 像素；畫面太矮（橫拿的小手機）放不下就再縮，最少 2 像素（這時重點是下面的「打開 LINE」要看得到）
+  let m = Math.max(2, Math.floor(target / total));
   let cx = vw / 2;
   let cy = vh * 0.45;
   if (!phone) {
@@ -105,6 +106,16 @@ export function cardAlpha(t) {
 export function hitPeach(s, x, y, tree, box) {
   const inside = (r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
   return inside(tree) || (cardAlpha(s.t) > 0.1 && inside(box.card));
+}
+
+// 手機用滑的換頁：按下、放開的位置很近（10 像素內），而且很快（0.6 秒內），才算「點」
+export function isTap(down, up) {
+  return !!down && Math.hypot(up.x - down.x, up.y - down.y) <= 10 && up.time - down.time <= 600;
+}
+
+// 說明文字和「打開 LINE」排一行放不下（窄手機），就疊成兩行
+export function captionStack(hintW, linkW, vw) {
+  return hintW + 6 + linkW > vw - 16;
 }
 
 // 說明文字的位置和透明度：從樹下慢慢滑到卡片下；剛好在中間（透明）的時候換字；「打開 LINE」最後才浮現

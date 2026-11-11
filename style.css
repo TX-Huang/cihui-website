@@ -476,6 +476,17 @@ body {
   }
 }
 
+/* 很窄的手機（320 寬）：選單再擠一點，「風鈴」才不會被切掉 */
+@media (max-width: 360px) {
+  .pill {
+    font-size: 12px;
+  }
+  .pill a,
+  .pill button {
+    padding: 7px 7px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .title .c,
   .copy.is-leaving .title .c {
@@ -668,4 +679,10 @@ body.over-tiger * {
 .peach-link:hover {
   background: #4a423b;
   color: #fff;
+}
+/* 窄手機：「打開 LINE」疊在說明文字下面 */
+.peach-ui.stack .peach-link {
+  left: 50%;
+  top: calc(100% + 6px);
+  transform: translateX(-50%);
 }
