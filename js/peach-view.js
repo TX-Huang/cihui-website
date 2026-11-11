@@ -1,18 +1,12 @@
 // 畫瑤池金母頁的蟠桃樹（js/peach.js 決定位置、什麼時候飄、飄到哪，這裡只負責畫）。
-// 點樹變成 LINE 的 QR code，有三種做法（網址 ?peach=petals / ?peach=scroll 切換，還在比較）：
-//   leaves（預設）：樹慢慢變淡，樹冠上的葉子和花一片一片飄起來，排在象牙白的卡片上
-//   petals：樹搖一下，桃花瓣翻轉飄落到宣紙上，像墨滴一樣暈開成格子
-//   scroll：樹頂的蟠桃發光浮起，化成卷軸往下攤開，上面印著 QR
+// 點樹變成 LINE 的 QR code：樹搖一下，桃花瓣翻轉飄落到旁邊的宣紙卡片上，像墨滴一樣暈開成格子。
 // 下面一行字和「打開 LINE」連結是一般的網頁元素（字比較清楚，鍵盤和讀屏也用得到）。
 import {
   treeRect,
   qrBox,
   assignParticles,
-  particlePose,
   petalPose,
   treeSway,
-  scrollPose,
-  PEACH_SPOT,
   createPeach,
   stepPeach,
   togglePeach,
@@ -28,8 +22,7 @@ const smooth = (t) => {
 };
 
 export class PeachView {
-  constructor(canvas, img, ui, { still = false, mode = "leaves" } = {}) {
-    this.mode = ["petals", "scroll"].includes(mode) ? mode : "leaves";
+  constructor(canvas, img, ui, { still = false } = {}) {
     this.c = canvas;
     this.ctx = canvas.getContext("2d");
     this.img = img;
@@ -41,8 +34,6 @@ export class PeachView {
     const pinks = ["#f6d3d8", "#f1c0c8", "#f8e0e2", "#efb7c0", "#fbe9e6"];
     for (const p of this.parts) p.pink = pinks[Math.floor(Math.random() * pinks.length)];
     ui.link.href = LINE_URL;
-    this.cells = [];
-    LINE_QR.forEach((r, row) => [...r].forEach((v, col) => v === "1" && this.cells.push([row, col])));
     ui.hint.addEventListener("click", () => togglePeach(this.s));
     // 先接住點擊（capture）：點到樹就不要再冒漣漪
     window.addEventListener(
@@ -77,7 +68,7 @@ export class PeachView {
     this.c.width = Math.round(this.w * this.dpr);
     this.c.height = Math.round(this.h * this.dpr);
     this.tree = treeRect(this.w, this.h, this.img.width / this.img.height);
-    this.box = qrBox(LINE_QR.length, this.tree, this.w, this.h, { beside: this.mode !== "leaves" });
+    this.box = qrBox(LINE_QR.length, this.tree, this.w, this.h, );
   }
 
   tick() {
@@ -94,9 +85,7 @@ export class PeachView {
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.clearRect(0, 0, this.w, this.h);
     if (s.alpha <= 0) return;
-    if (this.mode === "petals") this.drawPetals();
-    else if (this.mode === "scroll") this.drawScroll();
-    else this.drawLeaves();
+    this.drawPetals();
     ctx.globalAlpha = 1;
   }
 
@@ -132,26 +121,7 @@ export class PeachView {
     ctx.stroke();
   }
 
-  // 原本的做法：樹變淡，葉子飄起來排成格子
-  drawLeaves() {
-    const { ctx, s, tree, box } = this;
-    this.drawTree(1 - 0.88 * smooth(s.t / 0.55));
-    this.drawCard(smooth((s.t - 0.3) / 0.45));
-    if (s.t <= 0) return;
-    ctx.globalAlpha = s.alpha;
-    for (const p of this.parts) {
-      const q = particlePose(p, s.t, tree, box);
-      ctx.fillStyle = q.e >= 1 ? QR_DARK : `rgb(${q.color[0]}, ${q.color[1]}, ${q.color[2]})`;
-      const h = q.size / 2;
-      if (q.e >= 1) ctx.fillRect(q.x - h, q.y - h, q.size, q.size);
-      else {
-        roundRect(ctx, q.x - h, q.y - h, q.size, q.size, h * (1 - q.e));
-        ctx.fill();
-      }
-    }
-  }
-
-  // 做法一：樹搖一下，花瓣翻轉飄落，落下後像墨一樣暈開
+  // 樹搖一下，花瓣翻轉飄落，落下後像墨一樣暈開
   drawPetals() {
     const { ctx, s, tree, box } = this;
     this.drawTree(1, treeSway(s.t));
@@ -184,66 +154,6 @@ export class PeachView {
       ctx.ellipse(0, 0, m * 0.65, m * 0.12 + m * 0.36 * Math.abs(Math.cos(q.angle * 0.7)), 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
-    }
-  }
-
-  // 做法二：蟠桃發光浮起、化成卷軸往下攤開
-  drawScroll() {
-    const { ctx, s, tree, box, img } = this;
-    this.drawTree(1);
-    if (s.t <= 0) return;
-    const q = scrollPose(s.t, tree, box);
-    const pk = q.peach;
-    if (pk.alpha > 0) {
-      // 淡淡的金光
-      const g = ctx.createRadialGradient(pk.x, pk.y, pk.r * 0.4, pk.x, pk.y, pk.r * 2.4);
-      g.addColorStop(0, `rgba(240, 214, 150, ${0.55 * pk.glow})`);
-      g.addColorStop(1, "rgba(240, 214, 150, 0)");
-      ctx.globalAlpha = s.alpha * pk.alpha;
-      ctx.fillStyle = g;
-      ctx.fillRect(pk.x - pk.r * 2.4, pk.y - pk.r * 2.4, pk.r * 4.8, pk.r * 4.8);
-      // 從樹圖上剪下那顆桃子
-      const sr = PEACH_SPOT.r * img.width;
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(pk.x, pk.y, pk.r, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(img, PEACH_SPOT.x * img.width - sr, PEACH_SPOT.y * img.height - sr, sr * 2, sr * 2, pk.x - pk.r, pk.y - pk.r, pk.r * 2, pk.r * 2);
-      ctx.restore();
-    }
-    if (q.roll <= 0) return;
-    const p = q.paper;
-    ctx.globalAlpha = s.alpha * q.roll;
-    // 紙
-    ctx.save();
-    ctx.shadowColor = "rgba(60, 50, 40, 0.16)";
-    ctx.shadowBlur = 20;
-    ctx.shadowOffsetY = 5;
-    ctx.fillStyle = QR_LIGHT;
-    ctx.fillRect(p.x, p.y, p.w, p.h);
-    ctx.restore();
-    // QR：紙打開到哪就露到哪
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(p.x, p.y, p.w, p.h);
-    ctx.clip();
-    ctx.fillStyle = QR_DARK;
-    for (const c of this.cells) ctx.fillRect(box.x0 + c[1] * box.m, box.y0 + c[0] * box.m, box.m, box.m);
-    ctx.restore();
-    // 上下兩根軸：金色，兩端深一點
-    for (const r of q.rods) {
-      const g = ctx.createLinearGradient(0, r.y, 0, r.y + r.h);
-      g.addColorStop(0, "#d8bd86");
-      g.addColorStop(0.5, "#b8955a");
-      g.addColorStop(1, "#8a6a35");
-      ctx.fillStyle = g;
-      roundRect(ctx, r.x, r.y, r.w, r.h, r.h / 2);
-      ctx.fill();
-      ctx.fillStyle = "#6e5226";
-      roundRect(ctx, r.x - 4, r.y - 1, 8, r.h + 2, 3);
-      ctx.fill();
-      roundRect(ctx, r.x + r.w - 4, r.y - 1, 8, r.h + 2, 3);
-      ctx.fill();
     }
   }
 

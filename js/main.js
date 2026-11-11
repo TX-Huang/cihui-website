@@ -645,10 +645,7 @@ async function start() {
   // 蟠桃樹（加 LINE 的入口）最先建立：使用者可能幾秒就滑到下一頁。
   // 要求減少動畫也要有，只是點了直接換，不飄
   const peachImg = await peachLoading;
-  if (peachImg) peach = new PeachView($("peach"), peachImg, { box: $("peachUi"), hint: $("peachHint"), link: $("peachLink") }, {
-      still: reduceMotion,
-      mode: new URLSearchParams(location.search).get("peach") // 還在比較：?peach=petals 或 ?peach=scroll
-    });
+  if (peachImg) peach = new PeachView($("peach"), peachImg, { box: $("peachUi"), hint: $("peachHint"), link: $("peachLink") }, { still: reduceMotion });
   window.__debug.peach = peach;
 
   const kits = await loadKoiKits(["red", "blue", "platinum"]);

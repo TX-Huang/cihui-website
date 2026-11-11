@@ -1,19 +1,11 @@
-// 蟠桃樹 → QR 的兩種新做法（先做出來給使用者比較；網址加 ?peach=petals 或 ?peach=scroll 切換，預設不變）
-//
-// 做法一「花瓣飄落、墨點暈開」(petals)：
+// 蟠桃樹 → QR：「花瓣飄落、墨點暈開」
 // 1. 樹一直在（不變淡），點了先輕輕搖一下（像一陣風），0.6 秒內停下來
 // 2. 每格一片桃花瓣：從樹冠被吹起，翻轉、左右飄，落到自己的格子上
 // 3. 落下之後才像墨滴一樣暈開成深色方格，花瓣同時淡掉；最後每格都是完整的方格
-//
-// 做法二「蟠桃化成卷軸」(scroll)：
-// 4. 樹頂那顆蟠桃浮起來（發淡淡金光），飄到卡片上緣
-// 5. 桃子化成一卷捲起來的卷軸，往下慢慢攤開，紙打開到哪、QR 就露到哪；最後整張卡片都打開
-// 6. 卷軸的軸在 QR 留白裡，不會蓋到格子，也不會跑到選單底下
-//
-// 兩種都要：每格移動不跳（≤ 25 像素）、整段 2.5 秒、t=1 時 QR 完整
+// 每格移動不跳（≤ 25 像素）、整段 2.5 秒、t=1 時 QR 完整
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { treeRect, qrBox, assignParticles, petalPose, treeSway, scrollPose, PEACH_SPOT, DURATION } from "../js/peach.js";
+import { treeRect, qrBox, assignParticles, petalPose, treeSway, DURATION } from "../js/peach.js";
 import { LINE_QR } from "../js/line-qr.js";
 
 const ASPECT = 694 / 1000;
@@ -68,49 +60,14 @@ test("petals: each petal leaves the crown, tumbles and drifts, lands on its modu
   }
 });
 
-test("scroll: the top peach floats up to the card, becomes a scroll that unrolls downward", () => {
-  const seq = frames((t) => scrollPose(t, tree, box));
-  const spot = { x: tree.x + PEACH_SPOT.x * tree.w, y: tree.y + PEACH_SPOT.y * tree.h };
-  assert.ok(Math.hypot(seq[0].peach.x - spot.x, seq[0].peach.y - spot.y) < 1e-6 && seq[0].peach.alpha === 0, "starts as the peach on the tree");
-  const arrive = seq.find((s) => Math.hypot(s.peach.x - (box.card.x + box.card.w / 2), s.peach.y - box.card.y) < 1);
-  assert.ok(arrive, "the peach reaches the top of the card");
-  assert.equal(seq.at(-1).peach.alpha, 0, "and turns into the scroll");
-  assert.equal(seq[0].open, 0);
-  assert.equal(seq.at(-1).open, 1, "fully open at the end");
-  const end = seq.at(-1).paper;
-  assert.deepEqual([end.x, end.y, end.w, end.h], [box.card.x, box.card.y, box.card.w, box.card.h], "the paper covers the whole card");
-  for (let i = 1; i < seq.length; i++) {
-    const a = seq[i - 1];
-    const b = seq[i];
-    assert.ok(Math.hypot(b.peach.x - a.peach.x, b.peach.y - a.peach.y) <= 25, "the peach never jumps");
-    assert.ok(b.open >= a.open && b.open - a.open <= 1 / 40, "unrolls slowly, never rolls back on the way");
-    assert.equal(b.paper.y, box.card.y, "the top rod stays put; the paper unrolls downward");
-  }
-});
-
-test("scroll: the rods sit outside the paper (never over the QR or its white margin) and below the menu bar", () => {
-  for (const [vw, vh] of [[1440, 900], [1280, 720], [390, 844], [667, 375]]) {
-    const tr = treeRect(vw, vh, ASPECT);
-    const b = qrBox(LINE_QR.length, tr, vw, vh);
-    const s = scrollPose(1, tr, b);
-    for (const rod of s.rods) {
-      assert.ok(rod.y >= 62, `${vw}x${vh}: rod below the menu (${rod.y})`);
-      // 軸完全在紙外面：QR 四邊的留白也不能碰（留白不夠會掃不到）
-      const c = b.card;
-      assert.ok(rod.y + rod.h <= c.y || rod.y >= c.y + c.h, `${vw}x${vh}: rod outside the card, quiet zone untouched`);
-      assert.ok(rod.x >= 0 && rod.x + rod.w <= vw, `${vw}x${vh}: rod on screen`);
-    }
-  }
-});
-
-// 7. 花瓣、卷軸兩種做法：卡片放在樹的左邊（樹大部分看得到，才看得出花瓣從樹上飄過去），
+// 4. 卡片放在樹的左邊（樹大部分看得到，才看得出花瓣從樹上飄過去），
 //    但不蓋到珠簾門洞；手機還是放在畫面中間
-test("petals / scroll: on desktops the card sits beside the tree (most of the tree stays visible), clear of the doorway", async () => {
+test("on desktops the card sits beside the tree (most of the tree stays visible), clear of the doorway", async () => {
   const { fitGate } = await import("../js/layout.js");
   const { GATE } = await import("../js/gate.js");
   for (const [vw, vh] of [[1280, 720], [1440, 900], [1920, 1080], [2560, 1440]]) {
     const tr = treeRect(vw, vh, ASPECT);
-    const b = qrBox(LINE_QR.length, tr, vw, vh, { beside: true });
+    const b = qrBox(LINE_QR.length, tr, vw, vh);
     const s = fitGate(vw, vh, GATE);
     const doorRight = vw / 2 + (GATE.door.x1 - GATE.w / 2) * s;
     assert.ok(b.card.x >= doorRight + 12 - 1e-9, `${vw}x${vh}: clear of the doorway`);
@@ -118,6 +75,6 @@ test("petals / scroll: on desktops the card sits beside the tree (most of the tr
     assert.ok(covered <= tr.w * 0.6, `${vw}x${vh}: covers ${Math.round((covered / tr.w) * 100)}% of the tree's width`);
     assert.ok(b.card.y >= 64 && b.card.y + b.card.h <= vh, `${vw}x${vh}: on screen, below the menu`);
   }
-  const phone = qrBox(LINE_QR.length, treeRect(390, 844, ASPECT), 390, 844, { beside: true });
+  const phone = qrBox(LINE_QR.length, treeRect(390, 844, ASPECT), 390, 844);
   assert.ok(Math.abs(phone.card.x + phone.card.w / 2 - 195) <= 1, "phones: centred (to the whole pixel)");
 });

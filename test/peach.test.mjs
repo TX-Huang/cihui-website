@@ -1,9 +1,8 @@
 // 蟠桃樹（瑤池金母頁）的規格：
 // 1. 桃樹站在大門右前方，不擋到珠簾門洞，整棵都在畫面裡；手機上也有，至少 80 像素寬（點得到）
-// 2. 點一下桃樹：葉子和花一片一片飄起來，排成道場 LINE 的 QR code；再點一下飄回去變成樹
+// 2. 點一下桃樹：變成道場 LINE 的 QR code（花瓣飄落、墨點暈開，細節在 peach-petals.test.mjs）；再點一下倒回去
 // 3. 掃得到：每個深色格子剛好一片；QR 卡片四邊留白至少 4 格；深淺對比至少 7；卡片整個在畫面裡、每格至少 4 像素
-// 4. 優雅：整段約 2.5 秒，每片出發時間錯開，路線微微往上飄（弧線），每格移動不跳；
-//    動到一半再點一下會從現在的位置慢慢倒回去，不會跳
+// 4. 優雅：整段約 2.5 秒；動到一半再點一下會從現在的位置慢慢倒回去，不會跳
 // 5. 換到別的神明：慢慢淡掉，回到樹的樣子；要求減少動畫：點了直接換，不飄
 import { test } from "node:test";
 import { spawnSync } from "node:child_process";
@@ -12,7 +11,6 @@ import {
   treeRect,
   qrBox,
   assignParticles,
-  particlePose,
   createPeach,
   stepPeach,
   togglePeach,
@@ -99,7 +97,7 @@ test("scannable: quiet zone of 4 modules, at least 4 px per module, inside the s
   assert.ok(ratio >= 7, `contrast ${ratio.toFixed(1)}`);
 });
 
-test("every dark module gets exactly one leaf, each starting somewhere on the crown", () => {
+test("every dark module gets exactly one petal, each starting somewhere on the crown", () => {
   const random = seeded(3);
   const pts = canopy(900, random);
   const ps = assignParticles(LINE_QR, pts, random);
@@ -113,31 +111,6 @@ test("every dark module gets exactly one leaf, each starting somewhere on the cr
   }
   // 樹冠的點比格子少也要每格都有（同一點可以出發好幾片）
   assert.equal(assignParticles(LINE_QR, canopy(50, random), random).length, darkCount);
-});
-
-test("each leaf drifts from the tree to its module along a gentle upward arc, never jumping", () => {
-  const random = seeded(5);
-  const vw = 1440;
-  const vh = 900;
-  const tree = treeRect(vw, vh, ASPECT);
-  const box = qrBox(LINE_QR.length, tree, vw, vh);
-  const ps = assignParticles(LINE_QR, canopy(900, random), random);
-  for (const p of ps.slice(0, 80)) {
-    const a = particlePose(p, 0, tree, box);
-    assert.ok(Math.abs(a.x - (tree.x + p.sx * tree.w)) < 1e-6 && Math.abs(a.y - (tree.y + p.sy * tree.h)) < 1e-6, "starts on the tree");
-    const z = particlePose(p, 1, tree, box);
-    assert.ok(Math.abs(z.x - (box.x0 + (p.col + 0.5) * box.m)) < 1e-6 && Math.abs(z.y - (box.y0 + (p.row + 0.5) * box.m)) < 1e-6, "ends in its module");
-    assert.equal(z.size, box.m, "fills the module exactly");
-    let last = a;
-    let lift = 0;
-    for (let f = 1; f <= DURATION; f++) {
-      const q = particlePose(p, f / DURATION, tree, box);
-      assert.ok(Math.hypot(q.x - last.x, q.y - last.y) <= 25, `moves smoothly (${Math.hypot(q.x - last.x, q.y - last.y).toFixed(1)} px in a frame)`);
-      lift = Math.max(lift, a.y + (z.y - a.y) * q.e - q.y); // 比直線高多少
-      last = q;
-    }
-    assert.ok(lift >= 20 && lift <= 160, `floats up a little on the way (${lift.toFixed(0)} px above the straight line)`);
-  }
 });
 
 test("about 2.5 s each way; a second click mid-way turns back smoothly from where it is", () => {
@@ -173,6 +146,7 @@ test("clicking the tree (or the QR card) toggles; clicking elsewhere does nothin
   s.t = 1;
   s.target = 1;
   assert.ok(hitPeach(s, box.card.x + 5, box.card.y + 5, tree, box), "the card, when the QR code is showing");
+  assert.ok(hitPeach(s, tree.x + tree.w - 10, tree.y + tree.h * 0.9, tree, box), "the tree too (the card sits beside it now)");
 });
 
 test("leaving the 金母 page: fades out and goes back to being a tree; reduced motion switches at once", () => {
