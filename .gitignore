@@ -8,3 +8,6 @@ Thumbs.db
 
 # API 金鑰，絕對不要上傳
 .env
+
+# 第三方的 Claude 技能（heydamir/unslop，CC BY 4.0），只在本機用
+.claude/skills/unslop/

@@ -460,14 +460,22 @@ body {
   }
 }
 
-/* 很窄的手機（320 寬）：選單再擠一點，「風鈴」才不會被切掉 */
-@media (max-width: 360px) {
-  .pill {
-    font-size: 12px;
-  }
+/* 一般手機（375、390 寬）：選單有六個按鈕，留白縮一點才放得下 */
+@media (max-width: 400px) {
   .pill a,
   .pill button {
     padding: 7px 7px;
+  }
+}
+/* 很窄的手機（320 寬）：再擠一點，字也小一號 */
+@media (max-width: 360px) {
+  .pill {
+    font-size: 12px;
+    padding: 4px 2px;
+  }
+  .pill a,
+  .pill button {
+    padding: 7px 5px;
   }
 }
 

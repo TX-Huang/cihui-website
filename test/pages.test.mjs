@@ -1,15 +1,15 @@
-// 內頁（關於道場、法會活動、服務）的規格：
-// 1. 三頁上方都有同一條選單：慈惠道場（回首頁）、關於道場、法會活動、服務；現在在哪一頁要標出來
+// 內頁（關於道場、法會活動、服務、相簿）的規格：
+// 1. 每一頁上方都有同一條選單：慈惠道場（回首頁）、關於道場、法會活動、服務、相簿；現在在哪一頁要標出來
 // 2. 法會日期寫在 js/events.js，一行一場（以後改這個檔就好）；頁面照農曆月日排好，
 //    日期寫成「農曆七月十八」；還沒跟道場確認的標「待確認」
 // 3. 道場還沒給的內容一律放進「待填」框，不會看起來像真的資料
-// 4. 動畫優雅：段落捲到時慢慢浮上來；要求減少動畫就直接顯示
+// 4. 動畫：只有頁首的字進場時浮上來一次（細節在 polish.test.mjs）
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { lunarDate, eventRows, EVENTS } from "../js/events.js";
 
-const PAGES = { "about.html": "關於道場", "events.html": "法會活動", "services.html": "服務" };
+const PAGES = { "about.html": "關於道場", "events.html": "法會活動", "services.html": "服務", "gallery.html": "相簿" };
 const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
 
 test("every inner page has the same menu, and marks the page you are on", () => {
@@ -26,7 +26,7 @@ test("every inner page has the same menu, and marks the page you are on", () => 
       assert.ok(nav.includes(`<a href="${f}"${current}>${l}</a>`), `${file}: link to ${l}${current ? " (marked current)" : ""}`);
     }
     assert.equal((nav.match(/aria-current/g) || []).length, 1, `${file}: only one page marked`);
-    assert.match(html, /<script type="module" src="js\/page.js"><\/script>/, `${file}: gentle reveal script`);
+    assert.match(html, /<script type="module" src="js\/page.js"><\/script>/, `${file}: page script`);
   }
 });
 
@@ -78,24 +78,9 @@ test("anything the temple has not given yet sits in a clearly marked 待填 box"
   assert.match(css, /\.todo\s*\{[^}]*dashed/, "待填 boxes have a dashed border");
 });
 
-test("reveal animation is slow, and off when the visitor asks for less motion", () => {
+test("printing: the menu is left out", () => {
   const css = read("pages.css");
-  const m = css.match(/\.js \.reveal\s*\{[^}]*transition:[^;]*opacity (\d+)ms/);
-  assert.ok(m && Number(m[1]) >= 800, "rises slowly (≥ 0.8 s)");
-  const block = (name) => css.slice(css.indexOf(name)).split(/\n@media|\n@keyframes/)[0];
-  assert.match(block("@media (prefers-reduced-motion: reduce)"), /\.reveal\s*\{[^}]*opacity:\s*1/, "reduced motion: shown at once");
-  assert.match(block("@media print"), /\.reveal\s*\{[^}]*opacity:\s*1/, "printing: everything is shown");
-});
-
-// 5. 就算程式檔壞掉（例如改 events.js 時打錯一個逗號），內容也不能一直是空白：
-//    頁面先等 page.js 說「好了」，等不到就把隱藏拿掉
-test("if the page script breaks, the text still shows up instead of staying blank", () => {
-  for (const file of Object.keys(PAGES)) {
-    const html = read(file);
-    const head = html.slice(0, html.indexOf("</head>"));
-    assert.match(head, /setTimeout\([\s\S]*__pageReady[\s\S]*classList\.remove\("js"\)/, `${file}: safety timer in the head`);
-  }
-  assert.match(read("js/page.js"), /window\.__pageReady = true/, "page.js says it is ready");
+  assert.match(css.slice(css.indexOf("@media print")), /\.topbar\s*\{[^}]*display:\s*none/);
 });
 
 // 6. 重要的字要讀得清楚：跟底色的對比至少 4.5（WCAG AA）；金色只拿來畫線，字用深一點的金
@@ -128,7 +113,7 @@ test("a typo in a festival date is caught instead of printing a wrong date", () 
   }
 });
 
-// 7. 首頁的選單跟內頁一樣：慈惠道場、關於道場、法會活動、服務（首頁另外保留風鈴開關）；
+// 7. 首頁的選單跟內頁一樣：慈惠道場、關於道場、法會活動、服務、相簿（首頁另外保留風鈴開關）；
 //    手機上也看得到這三個連結
 test("the home page menu matches the inner pages (plus the wind-chime switch), on phones too", () => {
   const html = read("index.html");
@@ -141,7 +126,7 @@ test("the home page menu matches the inner pages (plus the wind-chime switch), o
   assert.doesNotMatch(read("style.css"), /\.pill a:not\(\.brand\)/, "links are not hidden on phones");
 });
 
-// 10. 匾額字型（崇羲篆體，CC BY-ND 3.0 TW）一定要標出處：首頁畫面不放（太干擾），改放在三個內頁的頁尾
+// 10. 匾額字型（崇羲篆體，CC BY-ND 3.0 TW）一定要標出處：首頁畫面不放（太干擾），改放在每個內頁的頁尾
 test("the plaque font credit is not on the home page, but every inner page footer credits it", () => {
   assert.doesNotMatch(read("index.html"), /class="credit"/, "not on the home page");
   for (const file of Object.keys(PAGES)) {

@@ -1,12 +1,12 @@
 // 法會活動：一行一場。以後要改日期、加活動，改這裡就好。
 // month、day 是農曆。confirmed：跟道場確認過了就改成 true（沒確認的會在頁面上標「待確認」）。
-// note：補充說明（可以不寫）。
+// note：補充說明（可以不寫）。seal：橫軸上那個小印裡的一個字。
 // 四位神明的聖誕各地說法不一，先用 docs/deities-lore.md 查到最常見的，等道場確認。
 export const EVENTS = [
-  { name: "瑤池金母聖誕", month: 7, day: 18, confirmed: false, note: "慈惠堂傳統的日子" },
-  { name: "九天玄女聖誕", month: 2, day: 15, confirmed: false },
-  { name: "中壇元帥聖誕", month: 9, day: 9, confirmed: false },
-  { name: "福德正神聖誕", month: 2, day: 2, confirmed: false, note: "頭牙" }
+  { name: "瑤池金母聖誕", seal: "母", month: 7, day: 18, confirmed: false, note: "慈惠堂傳統的日子" },
+  { name: "九天玄女聖誕", seal: "玄", month: 2, day: 15, confirmed: false },
+  { name: "中壇元帥聖誕", seal: "帥", month: 9, day: 9, confirmed: false },
+  { name: "福德正神聖誕", seal: "福", month: 2, day: 2, confirmed: false, note: "頭牙" }
 ];
 
 const NUM = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];

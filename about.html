@@ -12,14 +12,6 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="pages.css" />
-    <script>
-      // 有 JS：段落先藏起來，捲到才慢慢浮上來（js/page.js）。
-      // 保險：page.js 3 秒內沒說「好了」（檔案壞掉、沒載到），就全部直接顯示，不會一直空白
-      document.documentElement.classList.add("js");
-      setTimeout(function () {
-        if (!window.__pageReady) document.documentElement.classList.remove("js");
-      }, 3000);
-    </script>
   </head>
   <body>
     <header class="topbar">
@@ -28,6 +20,7 @@
         <a href="about.html" aria-current="page">關於道場</a>
         <a href="events.html">法會活動</a>
         <a href="services.html">服務</a>
+        <a href="gallery.html">相簿</a>
       </nav>
     </header>
 
@@ -43,19 +36,19 @@
 
       <div class="content">
         <section>
-          <h2 class="reveal">道場緣起</h2>
-          <div class="todo reveal"><span class="todo-tag">待填</span>道場怎麼開始的：哪一年、誰創立、名字的由來、是不是慈惠堂系統。</div>
+          <h2>道場緣起</h2>
+          <div class="todo"><span class="todo-tag">待填</span>道場怎麼開始的：哪一年、誰創立、名字的由來、是不是慈惠堂系統。</div>
         </section>
 
         <section>
-          <h2 class="reveal">供奉神明</h2>
-          <p class="reveal">主祀瑤池金母，陪祀九天玄女、中壇元帥、福德正神。</p>
+          <h2>供奉神明</h2>
+          <p>主祀瑤池金母，陪祀九天玄女、中壇元帥、福德正神。</p>
           <div class="cards" id="deityCards"></div>
         </section>
 
         <section>
-          <h2 class="reveal">道場照片</h2>
-          <div class="todo reveal"><span class="todo-tag">待填</span>道場外觀、正殿、神像的照片（神像可以拍的話）。</div>
+          <h2>道場照片</h2>
+          <div class="todo"><span class="todo-tag">待填</span>道場外觀、正殿、神像的照片（神像可以拍的話）。照片也會放進<a href="gallery.html">相簿</a>。</div>
         </section>
       </div>
     </main>
