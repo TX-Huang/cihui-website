@@ -226,3 +226,25 @@ ChatGPT 改圖時位置可能會跑掉一點點，沒關係，我會用程式對
 `peach-tree.png`
 > Create an image. Size 1024x1536 (portrait). Transparent background PNG.
 > A single small celestial peach tree (蟠桃樹) shown whole from the base of the trunk to the top of the crown. A graceful, gently twisting trunk in soft grey-brown. A full, rounded, airy crown of deep jade-green leaves mixed with pale pink peach blossoms, and five or six ripe peaches with a cream-to-blush gradient hanging among the leaves. Soft and refined, quiet and calm, painterly realism, fine detail; colours harmonised with ivory, champagne gold and celadon. Only the tree — no ground, no grass, no rocks, no roots spreading out, no pot, no shadow, no background, no text.
+
+## 8. 相簿畫卷（相簿頁）— 讓畫卷有立體感
+
+之前的木軸和裱綾是用程式畫的，太平、太假。改成 4 張 AI 圖，程式只負責排和動。
+生好存成 `assets/raw/chatgpt2/` 裡下面的檔名。
+**第 1 張不要透明背景**（它是紙，要整張填滿）；第 2～4 張要 **Transparent background PNG**。
+
+### 8-1. `scroll-paper.png` — 畫卷的紙和上下裱綾（會左右重複拼接）
+> Create an image. Size 1536x1024 (landscape).
+> A flat, front-on, evenly lit texture of a section of a mounted Chinese handscroll, filling the whole frame edge to edge. Along the top: a band of pale celadon (soft grey-green) silk brocade with a faint woven cloud pattern, edged with a very thin line of champagne gold. The same band along the bottom. Between the two bands: warm ivory, aged xuan rice paper with soft visible fibers and very subtle tone variation. The pattern continues off both the left and right edges so it can repeat horizontally. No objects, no rollers, no text, no seals, no shadows, no vignette, no frame.
+
+### 8-2. `scroll-end.png` — 捲起來的那一端（畫卷左右兩端都用這張）
+> Create an image. Size 1024x1536 (portrait). Transparent background PNG.
+> The rolled-up end of a Chinese handscroll standing upright, seen from the front: a thick cylinder of tightly rolled ivory paper wrapped on the outside in pale celadon silk, with a dark rosewood roller running through its center and polished white jade end caps sticking out at the top and bottom. Realistic and three-dimensional, soft light from the upper left, gentle shading across the curved surface. Only the rolled scroll — no table, no shadow on the ground, no background, no text.
+
+### 8-3. `hang-top.png` — 手機掛軸的上端（天杆和掛繩）
+> Create an image. Size 1536x512 (wide). Transparent background PNG.
+> The top of a Chinese hanging scroll seen from the front: a slim dark rosewood rod lying horizontally, a band of pale celadon silk brocade just below it, two thin narrow silk ribbons hanging down from the rod, and a braided silk hanging cord tied in a soft triangle above the rod. Realistic and three-dimensional, soft light from the upper left. Only these parts — no wall, no paper below, no background, no text.
+
+### 8-4. `hang-bottom.png` — 手機掛軸的下端（地軸）
+> Create an image. Size 1536x512 (wide). Transparent background PNG.
+> The bottom roller of a Chinese hanging scroll seen from the front: a horizontal dark rosewood roller, a little thicker than a pencil-thin rod, with polished white jade end caps sticking out on both the left and right sides, and a band of pale celadon silk brocade just above it. Realistic and three-dimensional, soft light from the upper left. Only these parts — no wall, no background, no text.
