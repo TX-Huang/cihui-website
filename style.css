@@ -257,7 +257,7 @@ body {
 }
 .subtitle {
   margin: 12px 0 0;
-  font-family: var(--serif);
+  font-family: "LXGW WenKai TC", var(--serif); /* 內文字：霞鶩文楷 */
   font-size: clamp(16px, 1.8vw, 22px);
   letter-spacing: 0.25em;
   color: var(--text-soft);
@@ -272,9 +272,11 @@ body {
 }
 .aside p {
   margin: 0;
+  font-family: "LXGW WenKai TC", var(--sans); /* 內文字：霞鶩文楷 */
 }
 .aside .hint {
   margin-top: 10px;
+  font-family: var(--sans); /* 小提示維持黑體 */
   font-size: 12px;
   letter-spacing: 0.12em;
   opacity: 0.7;

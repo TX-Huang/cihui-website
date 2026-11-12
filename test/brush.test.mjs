@@ -57,3 +57,25 @@ test("every page loads the brush font from Google Fonts", () => {
     assert.match(read(f), /fonts\.googleapis\.com\/css2\?[^"]*family=Yuji\+Boku/, f);
   }
 });
+
+// 5. 內文用霞鶩文楷 TC（手寫楷書，SIL OFL，繁體字齊全）：跟毛筆標題同一個書法家族。
+//    很小的介面文字（選單、小標籤、按鈕、頁尾、提示）維持思源黑體，最清楚
+test("body text uses LXGW WenKai TC; small interface text stays in the clear sans", () => {
+  const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "");
+  const pages = strip(read("pages.css"));
+  assert.match(pages, /--read:\s*"LXGW WenKai TC",\s*var\(--sans\)/, "--read falls back to the sans");
+  assert.match(pages, /\nbody\s*\{[^}]*font-family:\s*var\(--read\)/, "body text");
+  const rule = pages.match(/([^{}]*)\{([^{}]*font-family:\s*var\(--sans\)[^{}]*)\}/);
+  assert.ok(rule, "a small-text rule exists");
+  for (const sel of [".pill", ".eyebrow", ".card-role", ".card-more", ".pending", "footer", ".viewer-bar button", ".scroll-hint", ".year-legend", ".todo-tag"]) {
+    assert.ok(rule[1].split(",").map((s) => s.trim()).includes(sel), `${sel} stays in the sans`);
+  }
+  const home = strip(read("style.css"));
+  for (const sel of [".subtitle", ".aside p"]) {
+    const body = home.match(new RegExp(`\\n${sel.replace(".", "\\.")}\\s*\\{([^}]*)\\}`))?.[1] ?? "";
+    assert.match(body, /font-family:\s*"LXGW WenKai TC"/, `home ${sel}`);
+  }
+  const hint = home.match(/\n\.aside \.hint\s*\{([^}]*)\}/)?.[1] ?? "";
+  assert.match(hint, /font-family:\s*var\(--sans\)/, "the small hint stays in the sans");
+  for (const f of ["index.html", ...INNER]) assert.match(read(f), /fonts\.googleapis\.com\/css2\?[^"]*family=LXGW\+WenKai\+TC/, `${f} loads it`);
+});

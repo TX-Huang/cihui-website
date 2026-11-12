@@ -15,6 +15,7 @@
   --silk: #c8d2c6; /* 畫卷上下的裱綾（青瓷色，跟大門屋瓦同色） */
   --serif: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
   --brush: "Yuji Boku", var(--serif); /* 毛筆字：重要的字用（缺字時退回宋體） */
+  --read: "LXGW WenKai TC", var(--sans); /* 內文：霞鶩文楷（手寫楷書，跟毛筆標題同一個家族） */
   --sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
   --ease: cubic-bezier(0.65, 0, 0.2, 1);
 }
@@ -30,7 +31,7 @@ html {
 body {
   margin: 0;
   color: var(--text);
-  font-family: var(--sans);
+  font-family: var(--read);
   font-size: 16px;
   line-height: 1.9;
   background: var(--paper);
@@ -136,6 +137,20 @@ a {
   margin: 0;
   color: var(--text-soft);
   letter-spacing: 0.04em;
+}
+
+/* 很小的介面文字（選單、小標籤、按鈕、頁尾、提示）維持思源黑體：小字黑體最清楚 */
+.pill,
+.eyebrow,
+.card-role,
+.card-more,
+.pending,
+footer,
+.viewer-bar button,
+.scroll-hint,
+.year-legend,
+.todo-tag {
+  font-family: var(--sans);
 }
 
 /* 重要的字用毛筆字（Yuji Boku，SIL OFL）：頁面標題、段落標題、神明名字、法會名稱、相簿題字。
