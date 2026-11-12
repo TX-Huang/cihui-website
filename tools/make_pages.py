@@ -121,8 +121,14 @@ gallery = """        <div class="scroll" id="scroll">
               </div>
             </div>
           </div>
-          <span class="rod rod-right" aria-hidden="true"></span>
-          <div class="rod-lane" aria-hidden="true"><span class="rod"></span></div>
+          <!-- 兩端捲起來的軸（AI 生成的圖，tools/prep_scroll.py）：右端固定，左端在展開時從右滾到左 -->
+          <img class="scroll-end scroll-end-right" src="assets/scroll/end.webp" alt="" aria-hidden="true" />
+          <!-- 手機掛軸：上端的天杆和掛繩 -->
+          <img class="hang-top" src="assets/scroll/hang-top.webp" alt="" aria-hidden="true" />
+          <div class="rod-lane" aria-hidden="true">
+            <img class="scroll-end scroll-end-left" src="assets/scroll/end.webp" alt="" aria-hidden="true" />
+            <img class="hang-bottom" src="assets/scroll/hang-bottom.webp" alt="" aria-hidden="true" />
+          </div>
         </div>
         <p class="scroll-hint" id="scrollHint">畫卷從右往左看 · 往左捲動</p>
 

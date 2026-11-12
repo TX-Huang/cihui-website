@@ -362,29 +362,32 @@ p {
   color: var(--seal);
 }
 
-/* ── 相簿：古代畫卷 ── */
+/* ── 相簿：古代畫卷（紙、裱綾、捲軸都是 AI 生成的圖，tools/prep_scroll.py） ──
+   --ph：紙多高（js/gallery-view.js 依照片高度設定）。紙的圖上下各有約一成是裱綾，照片放在中間的宣紙上 */
 .scroll-wrap {
   max-width: none;
   padding: 24px 0 72px;
 }
 .scroll {
+  --ph: 500px;
   position: relative;
   margin: 0 auto;
   max-width: 1440px;
-  padding: 0 40px;
-  overflow: clip; /* 展開時滾動的那根軸，跑到卷子外面的部分裁掉（不會把頁面撐寬、撐長） */
-  overflow-clip-margin: 32px;
+  padding: calc(var(--ph) * 0.14) 72px;
+  overflow: clip; /* 展開時滾動的那捆捲軸，跑到卷子外面的部分裁掉（不會把頁面撐寬、撐長）；兩端的軸本身都在卷子裡面 */
 }
 .scroll-paper {
   position: relative;
+  box-sizing: border-box;
+  height: var(--ph);
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 24px 0;
-  border-top: 12px solid var(--silk);
-  border-bottom: 12px solid var(--silk);
-  background: var(--paper-light);
-  box-shadow: 0 12px 32px rgba(60, 50, 40, 0.1);
+  padding: calc(var(--ph) * 0.14) 0;
+  background: url("assets/scroll/paper.webp") repeat-x 0 0 / auto 100%;
+  background-attachment: local; /* 紙跟著照片一起捲 */
+  box-shadow: 0 16px 32px rgba(60, 50, 40, 0.16);
   scrollbar-width: thin;
+  scrollbar-color: rgba(122, 92, 44, 0.45) transparent;
   animation: unroll 1600ms var(--ease) both; /* 打開頁面時從右往左慢慢展開 */
 }
 .scroll-track {
@@ -410,6 +413,7 @@ p {
   font-size: 14px;
   color: var(--text-soft);
 }
+/* 照片像裱在宣紙上：一圈白紙邊、淡淡的陰影 */
 .shot {
   padding: 0;
   border: 0;
@@ -418,10 +422,12 @@ p {
 }
 .shot img {
   display: block;
+  box-sizing: border-box;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  box-shadow: 0 2px 8px rgba(60, 50, 40, 0.12);
+  border: 4px solid #fbf8f2;
+  box-shadow: 0 4px 12px rgba(60, 50, 40, 0.18);
 }
 .scroll-empty {
   position: absolute;
@@ -430,46 +436,34 @@ p {
   width: min(420px, 80%);
   transform: translate(-50%, -50%);
 }
-/* 兩端的軸（天杆、地杆）：深木色，兩頭金色 */
-.rod {
+/* 兩端捲起來的軸：比紙高一點（玉軸頭露出來），右端左右翻轉 */
+.scroll-end {
   position: absolute;
-  top: -20px;
-  bottom: -20px;
-  width: 20px;
-  border-radius: 8px;
-  background: linear-gradient(to right, #4a3a2a, #6e5636 45%, #3b2e22);
-  box-shadow: 0 4px 12px rgba(40, 30, 20, 0.25);
+  top: calc(var(--ph) * 0.015);
+  height: calc(var(--ph) * 1.25);
+  width: auto;
+  pointer-events: none;
+  filter: drop-shadow(6px 10px 12px rgba(40, 30, 20, 0.3));
   z-index: 2;
 }
-.rod::before,
-.rod::after {
-  content: "";
-  position: absolute;
-  left: -4px;
-  right: -4px;
-  height: 12px;
-  border-radius: 4px;
-  background: linear-gradient(to right, #8a6a35, #d8bd86 50%, #8a6a35);
+.scroll-end-right {
+  right: calc(72px - var(--ph) * 0.125);
+  transform: scaleX(-1);
 }
-.rod::before {
-  top: -8px;
-}
-.rod::after {
-  bottom: -8px;
-}
-.rod-right {
-  right: 24px;
-}
-/* 展開時從右邊滾到左邊的那根軸 */
+/* 展開時從右邊滾到左邊的那捆捲軸 */
 .rod-lane {
   position: absolute;
-  inset: 0 40px;
+  inset: 0 72px;
   pointer-events: none;
   animation: rod-roll 1600ms var(--ease) both;
   z-index: 2;
 }
-.rod-lane .rod {
-  left: -16px;
+.rod-lane .scroll-end-left {
+  left: calc(var(--ph) * -0.125);
+}
+.hang-top,
+.hang-bottom {
+  display: none;
 }
 .scroll-hint {
   margin: 16px auto 0;
@@ -611,55 +605,45 @@ footer .credit {
   .card-main .card-name {
     font-size: 24px;
   }
-  /* 掛軸：直的，從上往下展開，軸在上下 */
+  /* 掛軸：直的，從上往下展開。--pw：紙多寬（js/gallery-view.js 設定）。
+     紙的圖左右各有約一成四是裱綾；上端是天杆和掛繩，下端是地軸（展開時往下滾） */
   .scroll {
-    padding: 24px 20px;
+    --pw: 327px;
+    padding: calc(var(--pw) * 0.24) 7.5% calc(var(--pw) * 0.12); /* 左右留白跟著畫面寬：上下兩根軸比紙寬一點，不能超出畫面 */
   }
   .scroll-paper {
-    overflow-x: hidden;
-    overflow-y: visible;
-    padding: 0 16px;
-    border: 0;
-    border-left: 8px solid var(--silk);
-    border-right: 8px solid var(--silk);
+    height: auto;
+    overflow: hidden;
+    padding: 24px calc(var(--pw) * 0.14);
+    background: url("assets/scroll/paper-v.webp") repeat-y 0 0 / 100% auto;
+    background-attachment: scroll;
     animation-name: unroll-down;
   }
-  .rod {
-    top: auto;
-    bottom: auto;
-    left: 8px;
-    right: 8px;
-    width: auto;
-    height: 16px;
-    background: linear-gradient(to bottom, #4a3a2a, #6e5636 45%, #3b2e22);
+  .scroll-end {
+    display: none;
   }
-  .rod::before,
-  .rod::after {
-    top: -4px;
-    bottom: -4px;
-    left: auto;
-    right: auto;
-    width: 12px;
+  .hang-top,
+  .hang-bottom {
+    display: block;
+    position: absolute;
+    width: calc(var(--pw) * 1.136);
     height: auto;
-    background: linear-gradient(to bottom, #8a6a35, #d8bd86 50%, #8a6a35);
+    pointer-events: none;
+    filter: drop-shadow(4px 8px 10px rgba(40, 30, 20, 0.28));
+    z-index: 2;
   }
-  .rod::before {
-    left: -8px;
-  }
-  .rod::after {
-    right: -8px;
-  }
-  .rod-right {
-    top: 12px;
+  .hang-top {
+    left: calc(7.5% - var(--pw) * 0.068);
+    top: calc(var(--pw) * 0.24 - var(--pw) * 0.236);
   }
   .rod-lane {
-    inset: 24px 20px;
+    inset: calc(var(--pw) * 0.24) 7.5% calc(var(--pw) * 0.12);
     transform: translateY(100%); /* 平常就停在卷子下緣（減少動畫時也一樣） */
     animation-name: rod-drop;
   }
-  .rod-lane .rod {
-    left: 8px;
-    top: -12px;
+  .rod-lane .hang-bottom {
+    left: calc(var(--pw) * -0.068);
+    top: calc(var(--pw) * -0.084);
   }
   .scroll-title {
     writing-mode: horizontal-tb;

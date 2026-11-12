@@ -99,4 +99,23 @@ test("phones: the bottom roller rests at the bottom even without animation, and 
   const phone = css.slice(css.indexOf("@media (max-width: 720px)"));
   assert.match(phone, /\.rod-lane\s*\{[^}]*transform:\s*translateY\(100%\)/, "rests at the bottom");
   assert.match(css, /\n\.scroll\s*\{[^}]*overflow:\s*clip/, "the moving roller is clipped to the scroll");
+  assert.doesNotMatch(css, /overflow-clip-margin/, "no clip margin (it would make the page wider)");
+});
+
+// 8. 畫卷用 AI 生成的圖（紙和裱綾、捲起來的軸、掛軸上下端），不再用程式畫的漸層（太平、太假）
+test("the scroll is built from the generated pictures, not CSS-drawn gradients", async () => {
+  const { existsSync } = await import("node:fs");
+  for (const f of ["paper.webp", "paper-v.webp", "end.webp", "hang-top.webp", "hang-bottom.webp"]) {
+    assert.ok(existsSync(new URL(`../assets/scroll/${f}`, import.meta.url)), f);
+  }
+  const html = read("gallery.html");
+  assert.ok((html.match(/<img[^>]*src="assets\/scroll\/end\.webp"[^>]*aria-hidden="true"/g) || []).length >= 2, "rolled ends on both sides");
+  assert.match(html, /src="assets\/scroll\/hang-top\.webp"/);
+  assert.match(html, /src="assets\/scroll\/hang-bottom\.webp"/);
+  const css = read("pages.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(css, /\.scroll-paper\s*\{[^}]*url\("assets\/scroll\/paper\.webp"\)/, "paper texture on desktop");
+  assert.match(css.slice(css.indexOf("@media (max-width: 720px)")), /url\("assets\/scroll\/paper-v\.webp"\)/, "paper texture on phones");
+  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (/rod|scroll|end|hang/.test(m[1])) assert.doesNotMatch(m[2], /linear-gradient/, `${m[1].trim()}: no drawn gradients`);
+  }
 });

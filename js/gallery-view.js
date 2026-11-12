@@ -5,6 +5,7 @@ import { ALBUMS } from "./gallery.js";
 import { scrollLayout, stepIndex, wheelPixels } from "./scroll.js";
 
 const $ = (id) => document.getElementById(id);
+const scroll = $("scroll");
 const paper = $("scrollPaper");
 const track = $("scrollTrack");
 const empty = $("scrollEmpty");
@@ -12,14 +13,31 @@ const viewer = $("viewer");
 let flat = []; // 所有照片排成一串（看大圖時用），跟畫卷上的照片同一份
 
 let mode = null;
+let laidOutWidth = 0; // 上次排版時紙有多寬
+let laidOutKey = ""; // 上次排版是手卷還是掛軸、手卷照片多高
+
+// 現在應該怎麼排：手機寬度以下是掛軸；手卷的照片高度跟著視窗高度
+const handSize = () => Math.round(Math.max(220, Math.min(360, window.innerHeight * 0.42)));
+const layoutKey = () => (window.innerWidth <= 720 ? "hang" : `hand:${handSize()}`);
 
 function render(albums) {
   flat = albums.flatMap((album) => album.photos.map((p) => ({ ...p, album: album.title })));
   const hang = window.innerWidth <= 720;
   mode = hang ? "hang" : "hand";
   document.documentElement.classList.toggle("hang", hang);
-  // 手卷：照片高度跟著視窗高度（最高 420）；掛軸：照片跟紙一樣寬
-  const size = hang ? paper.clientWidth - 32 : Math.max(240, Math.min(420, window.innerHeight * 0.48));
+  // 紙的圖上下（掛軸是左右）各有一成四是裱綾，照片放在中間七成二的宣紙上。
+  // 手卷：照片高度跟著視窗高度，紙高＝照片高 ÷ 0.72；掛軸：紙寬跟著畫面，照片寬＝紙寬 × 0.72
+  let size;
+  laidOutWidth = paper.offsetWidth;
+  laidOutKey = layoutKey();
+  if (hang) {
+    const pw = paper.offsetWidth;
+    scroll.style.setProperty("--pw", `${pw}px`);
+    size = pw * 0.72;
+  } else {
+    size = handSize();
+    scroll.style.setProperty("--ph", `${size / 0.72}px`);
+  }
   const L = scrollLayout(albums, { mode, size });
   track.querySelectorAll(".scroll-item").forEach((n) => n.remove());
   // 手卷比畫面短的時候：卷子撐滿畫面，內容靠右（卷首在右邊）
@@ -124,12 +142,20 @@ viewer.addEventListener("touchend", (e) => {
   if (Math.abs(dx) > 40) show(stepIndex(current, flat.length, dx > 0 ? 1 : -1));
 });
 
-render(ALBUMS);
-let lastW = window.innerWidth;
+let currentAlbums = ALBUMS;
+render(currentAlbums);
+// 紙的寬度跟上次排版時不一樣（轉手機方向、捲軸出現或消失、調整視窗）就重排：紙、軸、照片要用同一個寬度
+new ResizeObserver(() => {
+  if (paper.offsetWidth !== laidOutWidth) render(currentAlbums);
+}).observe(paper);
+// 換成手卷／掛軸、或手卷的視窗高度變了（紙寬可能剛好沒變）：也要重排
 addEventListener("resize", () => {
-  if (window.innerWidth !== lastW) {
-    lastW = window.innerWidth;
-    render(ALBUMS);
-  }
+  if (layoutKey() !== laidOutKey) render(currentAlbums);
 });
-window.__debug = { ...(window.__debug || {}), gallery: { render, photos: () => flat } };
+window.__debug = {
+  ...(window.__debug || {}),
+  gallery: {
+    render: (albums) => render((currentAlbums = albums)), // 除錯用：換一組相簿看排起來的樣子
+    photos: () => flat
+  }
+};
