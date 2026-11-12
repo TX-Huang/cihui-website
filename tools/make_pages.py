@@ -34,7 +34,7 @@ def page(file, label, desc, h1, lead, body, wide=False, extra_scripts=""):
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=Noto+Sans+TC:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=Noto+Sans+TC:wght@400;500&family=Yuji+Boku&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="pages.css" />

@@ -247,12 +247,12 @@ body {
 }
 .title {
   margin: 0;
-  font-family: var(--serif);
-  font-weight: 900;
+  font-family: "Yuji Boku", var(--serif); /* 神明名字用毛筆字（只有一種粗細，不加粗） */
+  font-weight: 400;
+  font-synthesis: none;
   font-size: clamp(40px, 5vw, 80px);
   line-height: 1.05;
   letter-spacing: 0.08em;
-  font-weight: 600;
   text-shadow: 0 2px 30px rgba(255, 255, 255, 0.9);
 }
 .subtitle {
