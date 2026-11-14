@@ -5,11 +5,14 @@
 //   點它：沿一道弧飛出去（往右、先往上再往下），繞過大門前面再飛回原位，約 2.7 秒。
 //   《封神演義》哪吒用乾坤圈打敖丙，圈打出去會再回到手上。
 // 火尖槍：斜立在右邊，輕輕浮動；槍尖的火一直冒出小火星。
+// 風火輪：一對浮在下方中間（腳踏風火輪）。火焰是 AI Video 做的影片（tools/prep_fenghuolun.py），
+//   影片裡輪子幾乎不轉，所以輪子另外剪下來由程式慢慢順時針轉（wheelAngle）。
 
 export const MAX_SPARKS = 60;
 const THROW = 160; // 飛一圈幾格
 const TIP = [0.94, 0.06]; // 火焰中心在槍圖裡的位置（tools/prep_weapons.py 量的槍尖，往內一點）
 const SPEAR_ASPECT = 900 / 885;
+const WHEELS_ASPECT = 1.8; // 一對風火輪連火焰的寬高比（tools/prep_fenghuolun.py 裁出來的）
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -26,8 +29,14 @@ export function spearPose(W, H, t = 0) {
   return { x, y, w, h, tip: { x: x - w / 2 + w * TIP[0], y: y - h / 2 + h * TIP[1] } };
 }
 
+export function wheelsPose(W, H, t = 0) {
+  const w = clamp(W * 0.3, 140, 440);
+  const h = w / WHEELS_ASPECT;
+  return { x: W / 2, y: H - h / 2 - H * 0.03 + 3 * Math.sin(t * 0.02), w, h };
+}
+
 export function createWeapons() {
-  return { t: 0, alpha: 0, turn: 0, spin: 0, thrown: false, u: 0, sparks: [] };
+  return { t: 0, alpha: 0, turn: 0, spin: 0, thrown: false, u: 0, sparks: [], wheelAngle: 0 };
 }
 
 export function ringPose(s, W, H) {
@@ -62,6 +71,7 @@ export function stepWeapons(s, { W, H, active, random, click }) {
     }
   }
   s.turn += 0.006;
+  s.wheelAngle += 0.02; // 約 5 秒轉一圈
 
   // 火星：從槍尖冒出來，往上飄、慢慢淡掉
   for (const p of s.sparks) {

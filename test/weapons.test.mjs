@@ -2,10 +2,11 @@
 // - 乾坤圈：浮在畫面左下（標題下面），慢慢上下浮、慢慢轉（像立體的圈在空中轉）
 //   點它：圈飛出去，劃一道弧繞過大門前面，2～3 秒後飛回原位（不會瞬間跳回）；飛的時候再點沒有用
 // - 火尖槍：斜立在畫面右邊，輕輕浮動；槍尖的火一直冒出小火星，往上飄、淡掉
+// - 風火輪：一對浮在畫面下方中間（腳踏風火輪），輪子慢慢順時針轉，火焰一直燒（火焰是影片，輪子由程式轉）
 // - 離開三太子頁：慢慢淡掉；飛出去的圈照樣飛回來
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ringHome, spearPose, createWeapons, stepWeapons, ringPose, MAX_SPARKS } from "../js/weapons.js";
+import { ringHome, spearPose, wheelsPose, createWeapons, stepWeapons, ringPose, MAX_SPARKS } from "../js/weapons.js";
 
 const W = 1440;
 const H = 900;
@@ -101,4 +102,28 @@ test("leaving the 三太子 page: fades slowly, no new sparks, a thrown ring sti
   assert.ok(n >= 30, `fades over ${n} frames`);
   run(s, 300, { active: false });
   assert.equal(s.thrown, false, "the ring came home");
+});
+
+test("the wind-fire wheels float at the bottom centre, between the ring and the spear, turning slowly clockwise", () => {
+  for (const [w, h] of [[1440, 900], [1024, 768], [390, 844]]) {
+    const wh = wheelsPose(w, h, 0);
+    assert.ok(Math.abs(wh.x - w / 2) < w * 0.05, "centred");
+    assert.ok(wh.y - wh.h / 2 > h * 0.55 && wh.y + wh.h / 2 <= h, "at the bottom, on screen");
+    assert.ok(wh.x - wh.w / 2 >= 0 && wh.x + wh.w / 2 <= w, "fits the width");
+    assert.ok(wh.w >= 140, "big enough to see");
+    const r = ringHome(w, h);
+    assert.ok(wh.x - wh.w / 2 > r.x - r.size / 2, "right of the ring's left edge");
+  }
+  const s = createWeapons();
+  let last = s.wheelAngle;
+  let lastY = wheelsPose(W, H, s.t).y;
+  for (let i = 0; i < 600; i++) {
+    stepWeapons(s, { W, H, active: true, random: Math.random });
+    const d = s.wheelAngle - last;
+    assert.ok(d > 0 && d <= 0.03, "clockwise, slowly");
+    const y = wheelsPose(W, H, s.t).y;
+    assert.ok(Math.abs(y - lastY) <= 0.5, "floats gently");
+    last = s.wheelAngle;
+    lastY = y;
+  }
 });
