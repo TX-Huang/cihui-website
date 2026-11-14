@@ -22,6 +22,11 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+import sys
+
+sys.path.insert(0, str(Path(__file__).parent))  # 用 python -I 跑時，同資料夾的 tone.py 要自己加進來
+from tone import tone  # noqa: E402  素材調淡，配月白網頁（2026-11-15 使用者選的方向）
+
 RAW = Path("assets/raw/chatgpt2")
 OUT = Path("assets/phoenix2")
 CELL_W = 560
@@ -39,6 +44,7 @@ def key(path):
     rgb = np.clip((im - (1 - av) * bg) / av, 0, 255)
     rgb[..., 1] = np.minimum(rgb[..., 1], np.maximum(rgb[..., 0], rgb[..., 2]))
     a[a < 0.04] = 0
+    rgb = tone(rgb, 0.5)  # 鳳凰是主角：只調一半，保留紅色
     return np.dstack([rgb, a * 255]).clip(0, 255).astype(np.uint8)
 
 

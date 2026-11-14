@@ -7,6 +7,7 @@ FLUX 畫不出純色背景（有筆觸、顏色也不太一樣），所以不量
   綠底：綠比紅藍高多少；洋紅底：紅藍比綠高多少；藍底：藍比紅綠高多少；黑底：多亮。
   背景那種顏色越突出 → 越透明，邊緣用一小段漸變；邊緣把混進來的背景色壓掉。
 最後只留大塊的（主體），背景上零星的小點、小火星拿掉。
+再用 tools/tone.py 把顏色調淡（使用者 2026-11-15 選「素材調淡」配月白網頁），後面的 prep 程式都吃調好的。
 """
 from pathlib import Path
 
@@ -14,12 +15,19 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 
+import sys
+
+sys.path.insert(0, str(Path(__file__).parent))  # 用 python -I 跑時，同資料夾的 tone.py 要自己加進來
+from tone import tone  # noqa: E402  素材調淡，配月白網頁（2026-11-15 使用者選的方向）
+
 RAW = Path("assets/raw/chatgpt2")
 OUT = RAW / "keyed"
 
 # 名稱: (來源檔, 背景, 保留小塊的最小面積比例)
 # TIGHT：背景突出到角落典型值的幾成就算背景（預設 0.7；稻穗原圖在穀粒外畫了一圈淡粉紅的光，要更嚴）
 TIGHT = {"rice": 0.35}
+# 調淡的強度（1 = 跟比較圖一樣；0 = 不調）
+TONE = {}
 ITEMS = {
     "peach-tree": ("peach-tree-v2-1.png", "blue", 0.002),
     "lotus-open": ("lotus-open-v2-1.png", "magenta", 0.002),
@@ -98,6 +106,7 @@ for name, (src, bg, min_frac) in ITEMS.items():
     out, a = key(rgb, bg, TIGHT.get(name, 0.7))
     a = keep_big(a, min_frac)
     a[a < 0.03] = 0
+    out = tone(out, TONE.get(name, 1.0))
     img = Image.fromarray(np.dstack([out, a * 255]).clip(0, 255).astype(np.uint8), "RGBA")
     img.save(OUT / f"{name}.png")
     ys, xs = np.nonzero(a > 0.5)
