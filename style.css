@@ -501,8 +501,8 @@ body {
 }
 
 /* 三青鳥：畫在大門前面、文字下面，不擋滑鼠 */
-/* 混天綾：在大門前面慢慢飄過（青鳥之下） */
-.ribbon {
+/* 乾坤圈、火尖槍：在大門前面（青鳥之下） */
+.weapons {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -538,7 +538,13 @@ body.over-tiger,
 body.over-tiger * {
   cursor: pointer !important;
 }
-.phoenix {
+/* 滑鼠移到乾坤圈上：手指游標（提示可以點） */
+body.over-ring,
+body.over-ring * {
+  cursor: pointer !important;
+}
+/* 拂塵和它掃出的雲氣 */
+.fuchen {
   position: absolute;
   inset: 0;
   width: 100%;

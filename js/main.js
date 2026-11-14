@@ -8,8 +8,8 @@ import { Petals } from "./petals.js";
 import { KoiPond, loadKoiKits } from "./koi.js";
 import { IntroView } from "./intro-view.js";
 import { BirdView, loadBirdKit } from "./bird-view.js";
-import { RibbonView, loadRibbonImage } from "./ribbon-view.js";
-import { PhoenixView, loadPhoenixKit } from "./phoenix-view.js";
+import { WeaponsView, loadWeaponsKit } from "./weapons-view.js";
+import { FuchenView, loadFuchenKit } from "./fuchen-view.js";
 import { TudiView, loadTudiKit } from "./tudi-view.js";
 import { LotusView, loadLotusKit } from "./lotus-view.js";
 import { PeachView, loadPeachImage } from "./peach-view.js";
@@ -46,8 +46,8 @@ const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const koiCanvas = $("koi");
 let koi = null;
 let birds = null;
-let ribbon = null; // 混天綾（中壇元帥）
-let phoenix = null; // 丹鳳（九天玄女）
+let weapons = null; // 乾坤圈、火尖槍（中壇元帥）
+let fuchen = null; // 拂塵（九天玄女）
 let tudi = null; // 稻穗和虎爺（福德正神）
 let lotus = null; // 蓮花（中壇元帥）
 let peach = null; // 蟠桃樹（瑤池金母）：點了變成道場 LINE 的 QR code
@@ -300,15 +300,15 @@ function loop(now = performance.now()) {
     birds.active = deity?.id === "jinmu" && !moving;
     birds.tick();
   }
-  if (ribbon) {
-    // 混天綾只在中壇元帥這一頁飄；換頁時慢慢淡掉
-    ribbon.active = deity?.id === "nezha" && !moving;
-    ribbon.tick();
+  if (weapons) {
+    // 乾坤圈、火尖槍只在中壇元帥這一頁；換頁時慢慢淡掉
+    weapons.active = deity?.id === "nezha" && !moving;
+    weapons.tick();
   }
-  if (phoenix) {
-    // 丹鳳只在九天玄女這一頁；換頁時慢慢淡掉
-    phoenix.active = deity?.id === "xuannu" && !moving;
-    phoenix.tick();
+  if (fuchen) {
+    // 拂塵只在九天玄女這一頁；換頁時慢慢淡掉
+    fuchen.active = deity?.id === "xuannu" && !moving;
+    fuchen.tick();
   }
   if (tudi) {
     // 稻穗和虎爺只在福德正神這一頁；換頁時慢慢淡掉
@@ -664,12 +664,12 @@ async function start() {
   // 三青鳥：停在大門上（減少動畫時不出現）
   const birdKit = reduceMotion ? null : await loadBirdKit("bluebird");
   if (birdKit) birds = new BirdView($("birds"), birdKit, GATE, $("gateImg"));
-  const ribbonImg = reduceMotion ? null : await loadRibbonImage();
-  if (ribbonImg) ribbon = new RibbonView($("ribbon"), ribbonImg);
-  window.__debug.ribbon = ribbon;
-  const phoenixKit = reduceMotion ? null : await loadPhoenixKit();
-  if (phoenixKit) phoenix = new PhoenixView($("phoenix"), phoenixKit, GATE, $("gateImg"));
-  window.__debug.phoenix = phoenix;
+  const weaponsKit = reduceMotion ? null : await loadWeaponsKit();
+  if (weaponsKit) weapons = new WeaponsView($("weapons"), weaponsKit);
+  window.__debug.weapons = weapons;
+  const fuchenKit = reduceMotion ? null : await loadFuchenKit();
+  if (fuchenKit) fuchen = new FuchenView($("fuchen"), fuchenKit);
+  window.__debug.fuchen = fuchen;
   const tudiKit = reduceMotion ? null : await loadTudiKit();
   if (tudiKit) tudi = new TudiView($("tudi"), tudiKit);
   window.__debug.tudi = tudi;
