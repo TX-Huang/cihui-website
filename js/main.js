@@ -13,6 +13,7 @@ import { PhoenixView, loadPhoenixKit } from "./phoenix-view.js";
 import { TudiView, loadTudiKit } from "./tudi-view.js";
 import { LotusView, loadLotusKit } from "./lotus-view.js";
 import { PeachView, loadPeachImage } from "./peach-view.js";
+import { GoldLightView, loadGoldLightKit } from "./goldlight-view.js";
 import { LakeView, loadLakeImage } from "./lake-view.js";
 
 // ── 珠簾尺寸（拱門圖的設計座標，圖寬 1000） ──
@@ -50,6 +51,7 @@ let phoenix = null; // 丹鳳（九天玄女）
 let tudi = null; // 稻穗和虎爺（福德正神）
 let lotus = null; // 蓮花（中壇元帥）
 let peach = null; // 蟠桃樹（瑤池金母）：點了變成道場 LINE 的 QR code
+let goldlight = null; // 金母頁的新丹鳳：飛過時天空變暖金色
 let lake = null; // 瑤池湖面（背景）
 let cloth = null;
 let deity = null;
@@ -312,6 +314,10 @@ function loop(now = performance.now()) {
     // 稻穗和虎爺只在福德正神這一頁；換頁時慢慢淡掉
     tudi.active = deity?.id === "tudi" && !moving;
     tudi.tick();
+  }
+  if (goldlight) {
+    goldlight.active = deity?.id === "jinmu" && !moving;
+    goldlight.tick();
   }
   if (peach) {
     // 蟠桃樹只在金母這一頁；換頁時慢慢淡掉、變回樹
@@ -647,6 +653,10 @@ async function start() {
   const peachImg = await peachLoading;
   if (peachImg) peach = new PeachView($("peach"), peachImg, { box: $("peachUi"), hint: $("peachHint"), link: $("peachLink") }, { still: reduceMotion });
   window.__debug.peach = peach;
+  // 丹鳳和金光（減少動畫時不出現）
+  const goldKit = reduceMotion ? null : await loadGoldLightKit();
+  if (goldKit) goldlight = new GoldLightView(goldKit);
+  window.__debug.goldlight = goldlight;
 
   const kits = await loadKoiKits(["red", "blue", "platinum"]);
   if (kits.length) koi = new KoiPond(koiCanvas, kits, kits.length); // 每種顏色一隻
