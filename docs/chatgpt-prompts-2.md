@@ -248,3 +248,39 @@ ChatGPT 改圖時位置可能會跑掉一點點，沒關係，我會用程式對
 ### 8-4. `hang-bottom.png` — 手機掛軸的下端（地軸）
 > Create an image. Size 1536x512 (wide). Transparent background PNG.
 > The bottom roller of a Chinese hanging scroll seen from the front: a horizontal dark rosewood roller, a little thicker than a pencil-thin rod, with polished white jade end caps sticking out on both the left and right sides, and a band of pale celadon silk brocade just above it. Realistic and three-dimensional, soft light from the upper left. Only these parts — no wall, no background, no text.
+
+## 9. 新的神尊元素（2026-11）：金母的丹鳳、玄女的拂塵、三太子的槍・圈・輪
+
+分工（2026-11-15 定）：
+- **AI Video 視窗**（本機 Wan2GP：FLUX 生圖＋MiniMax 圖生影片，免費）：丹鳳兩支影片、風火輪影片，連它們的綠色背景第一格一起做。
+  規格已經用訊息交給它（1280x704，丹鳳試 1920x1088；107 格；最後一格＝第一格；另外匯出每格 PNG）。下面 9-1、9-2、9-7 只留作文字參考。
+- **ChatGPT**：9-3～9-6 四張靜態圖（要透明背景，拂塵很細的白毛不用去綠，邊緣才乾淨）。
+圖都存 `assets/raw/chatgpt2/`，除了特別說明，都是 **Transparent background PNG**、只有物件本身。
+
+### 9-1. `phoenix2-side.png` — 新丹鳳（側面飛），參考影片的上古神鳥風格
+> Create an image. Size 1536x1024 (landscape). Transparent background PNG.
+> A colossal ancient Chinese phoenix (丹鳳) in a cinematic, painterly gongbi style, seen from the side, flying to the RIGHT with both wings raised high in a powerful upstroke. Feathers in deep crimson and dark vermilion, with dark charcoal-black inner rows and tips edged in aged, muted gold; NO green, NO teal, NO blue anywhere on the bird. A proud head with a small crest and a golden beak, and very long, flowing tail plumes in crimson and gold that stream behind like silk. Rich detail on every feather, soft cinematic light from the upper left. The whole bird, including wing tips and the ends of the tail plumes, fits inside the canvas with a margin on every side. Only the bird — no background, no clouds, no buildings, no shadow, no text.
+
+### 9-2. `phoenix2-front.png` — 同一隻丹鳳（正面展翅）
+先上傳 `phoenix2-side.png`，讓牠是同一隻鳥：
+> Use the attached phoenix as the exact same creature (same feather colors — deep crimson, charcoal black, aged gold edges, no green or teal — same crest, same long silk-like tail plumes). Show it from the FRONT, facing the viewer, hovering with both enormous wings spread wide open and perfectly symmetrical, head slightly lowered as if gazing down at the world, the long tail plumes hanging and flowing below. Landscape, 1536x1024. Transparent background PNG. The whole bird, including wing tips and tail plume tips, fits inside the canvas with a margin on every side. Only the bird — no background, no shadow, no text.
+
+### 9-3. `fuchen.png` — 九天玄女的拂塵
+> Create an image. Size 1024x1536 (portrait). Transparent background PNG.
+> A Taoist horsehair fly-whisk (拂塵) hanging straight down, handle at the top: a slim handle of white jade with a delicate carved cloud pattern and small champagne-gold fittings at both ends, and below it a long, soft bundle of silky white horsehair that hangs down and fans out slightly toward the tips, with fine individual strands visible. Realistic and refined, soft light from the upper left. The whole whisk fits inside the canvas with a margin on every side. Only the whisk — no hand, no background, no shadow, no text.
+
+### 9-4. `cloud-wisp.png` — 拂塵掃開的雲氣
+> Create an image. Size 1536x1024 (landscape). Transparent background PNG.
+> A single soft wisp of auspicious cloud (祥雲) drifting sideways, painted in pale ivory and white with very faint champagne-gold outlines, airy and semi-transparent toward its edges, in a refined Chinese painting style. Only the cloud — no background, no other objects, no text.
+
+### 9-5. `qiankunquan.png` — 乾坤圈
+> Create an image. Size 1024x1024. Transparent background PNG.
+> Nezha's Universe Ring (乾坤圈): a single thick ring of burnished antique gold, seen from the front and very slightly tilted, with fine engraved cloud and wave patterns around its surface and a soft metallic sheen. Realistic, three-dimensional, soft light from the upper left. The whole ring fits inside the canvas with a margin. Only the ring — no glow, no flames, no background, no shadow, no text.
+
+### 9-6. `huojianqiang.png` — 火尖槍
+> Create an image. Size 1536x1536. Transparent background PNG.
+> Nezha's Fire-Tipped Spear (火尖槍), lying diagonally from the lower left to the upper right: a flame-shaped polished steel spearhead with a gilded collar, a full tassel of deep red horsehair just below the head, and a long shaft of dark red lacquer with gold bands. Realistic and refined, soft light from the upper left. The whole spear, including the tip and the end of the shaft, fits inside the canvas with a margin. Only the spear — no flames, no hand, no background, no shadow, no text.
+
+### 9-7. `fenghuolun.png` — 風火輪（影片的第一格，綠色背景）
+> Create an image. Size 1536x1024 (landscape).
+> Nezha's pair of Wind Fire Wheels (風火輪), side by side, seen from the front: two ornate golden wheels with spokes and a carved hub, each wheel ringed by swirling orange-red flames and soft curls of wind. Refined, painterly but realistic. The two wheels are SMALL in the frame (together about half the width) and centered, with a wide empty margin on every side so the flames never touch the edges. Background: solid flat pure green (#00FF00) — no gradient, no shadow, no ground, no other objects, no text.
