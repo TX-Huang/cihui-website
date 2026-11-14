@@ -1,22 +1,22 @@
 // 金母頁的金色光線：丹鳳飛過時天空才變金。計算在 js/goldlight.js。
 // 三層：
-//   1. 鳳凰（在大門後面的天空飛，畫在 z 6，跟鯉魚同一層的上面）
+//   1. 鳳凰（在大門前面、屋頂上方的天空飛）：放在舞台（#stage）裡、大門和青鳥之間（z 14），標題文字（z 20）蓋在牠上面
 //   2. 暖色調（z 11，色彩相乘）：天空、霧、大門的白牆一起被染成暖金色（月白底色用柔光幾乎看不出來，所以用相乘）
 //   3. 光（z 12，濾色混合）：光柱、鳳凰身上的光暈、飄落的火星
 // 鳳凰是 AI Video 做的拍翅影片去背後的圖集（tools/prep_phoenix2.py）；光柱、光暈也是 AI 圖。
-import { createLight, stepLight, flightPose, stepEmbers, flapFrame } from "./goldlight.js";
+import { createLight, stepLight, flightPose, stepEmbers, flapFrame, flapLift } from "./goldlight.js";
 
 const smooth = (t) => {
   const x = Math.max(0, Math.min(1, t));
   return x * x * (3 - 2 * x);
 };
 
-function layer(tag, z, blend) {
+function layer(tag, z, blend, parent = document.body) {
   const e = document.createElement(tag);
   e.setAttribute("aria-hidden", "true");
   Object.assign(e.style, { position: "fixed", inset: "0", width: "100%", height: "100%", pointerEvents: "none", zIndex: String(z) });
   if (blend) e.style.mixBlendMode = blend;
-  document.body.append(e);
+  parent.append(e);
   return e;
 }
 
@@ -33,13 +33,14 @@ export class GoldLightView {
     this.mixer.height = kit.fly.height;
     this.active = false;
     this.embers = [];
-    this.bird = layer("canvas", 6);
+    this.bird = null; // 等光那一層建好再建（同一個 z，後建的在上面）
     this.grade = layer("div", 11, "multiply");
     // 右上方（鳳凰飛的天空）比較亮、比較金，往下慢慢變成暖橘
     this.grade.style.background =
       "radial-gradient(130% 110% at 75% 12%, rgb(255, 226, 170) 0%, rgb(252, 206, 145) 50%, rgb(240, 190, 140) 100%)";
     this.grade.style.opacity = "0";
     this.light = layer("canvas", 12, "screen");
+    this.bird = layer("canvas", 14, null, document.getElementById("stage") || document.body);
     this.resize();
     addEventListener("resize", () => this.resize());
   }
@@ -68,7 +69,7 @@ export class GoldLightView {
     }
     this.t += steps;
     if (!steps) return;
-    const pose = s.flying ? flightPose(s.p, this.W, this.H) : null;
+    const pose = s.flying ? this.withFlap(flightPose(s.p, this.W, this.H)) : null;
     const sources = pose && this.active
       ? [
           { x: pose.x - pose.w * 0.32, y: pose.y + pose.h * 0.22 }, // 尾羽
@@ -80,6 +81,15 @@ export class GoldLightView {
     this.grade.style.opacity = String(s.warm * 0.6);
     this.drawBird(pose);
     this.drawLight(pose);
+  }
+
+  // 拍翅時身體起伏：翅膀往下拍時被推上去；頭跟著上升抬起、下沉時低下
+  withFlap(pose) {
+    const { frames, lift } = this.kit.fly;
+    if (!lift) return pose;
+    const L = flapLift(this.t, frames, lift);
+    const v = flapLift(this.t + 3, frames, lift) - flapLift(this.t - 3, frames, lift);
+    return { ...pose, y: pose.y - L * pose.h * 0.07, tilt: Math.max(-0.08, Math.min(0.08, -v * 0.35)) };
   }
 
   drawBird(pose) {
@@ -109,7 +119,7 @@ export class GoldLightView {
     }
     ctx.save();
     ctx.translate(pose.x, pose.y);
-    ctx.rotate(-0.04 + 0.02 * Math.sin(p * Math.PI * 4));
+    ctx.rotate(-0.03 + (pose.tilt || 0));
     ctx.globalAlpha = fade;
     ctx.drawImage(this.mixer, -(rx + rw / 2) * k, -(ry + rh / 2) * k, fly.width * k, fly.height * k);
     ctx.restore();

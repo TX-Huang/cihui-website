@@ -11,6 +11,8 @@
    跟綠的距離 → 透明度；邊緣把混進來的綠扣掉，殘留的綠壓掉。
 3. 鳥的身體在影片裡本來就不太動（量過），所以不對齊，全部格子共用一個裁切框。
    另外記下第 1 格鳥的框（ref）：畫面上用這個框對齊鳥的位置和大小。
+3b. lift：每一格翅膀有多低（-1 最高、1 最低）。量「鳥最上緣」的高度（翅膀舉高時最上緣在上面），
+   前後各一格平均一下。畫面上照這個讓身體起伏：翅膀往下拍時身體被推上去。
 4. 光的圖：太暗的地方（< 20）直接變全黑，不然濾色疊上去整頁會灰灰的。
    光暈是一顆圓：裁成正方形後，外圈再慢慢壓到全黑，畫面上才不會看到方框的邊。
 """
@@ -68,7 +70,10 @@ def fly():
         rects.append([x, y, CELL_W, ch, 2 if PICK[i] < 80 else 4])
     OUT.mkdir(parents=True, exist_ok=True)
     atlas.save(OUT / "fly.webp", quality=82, method=6)
-    meta = {"atlas": list(atlas.size), "fps": 24, "frames": rects, "width": CELL_W, "height": ch, "ref": ref}
+    tops = np.array([float(np.nonzero((f[..., 3] > 128).any(axis=1))[0].min()) for f in frames])
+    tops = (np.roll(tops, 1) + tops + np.roll(tops, -1)) / 3  # 前後平均（首尾接得起來）
+    lift = (tops - tops.min()) / max(1e-6, np.ptp(tops)) * 2 - 1
+    meta = {"atlas": list(atlas.size), "fps": 24, "frames": rects, "width": CELL_W, "height": ch, "ref": ref, "lift": [round(float(v), 3) for v in lift]}
     (OUT / "fly.json").write_text(json.dumps(meta), encoding="utf-8")
     print("fly", len(frames), "frames, cell", (CELL_W, ch), "atlas", atlas.size, "ref", ref, f"{(OUT / 'fly.webp').stat().st_size // 1024} KB")
 

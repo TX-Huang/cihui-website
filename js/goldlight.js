@@ -15,15 +15,17 @@ const smooth = (t) => {
   return x * x * (3 - 2 * x);
 };
 
-// 鳳凰在 p（0～1）時在畫面上的位置：x, y 是中心，w, h 是大小（很大：畫面寬的一半）
+// 鳳凰在 p（0～1）時在畫面上的位置：x, y 是中心，w, h 是大小
+// 在大門前面、屋頂上方的天空飛（2026-11-15 使用者覺得不自然：原本太大、躲在屋頂後面只看得到一半）
+// 拍翅時身體的起伏和抬頭低頭由畫面那邊照 flapLift 加上去
 export function flightPose(p, W, H) {
-  const w = W * 0.5;
+  const w = W * 0.36;
   const h = w / 1.305; // 鳳凰圖的長寬比
   const x0 = -w / 2 - 20;
   const x1 = W + w / 2 + 20;
   return {
     x: x0 + (x1 - x0) * p,
-    y: H * (0.26 - 0.06 * Math.sin(Math.PI * p)) + 6 * Math.sin(p * Math.PI * 6), // 微微往上弧，帶一點起伏
+    y: H * (0.19 - 0.05 * Math.sin(Math.PI * p)), // 微微往上弧
     w,
     h
   };
@@ -98,4 +100,12 @@ export function flapFrame(t, frames) {
     x -= l;
   }
   return { a: 0, b: 1 % frames.length, w: 0 };
+}
+
+// 拍翅時身體的起伏：lift[i] 是圖集第 i 格翅膀有多低（-1 最高、1 最低）。
+// 翅膀往下拍 → 身體被推上去；所以畫面上「翅膀越低、身體越高」。兩格之間用平滑曲線接
+export function flapLift(t, frames, lift) {
+  const { a, b, w } = flapFrame(t, frames);
+  const k = w * w * (3 - 2 * w);
+  return lift[a] + (lift[b] - lift[a]) * k;
 }

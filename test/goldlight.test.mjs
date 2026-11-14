@@ -6,7 +6,7 @@
 // 火星：從鳳凰身上飄落，慢慢往下飄、慢慢淡掉，最多 120 顆
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createLight, stepLight, flightPose, stepEmbers, flapFrame, FLIGHT, MAX_EMBERS } from "../js/goldlight.js";
+import { createLight, stepLight, flightPose, stepEmbers, flapFrame, flapLift, FLIGHT, MAX_EMBERS } from "../js/goldlight.js";
 
 const W = 1440;
 const H = 900;
@@ -26,13 +26,14 @@ test("the phoenix crosses the upper sky from left to right, starting and ending 
   let last = a;
   for (let f = 1; f <= FLIGHT; f++) {
     const p = flightPose(f / FLIGHT, W, H);
-    assert.ok(p.y > H * 0.08 && p.y < H * 0.42, `stays in the upper sky (y ${p.y.toFixed(0)})`);
+    assert.ok(p.y > H * 0.08 && p.y < H * 0.3, `stays high in the sky, above the gate's roofs (y ${p.y.toFixed(0)})`);
     assert.ok(Math.hypot(p.x - last.x, p.y - last.y) <= 6, "glides slowly");
     assert.ok(p.x > last.x, "always heading right");
     last = p;
   }
   assert.ok(FLIGHT >= 480 && FLIGHT <= 720, `a slow crossing (${(FLIGHT / 60).toFixed(1)} s)`);
-  assert.ok(a.w >= W * 0.4, "colossal: at least 40% of the screen wide");
+  // 使用者覺得飛過去不自然（2026-11-15）：原本畫面寬的一半，躲在屋頂後面只看得到一半。改到大門前面、小一點，整隻都看得到
+  assert.ok(a.w >= W * 0.3 && a.w <= W * 0.42, "big, but the whole bird fits above the roofs");
 });
 
 test("the sky warms only while the phoenix passes, brightest mid-way, then fades back", () => {
@@ -134,4 +135,20 @@ test("leaving mid-flight: the phoenix itself fades out within a second, smoothly
   }
   stepLight(s, { active: true, random });
   assert.ok(s.show > 0 && s.show <= 1 / 30 + 1e-9, "fades back in");
+});
+
+test("wingbeat lift: the body rises as the wings beat down and sinks as they come up, smoothly, looping", () => {
+  // lift：每一格翅膀有多低（-1 = 翅膀最高、1 = 翅膀最低，tools/prep_phoenix2.py 量的）
+  const frames = [[0, 0, 1, 1, 2], [0, 0, 1, 1, 2], [0, 0, 1, 1, 4], [0, 0, 1, 1, 2]];
+  const lift = [-1, 0.2, 1, -0.4];
+  const cycle = ((2 + 2 + 4 + 2) / 24) * 60;
+  assert.ok(Math.abs(flapLift(0, frames, lift) - -1) < 1e-9);
+  assert.ok(Math.abs(flapLift(cycle, frames, lift) - flapLift(0, frames, lift)) < 1e-9, "loops");
+  let last = flapLift(0, frames, lift);
+  for (let t = 0.25; t < cycle * 2; t += 0.25) {
+    const v = flapLift(t, frames, lift);
+    assert.ok(v >= -1 && v <= 1);
+    assert.ok(Math.abs(v - last) < 0.15, "no jumps");
+    last = v;
+  }
 });
