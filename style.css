@@ -46,6 +46,13 @@ body {
   transform: translate3d(calc(var(--mx, 0) * -14px), calc(var(--my, 0) * -8px), 0) scale(var(--zoom, 1));
   transition: transform 2s var(--ease);
 }
+/* 比較用的油畫版（網址加 ?look=oil 或 ?look=oil-red） */
+[data-look="oil"] .sky-img {
+  background-image: url("assets/oil/bg.webp");
+}
+[data-look="oil-red"] .sky-img {
+  background-image: url("assets/oil/bg-red.webp");
+}
 /* 每位神明一層不同的晨光色調 */
 .sky-img::after {
   content: "";

@@ -1,7 +1,8 @@
 // 大門圖片的位置資料（設計座標：大門圖寬 1600）。
 // 換新的大門圖時，跑 tools/prep_gate_grand.py 會印出門洞位置，再更新這裡。
+// 有三版：現在的月白版，和比較用的油畫版（網址加 ?look=oil 月白油畫、?look=oil-red 朱紅油畫）。
 
-export const GATE = {
+const MOON = {
   src: "assets/gate-grand.webp",
   w: 1600,
   h: 1070,
@@ -22,3 +23,24 @@ export const GATE = {
     { x: 1380, y: 403, face: -1 }
   ]
 };
+
+// 比較用的油畫版：AI Video 拿現在的大門改畫，透明度也直接用現在大門的（tools/prep_oil.py），
+// 所以門洞、匾額、青鳥停的點都一樣，只換圖
+const OIL = { ...structuredClone(MOON), src: "assets/oil/gate.webp" };
+const OIL_RED = { ...structuredClone(MOON), src: "assets/oil/gate-red.webp" };
+
+const GATES = { moon: MOON, oil: OIL, "oil-red": OIL_RED };
+
+// 背景和開場的圖
+const ASSETS = {
+  moon: { bg: "assets/bg-yaochi.webp", earth: "assets/intro-earth.webp", clouds: "assets/intro-clouds.webp", clouds2: "assets/intro-clouds-2.webp" },
+  oil: { bg: "assets/oil/bg.webp", earth: "assets/oil/intro-earth.webp", clouds: "assets/oil/intro-clouds.webp", clouds2: "assets/oil/intro-clouds-2.webp" }
+};
+ASSETS["oil-red"] = { ...ASSETS.oil, bg: "assets/oil/bg-red.webp" };
+
+// 現在是哪一版：index.html 開頭的小程式看網址設定 <html data-look>（測試的時候沒有網頁，就是月白版）
+const asked = typeof document !== "undefined" ? document.documentElement.dataset.look : "";
+export const LOOK = GATES[asked] ? asked : "moon";
+export const gateFor = (look) => GATES[look] || MOON;
+export const lookAssets = (look) => ASSETS[look] || ASSETS.moon;
+export const GATE = gateFor(LOOK);

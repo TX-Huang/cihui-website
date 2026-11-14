@@ -2,6 +2,7 @@
 // 畫布放在 .sky-img 裡面，跟原本的 CSS 背景圖疊在同一個位置：
 // 視差（跟著滑鼠微微移動）、走進門的放大、每位神明的色調（::after）都照舊套用。
 // 顯示卡不合作時就不畫，底下原本的 CSS 背景圖還在，看起來只是不會動。
+import { LOOK, lookAssets } from "./gate.js";
 import { coverMap, waterTop, createLake, touch, stepLake, rippleRadius, rippleAmp, remapRipples, HORIZON, MAX_RIPPLES } from "./lake.js";
 
 const POS_Y = 0.6; // 跟 style.css 的 background-position 一樣（center 60%）
@@ -267,6 +268,6 @@ export function loadLakeImage() {
     const im = new Image();
     im.onload = () => res(im);
     im.onerror = () => res(null);
-    im.src = "assets/bg-yaochi.webp";
+    im.src = lookAssets(LOOK).bg; // 跟 CSS 背景同一張（月白版或油畫版）
   });
 }

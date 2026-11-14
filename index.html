@@ -25,6 +25,11 @@
         )
           document.documentElement.classList.add("no-intro");
       } catch (e) {}
+      // 比較用的油畫版：網址加 ?look=oil（月白油畫）或 ?look=oil-red（朱紅油畫），大門、背景、開場的雲換成油畫風
+      try {
+        var look = new URLSearchParams(location.search).get("look");
+        if (look === "oil" || look === "oil-red") document.documentElement.dataset.look = look;
+      } catch (e) {}
     </script>
   </head>
   <body>
@@ -34,6 +39,13 @@
       <img class="intro-earth" src="assets/intro-earth.webp" alt="" />
       <img class="intro-clouds back" src="assets/intro-clouds-2.webp" alt="" />
       <img class="intro-clouds front" src="assets/intro-clouds.webp" alt="" />
+      <script>
+        // 油畫版：開場的三張圖換掉
+        if (document.documentElement.dataset.look)
+          [["intro-earth", "intro-earth"], ["intro-clouds.back", "intro-clouds-2"], ["intro-clouds.front", "intro-clouds"]].forEach(function (p) {
+            document.querySelector(".intro ." + p[0]).src = "assets/oil/" + p[1] + ".webp";
+          });
+      </script>
       <div class="intro-veil"></div>
       <button type="button" class="intro-skip">略過</button>
     </div>
@@ -71,6 +83,11 @@
           <div class="door-glow" id="doorGlow"></div>
           <canvas id="cloth" aria-hidden="true"></canvas>
           <img class="gate-img" id="gateImg" src="assets/gate-grand.webp" alt="" draggable="false" />
+          <script>
+            // 油畫版：大門的圖在下載前就換掉
+            var look = document.documentElement.dataset.look;
+            if (look) document.getElementById("gateImg").src = look === "oil-red" ? "assets/oil/gate-red.webp" : "assets/oil/gate.webp";
+          </script>
           <canvas class="gate-blur" id="gateBlur" aria-hidden="true"></canvas>
           <div class="plaque" id="plaque" role="img" aria-label="慈惠道場"></div>
         </div>
