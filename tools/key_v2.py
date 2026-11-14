@@ -31,6 +31,10 @@ ITEMS = {
     "cloud-wisp": ("cloud-wisp-4.png", "black", 0.002),
     "qiankunquan": ("qiankunquan-2.png", "green", 0.002),
     "huojianqiang": ("huojianqiang-2.png", "green", 0.0005),
+    # 鯉魚：整隻去背，再用 tools/split_koi.py 拆成身體、鰭（FLUX 改圖拆不開）
+    "redkoi": ("redkoi-v2-1.png", "green", 0.0005),
+    "bluekoi": ("bluekoi-v2-1.png", "magenta", 0.0005),
+    "platinumkoi": ("platinumkoi-v2-1.png", "green", 0.0005),
 }
 
 

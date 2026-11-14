@@ -18,22 +18,39 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+# 第一個參數可以是影片，或是已經拆好的 PNG 資料夾（AI Video 會一起給）
 video, start, count = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+STRIDE = int(sys.argv[4]) if len(sys.argv) > 4 else 1  # 每幾格取一格（長的影片取少一點，圖集才不會太大）
 OUT = Path("assets/birds")
 FRAME_W = 300  # 每格縮到多寬
 COLS = 6
 
-tmp = Path(tempfile.mkdtemp())
-subprocess.run(["ffmpeg", "-v", "error", "-i", video, str(tmp / "%03d.png")], check=True)
-files = sorted(tmp.glob("*.png"))[start : start + count]
+if Path(video).is_dir():
+    files = sorted(Path(video).glob("*.png"))[start : start + count : STRIDE]
+else:
+    tmp = Path(tempfile.mkdtemp())
+    subprocess.run(["ffmpeg", "-v", "error", "-i", video, str(tmp / "%03d.png")], check=True)
+    files = sorted(tmp.glob("*.png"))[start : start + count : STRIDE]
 
-first = np.asarray(Image.open(files[0]).convert("RGB")).astype(float)
-bg = np.median(np.concatenate([first[:30, :30].reshape(-1, 3), first[-30:, -30:].reshape(-1, 3)]), axis=0)
-print("background", bg.round())
+
+def background(im):
+    """這一格的背景色：右下角和左邊中間（H3 的背景顏色會慢慢變，左上角有時候會變暗，不量那裡）"""
+    h, w = im.shape[:2]
+    return np.median(np.concatenate([im[-30:, -30:].reshape(-1, 3), im[h // 2 - 15 : h // 2 + 15, :30].reshape(-1, 3)]), axis=0)
 
 
 def key(path):
     im = np.asarray(Image.open(path).convert("RGB")).astype(float)
+    bg = background(im)
+    if bg[1] > bg[0] + 60 and bg[1] > bg[2] + 60:
+        # 綠背景（2026-11-15 起）：量「綠比紅藍高多少」，背景整片變暗一點也不怕；青鳥的藍綠是藍 ≥ 綠，不會被吃掉
+        dom = im[..., 1] - np.maximum(im[..., 0], im[..., 2])
+        full = dom[-30:, -30:].mean()
+        a = np.clip((full * 0.6 - dom) / (full * 0.4), 0, 1)
+        av = np.maximum(a, 0.15)[..., None]
+        rgb = np.clip((im - (1 - av) * bg) / av, 0, 255)
+        rgb[..., 1] = np.minimum(rgb[..., 1], np.maximum(rgb[..., 0], rgb[..., 2]))
+        return np.dstack([rgb, a * 255]).clip(0, 255).astype(np.uint8)
     d = np.sqrt(((im - bg) ** 2).sum(axis=2))
     a = np.clip((d - 45) / 90, 0, 1)
     # 邊緣像素 = 鳥的顏色和洋紅背景混在一起：把背景那一份扣掉，還原鳥本來的顏色
@@ -101,7 +118,7 @@ OUT.mkdir(parents=True, exist_ok=True)
 atlas.save(OUT / "bluebird-fly.webp", quality=82, method=6)
 meta = {
     "atlas": list(atlas.size),
-    "fps": 24,
+    "fps": 24 / STRIDE,
     "frames": rects,
     "pivot": [round(feet[0], 1), round(feet[1], 1)],
     "upFrame": up_frame,

@@ -1,6 +1,7 @@
 """把鯉魚拆成零件：身體、尾巴、各片鰭，打包成一張圖集（atlas）+ 一份說明（json）。
 用法: python -I tools/prep_koi_parts.py
-輸入: assets/raw/chatgpt2/{bluekoi,redkoi,platinumkoi}.png、koi-{色}-body.png、koi-{色}-fins.png
+輸入: assets/raw/chatgpt2/keyed/{bluekoi,redkoi,platinumkoi}.png、koi-{色}-body.png、koi-{色}-fins.png
+      （2026-11-15 起是 AI Video 做的油畫風鯉魚：tools/key_v2.py 去背、tools/split_koi.py 拆身體和鰭）
 輸出: assets/koi/{色}.webp（零件）、{色}-shadow.webp（同位置、模糊的影子）、{色}.json
 
 座標說明（json 裡）：
@@ -16,7 +17,7 @@ import numpy as np
 from PIL import Image, ImageFilter
 from scipy import ndimage
 
-SRC = Path("assets/raw/chatgpt2")
+SRC = Path("assets/raw/chatgpt2/keyed")
 OUT = Path("assets/koi")
 FISH = [("blue", "bluekoi"), ("red", "redkoi"), ("platinum", "platinumkoi")]
 TARGET_L = 420  # 身體長度縮到幾像素（整隻魚含尾巴約 600）
