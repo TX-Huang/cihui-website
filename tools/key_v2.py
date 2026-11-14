@@ -25,24 +25,16 @@ OUT = RAW / "keyed"
 
 # 名稱: (來源檔, 背景, 保留小塊的最小面積比例)
 # TIGHT：背景突出到角落典型值的幾成就算背景（預設 0.7；稻穗原圖在穀粒外畫了一圈淡粉紅的光，要更嚴）
-TIGHT = {"rice": 0.35}
+TIGHT = {}
 # 調淡的強度（1 = 跟比較圖一樣；0 = 不調）
 TONE = {}
 ITEMS = {
-    "peach-tree": ("peach-tree-v2-1.png", "blue", 0.002),
-    "lotus-open": ("lotus-open-v2-1.png", "magenta", 0.002),
-    "lotus-bud": ("lotus-bud-v2-1.png", "magenta", 0.002),
-    "lotus-leaf": ("lotus-leaf-v2-2.png", "magenta", 0.002),
-    "rice": ("rice-v2-2.png", "magenta", 0.0005),
-    "tiger": ("tiger-v2-2.png", "green", 0.002),
+    # 2026-11-15 定案：只有鳳凰是油畫風；鯉魚、蟠桃樹、金蓮、稻穗、虎爺、青鳥換回原本的圖。
+    # 下面四樣是新加的元素，暫時用油畫版（調淡），之後換成 AI Video 用原本風格重畫的版本
     "fuchen": ("fuchen-2.png", "black", 0.0005),
     "cloud-wisp": ("cloud-wisp-4.png", "black", 0.002),
     "qiankunquan": ("qiankunquan-2.png", "green", 0.002),
     "huojianqiang": ("huojianqiang-2.png", "green", 0.0005),
-    # 鯉魚：整隻去背，再用 tools/split_koi.py 拆成身體、鰭（FLUX 改圖拆不開）
-    "redkoi": ("redkoi-v2-1.png", "green", 0.0005),
-    "bluekoi": ("bluekoi-v2-1.png", "magenta", 0.0005),
-    "platinumkoi": ("platinumkoi-v2-1.png", "green", 0.0005),
 }
 
 

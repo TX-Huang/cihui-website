@@ -1,6 +1,6 @@
 """蟠桃樹的圖：裁掉多餘的透明邊、縮小，存成網頁用的 webp。
 用法: python -I tools/prep_peach.py
-輸入: assets/raw/chatgpt2/keyed/peach-tree.png（2026-11-15 起是 AI Video 做的油畫風版本，先用 tools/key_v2.py 去背）
+輸入: assets/raw/chatgpt2/peach-tree.png（ChatGPT 生的，樹冠外有一圈很淡的光暈，放在背景上幾乎看不出來，保留）
 輸出: assets/elements/peach-tree.webp
 """
 from pathlib import Path
@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-im = Image.open("assets/raw/chatgpt2/keyed/peach-tree.png").convert("RGBA")
+im = Image.open("assets/raw/chatgpt2/peach-tree.png").convert("RGBA")
 a = np.asarray(im)[..., 3]
 im.putalpha(Image.fromarray(np.where(a < 8, 0, a).astype(np.uint8)))
 im = im.crop(im.getbbox())

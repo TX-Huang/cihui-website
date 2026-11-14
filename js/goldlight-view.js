@@ -4,7 +4,7 @@
 //   2. 暖色調（z 11，色彩相乘）：天空、霧、大門的白牆一起被染成暖金色（月白底色用柔光幾乎看不出來，所以用相乘）
 //   3. 光（z 12，濾色混合）：光柱、鳳凰身上的光暈、飄落的火星
 // 鳳凰是 AI Video 做的拍翅影片去背後的圖集（tools/prep_phoenix2.py）；光柱、光暈也是 AI 圖。
-import { createLight, stepLight, flightPose, stepEmbers, flapFrame, flapLift } from "./goldlight.js";
+import { createLight, stepLight, flightPose, stepEmbers, flapFrame } from "./goldlight.js";
 
 const smooth = (t) => {
   const x = Math.max(0, Math.min(1, t));
@@ -69,7 +69,7 @@ export class GoldLightView {
     }
     this.t += steps;
     if (!steps) return;
-    const pose = s.flying ? this.withFlap(flightPose(s.p, this.W, this.H)) : null;
+    const pose = s.flying ? flightPose(s.p, this.W, this.H) : null;
     const sources = pose && this.active
       ? [
           { x: pose.x - pose.w * 0.32, y: pose.y + pose.h * 0.22 }, // 尾羽
@@ -81,15 +81,6 @@ export class GoldLightView {
     this.grade.style.opacity = String(s.warm * 0.6);
     this.drawBird(pose);
     this.drawLight(pose);
-  }
-
-  // 拍翅時身體起伏：翅膀往下拍時被推上去；頭跟著上升抬起、下沉時低下
-  withFlap(pose) {
-    const { frames, lift } = this.kit.fly;
-    if (!lift) return pose;
-    const L = flapLift(this.t, frames, lift);
-    const v = flapLift(this.t + 3, frames, lift) - flapLift(this.t - 3, frames, lift);
-    return { ...pose, y: pose.y - L * pose.h * 0.07, tilt: Math.max(-0.08, Math.min(0.08, -v * 0.35)) };
   }
 
   drawBird(pose) {
@@ -119,7 +110,7 @@ export class GoldLightView {
     }
     ctx.save();
     ctx.translate(pose.x, pose.y);
-    ctx.rotate(-0.03 + (pose.tilt || 0));
+    ctx.rotate(-0.03);
     ctx.globalAlpha = fade;
     ctx.drawImage(this.mixer, -(rx + rw / 2) * k, -(ry + rh / 2) * k, fly.width * k, fly.height * k);
     ctx.restore();

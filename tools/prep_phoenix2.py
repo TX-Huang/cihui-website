@@ -1,18 +1,18 @@
 """新丹鳳（金母頁）：把 AI Video 做的拍翅影片（綠背景）變成動畫圖集，光柱、光暈的圖也一起整理。
 用法: python -I tools/prep_phoenix2.py
-輸入: assets/raw/chatgpt2/phoenix2-fly-frames/0001～0107.png（H3 影片拆好的格子，1920x1088）
+輸入: assets/raw/chatgpt2/phoenix2-cruise-frames/0001～0107.png（H3 影片拆好的格子，1920x1088）
+      2026-11-15 換成 cruise：真的在往前飛（翅膀一直拍、不會停，身體跟著上下、尾羽被風往後吹）。
+      舊的 phoenix2-fly 是原地拍翅、最後一秒會停住，使用者覺得飛過去不自然。
       assets/raw/chatgpt2/compare/light-rays-1.png、warm-glow-1.png（FLUX 黑底，畫面上用「濾色」疊上去）
 輸出: assets/phoenix2/fly.webp/.json、rays.webp、glow.webp
 
 做法：
-1. 選格子：1～79 格是兩下拍翅，每 2 格取 1 格；80～106 格鳥幾乎不動（慢慢回到第 1 格的姿勢），
-   每 4 格取 1 格，把停頓縮短。第 107 格跟第 1 格一樣，不取（接回第 1 格剛好）。
+1. 選格子：第 1～106 格每 2 格取 1 格（53 格）。第 107 格跟第 1 格一樣，不取（接回第 1 格剛好）。
+   影片裡身體本來就跟著拍翅上下，網頁上不用再加起伏。
 2. 去背：每一格背景的綠都不太一樣（量過：(7,236,15)～(29,198,45)），所以每一格自己量四個角的綠。
    跟綠的距離 → 透明度；邊緣把混進來的綠扣掉，殘留的綠壓掉。
 3. 鳥的身體在影片裡本來就不太動（量過），所以不對齊，全部格子共用一個裁切框。
    另外記下第 1 格鳥的框（ref）：畫面上用這個框對齊鳥的位置和大小。
-3b. lift：每一格翅膀有多低（-1 最高、1 最低）。量「鳥最上緣」的高度（翅膀舉高時最上緣在上面），
-   前後各一格平均一下。畫面上照這個讓身體起伏：翅膀往下拍時身體被推上去。
 4. 光的圖：太暗的地方（< 20）直接變全黑，不然濾色疊上去整頁會灰灰的。
    光暈是一顆圓：裁成正方形後，外圈再慢慢壓到全黑，畫面上才不會看到方框的邊。
 """
@@ -22,16 +22,12 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-import sys
-
-sys.path.insert(0, str(Path(__file__).parent))  # 用 python -I 跑時，同資料夾的 tone.py 要自己加進來
-from tone import tone  # noqa: E402  素材調淡，配月白網頁（2026-11-15 使用者選的方向）
 
 RAW = Path("assets/raw/chatgpt2")
 OUT = Path("assets/phoenix2")
 CELL_W = 560
 COLS = 8
-PICK = list(range(1, 80, 2)) + list(range(80, 107, 4))
+PICK = list(range(1, 107, 2))
 
 
 def key(path):
@@ -44,7 +40,7 @@ def key(path):
     rgb = np.clip((im - (1 - av) * bg) / av, 0, 255)
     rgb[..., 1] = np.minimum(rgb[..., 1], np.maximum(rgb[..., 0], rgb[..., 2]))
     a[a < 0.04] = 0
-    rgb = tone(rgb, 0.5)  # 鳳凰是主角：只調一半，保留紅色
+    # 不調淡：使用者 2026-11-15 定案「只有鳳凰是油畫風」，鳳凰保持原本的鮮豔
     return np.dstack([rgb, a * 255]).clip(0, 255).astype(np.uint8)
 
 
@@ -54,7 +50,7 @@ def bbox(mask):
 
 
 def fly():
-    frames = [key(RAW / "phoenix2-fly-frames" / f"{i:04d}.png") for i in PICK]
+    frames = [key(RAW / "phoenix2-cruise-frames" / f"{i:04d}.png") for i in PICK]
     H, W = frames[0].shape[:2]
     union = np.zeros((H, W), bool)
     for f in frames:
@@ -72,14 +68,11 @@ def fly():
         cell = Image.fromarray(f, "RGBA").crop(box).resize((CELL_W, ch), Image.LANCZOS)
         x, y = (i % COLS) * CELL_W, (i // COLS) * ch
         atlas.alpha_composite(cell, (x, y))
-        # 每一格播多久（以原影片的格數算）：前段每 2 格取 1、後段每 4 格取 1
-        rects.append([x, y, CELL_W, ch, 2 if PICK[i] < 80 else 4])
+        # 每一格播多久（以原影片的格數算）：每 2 格取 1
+        rects.append([x, y, CELL_W, ch, 2])
     OUT.mkdir(parents=True, exist_ok=True)
     atlas.save(OUT / "fly.webp", quality=82, method=6)
-    tops = np.array([float(np.nonzero((f[..., 3] > 128).any(axis=1))[0].min()) for f in frames])
-    tops = (np.roll(tops, 1) + tops + np.roll(tops, -1)) / 3  # 前後平均（首尾接得起來）
-    lift = (tops - tops.min()) / max(1e-6, np.ptp(tops)) * 2 - 1
-    meta = {"atlas": list(atlas.size), "fps": 24, "frames": rects, "width": CELL_W, "height": ch, "ref": ref, "lift": [round(float(v), 3) for v in lift]}
+    meta = {"atlas": list(atlas.size), "fps": 24, "frames": rects, "width": CELL_W, "height": ch, "ref": ref}
     (OUT / "fly.json").write_text(json.dumps(meta), encoding="utf-8")
     print("fly", len(frames), "frames, cell", (CELL_W, ch), "atlas", atlas.size, "ref", ref, f"{(OUT / 'fly.webp').stat().st_size // 1024} KB")
 

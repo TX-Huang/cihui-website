@@ -1,8 +1,7 @@
 """把仙佛元素的圖（透明背景 PNG）裁掉多餘的透明邊、縮小，存成網頁用的 webp。
 用法: python -I tools/prep_elements.py
-輸入: assets/raw/chatgpt2/keyed/rice.png、lotus-open.png、lotus-bud.png、lotus-leaf.png、tiger.png
-      （2026-11-15 起是 AI Video 做的油畫風版本，先用 tools/key_v2.py 去背；
-       蓮花本身就畫成金花、青瓷葉了，不用再跑 tools/gold_lotus.py）
+輸入: assets/raw/chatgpt2/rice.png、lotus-open.png、lotus-bud.png、lotus-leaf.png、tiger.png
+注意: 蓮花三張之後改用 tools/gold_lotus.py apply B 做成金蓮（這支會蓋回粉紅色，跑完要再跑一次 gold_lotus）
 輸出: assets/elements/*.webp，和 elements.json（每張多大、稻穗莖的底部在哪）
 """
 import json
@@ -11,7 +10,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-RAW = Path("assets/raw/chatgpt2/keyed")
+RAW = Path("assets/raw/chatgpt2")
 OUT = Path("assets/elements")
 # 名稱: 縮到多高（像素）
 ITEMS = {"rice": 600, "lotus-open": 300, "lotus-bud": 300, "lotus-leaf": 300, "tiger": 300}
@@ -25,6 +24,12 @@ for name, height in ITEMS.items():
     im = im.crop(im.getbbox())
     w = round(im.width * height / im.height)
     im = im.resize((w, height), Image.LANCZOS)
+    if name == "rice":
+        # 顏色壓低一點（配月白素雅）：往灰階靠 25%
+        arr = np.asarray(im).astype(float)
+        gray = arr[..., :3] @ np.array([0.299, 0.587, 0.114])
+        arr[..., :3] = arr[..., :3] * 0.75 + gray[..., None] * 0.25
+        im = Image.fromarray(arr.clip(0, 255).astype(np.uint8), "RGBA")
     im.save(OUT / f"{name}.webp", quality=84, method=6)
     info = {"w": w, "h": height}
     if name == "rice":
