@@ -8,7 +8,8 @@
 輸出: assets/phoenix2/fly.webp/.json、rays.webp、glow.webp
 
 做法：
-1. 46 格全用，每格播 1 個影片格（24 格／秒，一圈 1.92 秒）。第 46 格接回第 1 格剛好（AI Video 量過）。
+1. 46 格全用，每格播 FRAME_DUR 個影片格（24 格／秒）。第 46 格接回第 1 格剛好（AI Video 量過）。
+   使用者 2026-11-15：一格播 1 個影片格（一拍 0.96 秒）「翅膀拍到太快」→ 放慢成一拍約 1.4 秒（一圈 2.9 秒）。
    影片裡身體本來就跟著拍翅上下，網頁上不用再加起伏。
    翅膀往下拍到最低時，有 4 格（13、14、36、37）羽毛尖碰到影片的下緣，會被切平：最下面幾排慢慢變透明，看不出切口。
 2. 去背：每一格自己量四個角的綠（這版都是純綠，但照樣量，換影片也能用）。
@@ -31,6 +32,7 @@ CELL_W = 560
 COLS = 8
 PICK = list(range(1, 47))
 BOTTOM_FADE = 16  # 影片最下面幾排慢慢變透明（羽毛尖碰到下緣會被切平）
+FRAME_DUR = 1.5  # 每一格播幾個影片格：一拍 = 23 格 × 1.5 ÷ 24 ≈ 1.44 秒
 
 
 def key(path):
@@ -72,7 +74,7 @@ def fly():
         cell = Image.fromarray(f, "RGBA").crop(box).resize((CELL_W, ch), Image.LANCZOS)
         x, y = (i % COLS) * CELL_W, (i // COLS) * ch
         atlas.alpha_composite(cell, (x, y))
-        rects.append([x, y, CELL_W, ch, 1])  # 每一格播 1 個影片格
+        rects.append([x, y, CELL_W, ch, FRAME_DUR])
     OUT.mkdir(parents=True, exist_ok=True)
     atlas.save(OUT / "fly.webp", quality=82, method=6)
     meta = {"atlas": list(atlas.size), "fps": 24, "frames": rects, "width": CELL_W, "height": ch, "ref": ref}
