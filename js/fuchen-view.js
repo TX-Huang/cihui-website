@@ -2,10 +2,9 @@
 // 拂塵圖（assets/elements/fuchen.webp）：上面是玉柄（不彎），下面的毛切成一條一條橫的，
 // 每一條照 hairOffset 往旁邊偏，接起來就是彎的毛。
 // 雲海用開場動畫的雲圖（跟網站其他畫面同一個畫風），一張正、一張左右翻過來接著排，慢慢往右飄。
-import { createFuchen, stepFuchen, hairOffset, whiskPose, hitWhisk, FOG_COLS, FOG_ROWS } from "./fuchen.js";
+import { createFuchen, stepFuchen, whiskPose, hitWhisk, hairPath, HAIR_ROOT, HAIR_TURN, FOG_COLS, FOG_ROWS } from "./fuchen.js";
 import { LOOK, lookAssets } from "./gate.js";
 
-const STRIPS = 28; // 毛切成幾條
 const CLOUD_TOP = 0.46; // 雲圖的上緣放在畫面高度的哪裡（雲頂大約在 0.58）
 const CLOUD_ALPHA = 0.88; // 雲海整體的不透明度（底下的台階隱約看得到）
 const CLOUD_SCALE = 3; // 雲海用 1/3 解析度畫（雲本來就很柔，看不出差別）
@@ -191,31 +190,44 @@ export class FuchenView {
   }
 
   // 照神像拿拂塵的樣子：毛從頭直直垂下來，玉柄從頭往右下斜（玉柄畫在毛上面，頭的金箍蓋住毛根）
+  // 照神像拿拂塵的樣子：毛從頭的金箍冒出來，繞一個弧往下垂；玉柄從頭往右下斜（玉柄畫在毛上面，金箍蓋住毛根）
   drawWhisk(ctx) {
-    const { whisk, meta } = this.kit;
+    const { whisk } = this.kit;
     const a = whiskPose(this.s, this.w, this.h);
     const k = a.len / whisk.height;
     const dw = whisk.width * k;
-    const rootY = whisk.height * meta.root;
+    const rootY = whisk.height * HAIR_ROOT;
     ctx.save();
     ctx.globalAlpha = this.s.alpha;
-    ctx.translate(a.x, a.y);
-    // 毛：一條一條往旁邊偏。每條是斜的（上緣偏 o0、下緣偏 o1，跟上下兩條剛好接上），毛才是連續的、不會一段一段
-    const hairH = whisk.height - rootY;
-    for (let i = 0; i < STRIPS; i++) {
-      const sy = rootY + (hairH * i) / STRIPS;
-      const sh = hairH / STRIPS;
-      const o0 = hairOffset(i / STRIPS, this.s.bend);
-      const o1 = hairOffset((i + 1) / STRIPS, this.s.bend);
-      const y0 = (sy - rootY) * k;
-      const dh = sh * k;
-      const skew = (o1 - o0) / dh;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high"; // 毛很細：縮小時用好一點的取樣，不然會一根一根鋸齒
+    // 毛：彎的那段（靠頭）切成很細的條，沿著 hairPath 排、每條轉成那一段的方向；
+    // 直直垂的那段整塊一起畫（只斜一點點跟著風擺），不切條，才不會看到一條一條的接縫
+    const pts = hairPath(a);
+    const n = pts.length - 1;
+    const sh = (whisk.height - rootY) / n;
+    const bendEnd = Math.round(HAIR_TURN * n);
+    for (let i = 0; i < bendEnd; i++) {
+      const p0 = pts[i];
+      const p1 = pts[i + 1];
+      const dx = p1.x - p0.x;
+      const dy = p1.y - p0.y;
       ctx.save();
-      ctx.transform(1, 0, skew, 1, o0 - skew * y0, 0);
-      ctx.drawImage(whisk, 0, sy, whisk.width, sh + 1, -dw / 2, y0, dw, dh + k);
+      ctx.translate(p0.x, p0.y);
+      ctx.rotate(-Math.atan2(dx, dy));
+      ctx.drawImage(whisk, 0, rootY + sh * i, whisk.width, sh, -dw / 2, 0, dw, Math.hypot(dx, dy) + 0.6);
       ctx.restore();
     }
+    const top = pts[bendEnd];
+    const tip = pts[n];
+    const hh = tip.y - top.y;
+    ctx.save();
+    ctx.translate(top.x, top.y);
+    ctx.transform(1, 0, (tip.x - top.x) / hh, 1, 0, 0);
+    ctx.drawImage(whisk, 0, rootY + sh * bendEnd, whisk.width, sh * (n - bendEnd), -dw / 2, 0, dw, hh);
+    ctx.restore();
     // 玉柄：圖裡是從頭往上，轉過來變成從頭往右下
+    ctx.translate(a.x, a.y);
     ctx.rotate(Math.PI - a.angle);
     ctx.drawImage(whisk, 0, 0, whisk.width, rootY, -dw / 2, -rootY * k, dw, rootY * k);
     ctx.restore();

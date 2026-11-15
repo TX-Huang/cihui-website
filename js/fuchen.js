@@ -2,7 +2,8 @@
 // 純計算（方便測試），畫面在 js/fuchen-view.js。時間單位是「格」（60 格 ≈ 1 秒）。
 //
 // 拂塵的姿勢照廟裡神像拿的樣子：(x, y) 是頭（毛掛的地方），玉柄從頭往右下斜 angle（從垂直量；
-// 另一端是手握的地方），毛從頭直直垂下來（重力）。
+// 另一端是手握的地方）。毛從頭順著玉柄的反方向冒出來（往左），繞一個柔順的弧再往下垂（重力），
+// 像神像手上的拂塵；毛根藏在頭的金箍底下，不會看到一刀切平的邊。
 // 平常浮在右邊；按住它就拿起來，跟著手走；放開就慢慢飄回原位。
 // bend：毛尖往左右偏多少（像素）。像彈簧一樣被拉回「風」要的位置，所以擺得慢、不會抖；
 // 拂塵在動的時候，毛往移動的反方向拖。毛的每一段照 hairOffset 偏：毛根不動，越往毛尖偏越多。
@@ -16,8 +17,14 @@ export const FOG_ROWS = 54;
 const COOL = 90; // 甩一下之後 1.5 秒內不會再掃出雲
 const WISP_LIFE = 300; // 一朵雲 5 秒
 const ASPECT = 394 / 900; // 拂塵圖的寬高比（tools/prep_weapons.py）
-const ROOT = 0.376; // 毛從整支的哪裡開始（weapons.json 的 fuchen.root）
+// 毛從整支的哪裡開始：拂塵圖第 307 列（900 列裡）＝頭的金箍下緣，以上是玉柄（金箍在第 278～306 列）。
+// weapons.json 的 fuchen.root（0.376）量的是「毛開始變寬」的地方，比金箍低，切在那裡會有一截毛跟著玉柄斜
+export const HAIR_ROOT = 307 / 900;
+const ROOT = HAIR_ROOT;
 const REST_TILT = 0.6; // 玉柄平常斜 約 34 度（神像拿拂塵的角度）
+const HAIR_OUT = 0.5; // 毛冒出來的方向：順著玉柄往外（左上），再往下偏一點
+export const HAIR_TURN = 0.3; // 毛在前 30% 的長度裡彎下來，之後直直垂
+export const HAIR_STEPS = 100;
 const FOG_BACK = 0.01; // 霧每格補回「差多少」的 1%：1 秒補回約一半，5 秒幾乎補滿
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -70,24 +77,50 @@ export function whiskPose(s, W, H) {
   return { x: s.x ?? a.x, y: s.y ?? a.y, angle: s.angle, len: a.len, bend: s.bend };
 }
 
+// 毛的形狀：從頭出發，方向（從「往下」量的角度）一開始是 HAIR_OUT 那邊，慢慢轉成直直往下。
+// 回傳 HAIR_STEPS+1 個點（沿著毛等距），再加上隨風擺的偏移（越往毛尖越多）
+export function hairPath(p) {
+  const out = p.angle - Math.PI + HAIR_OUT;
+  const ds = ((1 - ROOT) * p.len) / HAIR_STEPS;
+  const pts = [];
+  let x = 0;
+  let y = 0;
+  for (let i = 0; i <= HAIR_STEPS; i++) {
+    const u = i / HAIR_STEPS;
+    pts.push({ x: p.x + x + hairOffset(u, p.bend), y: p.y + y });
+    const phi = out * (1 - smooth(0, HAIR_TURN, u + 0.5 / HAIR_STEPS));
+    x += ds * Math.sin(phi);
+    y += ds * Math.cos(phi);
+  }
+  return pts;
+}
+
+// 毛上第 u 段（0 = 毛根、1 = 毛尖）
+function hairAt(pts, u) {
+  const f = clamp(u, 0, 1) * HAIR_STEPS;
+  const i = Math.min(HAIR_STEPS - 1, Math.floor(f));
+  const w = f - i;
+  return { x: pts[i].x + (pts[i + 1].x - pts[i].x) * w, y: pts[i].y + (pts[i + 1].y - pts[i].y) * w };
+}
+
 // 拂塵上第 t 段在畫面上的位置（拂塵圖由上到下：0 = 玉柄末端（手握）、ROOT = 頭、1 = 毛尖）
 export function whiskPoint(p, t) {
   if (t <= ROOT) {
     const d = (ROOT - t) * p.len; // 從頭沿著玉柄往右下
     return { x: p.x + d * Math.sin(p.angle), y: p.y + d * Math.cos(p.angle) };
   }
-  const h = (t - ROOT) / (1 - ROOT);
-  return { x: p.x + hairOffset(h, p.bend), y: p.y + (t - ROOT) * p.len };
+  return hairAt(hairPath(p), (t - ROOT) / (1 - ROOT));
 }
 
-// 這一點在毛上嗎（from：從毛的第幾成開始算）
+// 這一點在毛上嗎（from：從毛的第幾成開始算）。沿著毛的每一段看：離中線夠近就算
 function onHair(p, q, from = 0) {
-  const hairLen = (1 - ROOT) * p.len;
-  const dy = q.y - p.y;
-  if (dy < hairLen * from || dy > hairLen) return false;
-  const h = dy / hairLen;
-  const half = p.len * ASPECT * 0.5 * (0.35 + 0.65 * h); // 毛根窄、毛尖散開
-  return Math.abs(q.x - p.x - hairOffset(h, p.bend)) < half;
+  const pts = hairPath(p);
+  for (let i = Math.ceil(from * HAIR_STEPS); i <= HAIR_STEPS; i++) {
+    const u = i / HAIR_STEPS;
+    const half = p.len * ASPECT * 0.5 * (0.35 + 0.65 * u); // 毛根窄、毛尖散開
+    if (Math.hypot(q.x - pts[i].x, q.y - pts[i].y) < half) return true;
+  }
+  return false;
 }
 
 // 這一點在玉柄上嗎（寬鬆一點，好抓）

@@ -1,6 +1,6 @@
 // 九天玄女的拂塵：訪客可以拿起來揮，把霧拂開（「拂去塵埃」；標語「智慧之神，指引明路」）
 // - 平常：拂塵浮在右邊，照廟裡神像拿的角度：玉柄從頭往右下斜（約 35 度，手握那端在右下），
-//   毛從頭直直垂下來（重力）；整支都在畫面內；毛隨風慢慢擺
+//   毛從頭順著玉柄的反方向冒出來（往左上），繞一個柔順的弧再往下垂（重力）；整支都在畫面內；毛隨風慢慢擺
 // - 按住拂塵拖：拂塵跟著手走，有一點延遲但不會跳；毛往移動的反方向拖
 // - 放開：拂塵花 1～3 秒慢慢回到原位，不會跳
 // - 按在拂塵外面：拿不起來
@@ -10,7 +10,7 @@
 // - 離開玄女頁：還拿著就放下，慢慢淡掉，也不會再掃出雲
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { fuchenAnchor, createFuchen, stepFuchen, hairOffset, whiskPose, whiskPoint, fogAt, MAX_WISPS } from "../js/fuchen.js";
+import { fuchenAnchor, createFuchen, stepFuchen, hairOffset, whiskPose, whiskPoint, fogAt, MAX_WISPS, HAIR_ROOT } from "../js/fuchen.js";
 
 const W = 1440;
 const H = 900;
@@ -30,7 +30,21 @@ test("rests on the right, held like the temple statues: handle slanting down-rig
     assert.ok(p.x > w * 0.6 && p.x < w, `on the right (${p.x})`);
     const slant = Math.atan2(hand.x - p.x, hand.y - p.y);
     assert.ok(slant > 0.45 && slant < 0.8, `handle slants down-right about 35 degrees (${slant.toFixed(2)})`);
-    assert.ok(Math.abs(tip.x - p.x) < p.len * 0.08, `hair hangs straight down (${(tip.x - p.x).toFixed(1)})`);
+    // 毛根：從頭往左上冒出來（不是一刀切平貼在玉柄旁邊）
+    const root = whiskPoint(p, HAIR_ROOT + 0.02);
+    assert.ok(root.x < p.x - 1 && root.y < p.y + 2, `hair leaves the head toward the upper left (${(root.x - p.x).toFixed(1)}, ${(root.y - p.y).toFixed(1)})`);
+    // 繞過去以後直直垂下來
+    const knee = whiskPoint(p, 0.6);
+    assert.ok(Math.abs(tip.x - knee.x) < p.len * 0.05, `then hangs straight down (${(tip.x - knee.x).toFixed(1)})`);
+    assert.ok(tip.x < p.x && tip.x > p.x - p.len * 0.2, "hangs just left of the head");
+    // 弧是連續的：相鄰兩點距離都差不多（沒有斷掉、沒有折角）
+    let prev = whiskPoint(p, HAIR_ROOT);
+    for (let t = HAIR_ROOT + 0.01; t <= 1.0001; t += 0.01) {
+      const q = whiskPoint(p, t);
+      const d = Math.hypot(q.x - prev.x, q.y - prev.y);
+      assert.ok(Math.abs(d - 0.01 * p.len) < 0.003 * p.len, `smooth arc (step ${d.toFixed(2)})`);
+      prev = q;
+    }
     assert.ok(tip.y > p.y + p.len * 0.5, "long hair below the head");
     for (const q of [p, hand, tip]) {
       assert.ok(q.x > 0 && q.x < w && q.y > h * 0.1 && q.y < h * 0.92, "on screen");
