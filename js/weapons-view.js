@@ -86,9 +86,14 @@ export class WeaponsView {
       m.drawImage(fireImg, f[0], f[1], f[2], f[3], 0, 0, fire.width, fire.height);
     }
     // 輪子：蓋在影片的輪子上，慢慢順時針轉（畫在小畫布裡，座標就是圖集格子的座標）
-    m.globalCompositeOperation = "source-over";
+    // 先把影片裡那個不會轉的輪子挖掉（輻條之間是透明的，不挖會看到兩組輻條）
     m.globalAlpha = 1;
     for (const wh of fire.wheels) {
+      m.globalCompositeOperation = "destination-out";
+      m.beginPath();
+      m.arc(wh.x, wh.y, wh.r, 0, Math.PI * 2);
+      m.fill();
+      m.globalCompositeOperation = "source-over";
       m.save();
       m.translate(wh.x, wh.y);
       m.rotate(this.s.wheelAngle);

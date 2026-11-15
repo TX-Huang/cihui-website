@@ -1,16 +1,16 @@
 """三太子的風火輪：AI Video 做的火焰影片（黑底）變成動畫圖集，輪子另外剪下來給程式轉。
 用法: python -I tools/prep_fenghuolun.py
-輸入: assets/raw/chatgpt2/fenghuolun-frames/0001～0107.png（H3，黑底，1920x1088，最後一格＝第一格）
-      assets/raw/chatgpt2/fenghuolun-start.png（第一格：去背的輪子放在純黑上）
+輸入: assets/raw/chatgpt2/fenghuolun-soft-frames/0001～0107.png（H3，黑底，1920x1088，最後一格＝第一格）
+      （第一格是 fenghuolun-soft-start.png：原本風格重畫的輪子 #2 放在純黑上；輪子圓盤從影片第一格剪）
 輸出: assets/elements/fenghuolun.webp（火焰動畫圖集）、fenghuolun-wheel.webp（左右兩個輪子的圓盤）、fenghuolun.json
 
 做法：
 1. 火焰：黑底 → 用亮度當透明度（暗的地方透明），顏色除回去。影片中段底下有一層很淡的灰煙，
    灰色、不夠亮的地方門檻再拉高（白色的風捲雲很亮，會留下來）。每 2 格取 1 格（54 格），播的時候兩格之間混過去。
 2. 輪子：影片裡輪子幾乎不轉（H3 只會讓火動），所以從第一格把兩個輪子的圓盤剪下來，
-   網頁上蓋在影片的輪子上面、由程式轉。輪子中心用「轉 30 度（12 根輻條）跟原來最像」找；
-   半徑 140：再往外就是火焰了（量過：半徑 144 以外橘紅色突然變多）。
-3. 調淡（tools/tone.py，強度 0.6）：配月白網頁，火還是看得出是火。
+   網頁上蓋在影片的輪子上面、由程式轉。輪子中心用「轉 36 度（10 根輻條）跟原來最像」找；
+   半徑 138：再往外就是火焰了（量過：半徑 144 以外橘紅色突然變多）。
+3. 不調淡：原本風格已經很淡雅（只有鳳凰是油畫風，2026-11-15 定案）。
 """
 import json
 import sys
@@ -28,8 +28,9 @@ OUT = Path("assets/elements")
 CELL_W = 400
 COLS = 6
 STRIDE = 2
-R = 140  # 輪子圓盤半徑（原圖像素）
-TONE = 0.6
+R = 138  # 輪子圓盤半徑（原圖像素）
+SPOKES = 10
+TONE = 0
 
 
 def key(path):
@@ -46,13 +47,13 @@ def key(path):
 
 
 def wheel_center(gray, est):
-    """轉 30 度跟原來最像的那一點（12 根輻條）"""
+    """轉一根輻條的角度後跟原來最像的那一點"""
     best = None
     for dy in range(-20, 21, 2):
         for dx in range(-20, 21, 2):
             cx, cy = est[0] + dx, est[1] + dy
             patch = gray[cy - 120 : cy + 120, cx - 120 : cx + 120]
-            rot = ndimage.rotate(patch, 30, reshape=False, order=1)
+            rot = ndimage.rotate(patch, 360 / SPOKES, reshape=False, order=1)
             yy, xx = np.mgrid[-120:120, -120:120]
             v = np.abs(rot - patch)[(xx**2 + yy**2) < 108**2].mean()
             if best is None or v < best[0]:
@@ -60,7 +61,7 @@ def wheel_center(gray, est):
     return best[1], best[2]
 
 
-files = sorted((RAW / "fenghuolun-frames").glob("*.png"))[:-1:STRIDE]  # 最後一格＝第一格，不取
+files = sorted((RAW / "fenghuolun-soft-frames").glob("*.png"))[:-1:STRIDE]  # 最後一格＝第一格，不取
 frames = [key(f) for f in files]
 H, W = frames[0].shape[:2]
 union = np.zeros((H, W), bool)
@@ -82,17 +83,21 @@ OUT.mkdir(parents=True, exist_ok=True)
 atlas.save(OUT / "fenghuolun.webp", quality=72, method=6)
 
 # 輪子圓盤
-start = np.asarray(Image.open(RAW / "fenghuolun-start.png").convert("RGB")).astype(float)
+# 從影片第一格剪（H3 重新編碼後輪子跟起始圖差幾像素，要對齊影片裡的輪子）
+start = np.asarray(Image.open(files[0]).convert("RGB")).astype(float)
 gray = start.mean(axis=2)
-centers = [wheel_center(gray, (744, 600)), wheel_center(gray, (1154, 600))]
+centers = [wheel_center(gray, (765, 559)), wheel_center(gray, (1157, 560))]
 d = round(2 * R * k)
 sheet = Image.new("RGBA", (d * 2, d), (0, 0, 0, 0))
 yy, xx = np.mgrid[-R:R, -R:R]
 edge = np.clip((R - np.hypot(xx + 0.5, yy + 0.5)) / 4, 0, 1)  # 邊緣 4 像素淡出
 wheels = []
 for i, (cx, cy) in enumerate(centers):
-    disc = tone(start[cy - R : cy + R, cx - R : cx + R], TONE)
-    rgba = np.dstack([disc, edge * 255]).clip(0, 255).astype(np.uint8)
+    # 輻條之間的黑底要透明（網頁會先把影片裡的輪子挖掉，再畫這個會轉的圓盤）
+    disc = start[cy - R : cy + R, cx - R : cx + R]
+    da = np.clip((disc.max(axis=2) - 45) / 70, 0, 1)
+    disc = tone(np.clip(disc / np.maximum(da[..., None], 0.3), 0, 255), TONE)
+    rgba = np.dstack([disc, da * edge * 255]).clip(0, 255).astype(np.uint8)
     sheet.alpha_composite(Image.fromarray(rgba, "RGBA").resize((d, d), Image.LANCZOS), (i * d, 0))
     wheels.append({"x": round((cx - box[0]) * k, 1), "y": round((cy - box[1]) * k, 1), "r": round(R * k, 1), "src": [i * d, 0, d, d]})
 sheet.save(OUT / "fenghuolun-wheel.webp", quality=85, method=6)
