@@ -12,7 +12,8 @@ import { DEITIES } from "../js/deities.js";
 import { EVENTS } from "../js/events.js";
 
 const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
-const VERIFIED = "關於道場緣起供奉神明照片法會活動聖誕固定報名方式最新公告服務項目預約與聯絡費用相簿瑤池金母九天玄女中壇元帥福德正慈惠主祀陪";
+// 2026-11-15 服務頁（年度藍圖）新增的字：一樣在瀏覽器逐字檢查過（同一個方法也抓得到缺的「眾、腳」）
+const VERIFIED = "關於道場緣起供奉神明照片法會活動聖誕固定報名方式最新公告服務項目預約與聯絡費用相簿瑤池金母九天玄女中壇元帥福德正慈惠主祀陪" + "理念三層護持光燈春祭改兩盞合一蟠桃盛娘週年慶全平安藍圖核心交集";
 const MISSING = "眾腳";
 const INNER = ["about.html", "events.html", "services.html", "gallery.html"];
 

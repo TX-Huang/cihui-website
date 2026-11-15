@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>服務 — 慈惠道場</title>
-    <meta name="description" content="慈惠道場的服務項目與預約方式。" />
+    <meta name="description" content="從容修行的年度藍圖：光明燈、新春祭改、蟠桃盛會、母娘聖誕與週年慶，一年的護持怎麼安排。" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -28,27 +28,153 @@
       <div class="hero">
         <div class="hero-img" aria-hidden="true"></div>
         <div class="hero-text">
-          <p class="eyebrow">慈惠道場</p>
+          <p class="eyebrow">從容修行的年度藍圖</p>
           <h1>服務</h1>
-          <p class="lead">道場為大家做的事</p>
+          <p class="lead">建構完整的能量防護，確保全年的元辰光采與家宅平安</p>
         </div>
       </div>
 
-      <div class="content">
-        <section>
-          <h2>服務項目</h2>
-          <div class="todo"><span class="todo-tag">待填</span>道場實際有哪些服務（例如點燈、安太歲、收驚、問事），每一項怎麼進行。</div>
-        </section>
+      <!-- 一年的旅程：從上往下捲，就是從元旦走到年底（js/blueprint-view.js 加上季節背景、旁邊的「一年」細線和互動） -->
+      <div class="journey" id="journey">
+        <div class="content">
+          <section class="bp-intro">
+            <h2>理念</h2>
+            <p class="bp-big">母娘深知世俗重擔，承諾給予無經濟壓力的修行之道。</p>
+            <dl class="bp-three">
+              <div>
+                <dt>理解</dt>
+                <dd>我們明白大家在生活中都有各自的重擔與責任。</dd>
+              </div>
+              <div>
+                <dt>承諾</dt>
+                <dd>為了讓修行更加從容、不為雜支煩惱，道場全年的固定活動僅包含特定項目。</dd>
+              </div>
+              <div>
+                <dt>透明</dt>
+                <dd>其餘時間並無額外費用。只要預先規劃，就能在無經濟壓力的情況下，獲得全年的護持。</dd>
+              </div>
+            </dl>
+          </section>
 
-        <section>
-          <h2>預約與聯絡</h2>
-          <div class="todo"><span class="todo-tag">待填</span>要不要預約、怎麼聯絡（電話、LINE）。</div>
-        </section>
+          <section class="bp-tiers-wrap">
+            <h2>三層護持</h2>
+            <p>從核心防護到隨喜感恩。<span class="js-only">點一圈，那一圈會亮起來。</span></p>
+            <div class="bp-tiers">
+              <div class="rings" id="rings" aria-hidden="true">
+                <span class="ring ring-joy" data-tier="joy"></span>
+                <span class="ring ring-free" data-tier="free"></span>
+                <span class="ring ring-core" data-tier="core"></span>
+              </div>
+              <ul class="tier-list">
+                <li data-tier="core">
+                  <button type="button" class="tier-name" data-tier="core">核心項目</button>
+                  <span class="tier-desc">光明燈與新春祭改。全年僅需預留此項實質開支，建立完整能量防護網。</span>
+                </li>
+                <li data-tier="free">
+                  <button type="button" class="tier-name" data-tier="free">自由參加</button>
+                  <span class="tier-desc">八月蟠桃盛會。為歷代祖先與冤親債主設立牌位，自由報名，價格透明。</span>
+                </li>
+                <li data-tier="joy">
+                  <button type="button" class="tier-name" data-tier="joy">隨喜功德</button>
+                  <span class="tier-desc">聖誕與週年慶。不設門檻，隨喜發心，純粹感受「回娘家」的法喜。</span>
+                </li>
+              </ul>
+            </div>
+          </section>
 
-        <section>
-          <h2>費用</h2>
-          <div class="todo"><span class="todo-tag">待填</span>要寫價錢、寫「隨喜」，或是不寫。</div>
-        </section>
+          <section class="stop" data-stop="yuandan" id="stop-yuandan">
+            <p class="when">元旦 · 核心項目一</p>
+            <h2>光明燈</h2>
+            <p>道場有別於傳統制式，依個人流年需求專屬點燈。並遵照母娘交代於「元旦」啟燈，為您搶先承接交脫運勢，提早點亮全年元辰光彩。</p>
+            <figure class="lamp" id="lamp">
+              <svg class="handover" viewBox="0 0 320 160" role="img" aria-label="運勢交替：舊年運氣往下、新年運勢往上，在元旦交會">
+                <path class="curve-old" d="" />
+                <path class="curve-new" d="" />
+                <line class="curve-axis" x1="160" y1="8" x2="160" y2="148" />
+                <circle class="curve-dot" cx="160" cy="80" r="5" />
+                <text x="8" y="40">舊年運氣</text>
+                <text x="312" y="40" text-anchor="end">新年運勢</text>
+                <text x="160" y="160" text-anchor="middle">元旦</text>
+              </svg>
+              <div class="lamp-light" aria-hidden="true"></div>
+              <button type="button" class="lamp-button js-only" id="lampButton">點燈看看</button>
+              <figcaption>元旦啟燈，承接運勢轉折點，為全年注入光彩能量。<span class="js-only">（這裡只是示意，點燈請洽道場）</span></figcaption>
+            </figure>
+            <ul class="price-list">
+              <li><span>小燈</span><span class="price">$1,200</span><span class="unit">／盞</span></li>
+              <li><span>大燈</span><span class="price">$3,600</span><span class="unit">／盞</span></li>
+            </ul>
+          </section>
+
+          <section class="stop" data-stop="xinchun" id="stop-xinchun">
+            <p class="when">新春 · 核心項目二</p>
+            <h2>新春祭改</h2>
+            <p>以「祭改」為基石的自選客製化模組。依個人新年展望加選對應項目，讓祈福效果最到位。</p>
+            <form class="quiz" id="quiz">
+              <p class="quiz-base"><span class="quiz-item">祭改</span><span class="price">$700</span><span class="quiz-who">一定包含：依個人流年吉凶為您化解阻礙、撥轉氣場</span></p>
+              <fieldset>
+                <legend>今年的您是哪一種情況？（可以複選）</legend>
+                <label><input type="checkbox" name="addon" value="qihuanfu" /><span class="quiz-who">逢九、正偏沖等特殊情形</span><span class="quiz-item">祈還福</span><span class="price">$800</span></label>
+                <label><input type="checkbox" name="addon" value="buyun" /><span class="quiz-who">希望一般運勢順遂</span><span class="quiz-item">補運</span><span class="price">$300</span></label>
+                <label><input type="checkbox" name="addon" value="bujiayun" /><span class="quiz-who">一家之主代表祈求</span><span class="quiz-item">補家運</span><span class="price">$300</span></label>
+                <label><input type="checkbox" name="addon" value="bukaoyun" /><span class="quiz-who">學子、國考、職登、應徵工作</span><span class="quiz-item">補考運</span><span class="price">$300</span></label>
+                <label><input type="checkbox" name="addon" value="bucaiku" /><span class="quiz-who">從商或投資，欲求正財、偏財</span><span class="quiz-item">補財庫</span><span class="price">$1,100</span></label>
+              </fieldset>
+              <p class="quiz-total js-only" id="quizTotal" aria-live="polite">合計 <strong>$700</strong>（祭改）</p>
+            </form>
+          </section>
+
+          <section class="bp-merge" id="merge">
+            <h2>核心交集</h2>
+            <p class="when">您全年的從容後盾</p>
+            <div class="merge-stage" aria-hidden="true">
+              <span class="glow glow-lamp">光明燈</span>
+              <span class="glow glow-gai">新春祭改</span>
+              <span class="merge-word">完整的能量防護</span>
+            </div>
+            <p>道場全年僅需為『光明燈』與『新春祭改』這兩項核心預留實質開支。</p>
+            <p class="small">為何缺一不可？唯有透過這兩項的連結，師姐與道場方能為您建立起完整的能量防護，精準觀照護持，成為您最從容的後盾。</p>
+          </section>
+
+          <section class="stop" data-stop="bayue" id="stop-bayue">
+            <p class="when">農曆八月 · 自由參加</p>
+            <h2>蟠桃盛會</h2>
+            <img class="bp-pic" src="assets/elements/peach-tree.webp" alt="" width="694" height="1000" loading="lazy" />
+            <p>八月蟠桃盛會普施。為歷代祖先與冤親債主設立牌位，自由報名，價格透明。</p>
+            <div class="todo"><span class="todo-tag">待填</span>牌位的價錢和報名方式。</div>
+          </section>
+
+          <section class="stop" data-stop="shengdan" id="stop-shengdan">
+            <p class="when">不定期 · 隨喜功德</p>
+            <h2>母娘聖誕與週年慶</h2>
+            <div class="lotus" id="lotus" aria-hidden="true">
+              <img class="lotus-bud" src="assets/elements/lotus-bud.webp" alt="" width="153" height="300" loading="lazy" />
+              <img class="lotus-open" src="assets/elements/lotus-open.webp" alt="" width="331" height="300" loading="lazy" />
+            </div>
+            <p>母娘聖誕與肇基週年慶，是道場最溫馨的團聚時刻。感恩母娘整年的慈悲護佑，期盼您以歡喜自在的心「回娘家」，共享法喜。</p>
+            <ul class="bp-notes">
+              <li>『祝壽金』隨喜發心，不設門檻。</li>
+              <li>敬請利用「匯款」，俾利道場精確造冊、向母娘呈稟文疏。</li>
+            </ul>
+            <div class="todo"><span class="todo-tag">待填</span>匯款的帳號。</div>
+          </section>
+
+          <section class="bp-year">
+            <h2>全年平安藍圖</h2>
+            <ol class="year-plan">
+              <li><span class="when">元旦</span>啟動光明燈<span class="small">核心預留</span></li>
+              <li><span class="when">新春</span>祭改與祈福模組<span class="small">核心預留</span></li>
+              <li><span class="when">農曆八月</span>蟠桃盛會普施<span class="small">自由評估</span></li>
+              <li><span class="when">不定期</span>聖誕與週年慶回娘家<span class="small">隨喜同樂</span></li>
+            </ol>
+            <p>只要每年預先留心這份藍圖，即可在無經濟壓力的從容中，確保整年的元辰光彩與家宅平安。道場，永遠是您最堅實的護持。</p>
+          </section>
+
+          <section>
+            <h2>預約與聯絡</h2>
+            <div class="todo"><span class="todo-tag">待填</span>要不要預約、怎麼聯絡（電話、LINE）。</div>
+          </section>
+        </div>
       </div>
     </main>
 
@@ -61,5 +187,6 @@
     </footer>
 
     <script type="module" src="js/page.js"></script>
+    <script type="module" src="js/blueprint-view.js"></script>
   </body>
 </html>
