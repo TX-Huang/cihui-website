@@ -330,3 +330,14 @@ test("leaving the 玄女 page: puts the whisk down, fades out slowly, no clouds 
   assert.ok(n >= 30, `fades over ${n} frames`);
   assert.equal(s.wisps.length, 0);
 });
+
+test("shrinking the window does not fling the hair up over the head", () => {
+  const s = createFuchen();
+  for (let i = 0; i < 120; i++) stepFuchen(s, { W: 1920, H: 1080, active: true, mouse: still });
+  for (let i = 0; i < 120; i++) {
+    stepFuchen(s, { W: 960, H: 540, active: true, mouse: still });
+    const p = whiskPose(s, 960, 540);
+    const tip = whiskPoint(p, 1);
+    assert.ok(tip.y > p.y + p.len * 0.2, `hair stays below the head (frame ${i}: ${(tip.y - p.y).toFixed(0)})`);
+  }
+});

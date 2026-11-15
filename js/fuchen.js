@@ -106,7 +106,7 @@ function hairLens(len) {
 function makeHair(x, y, angle, len) {
   const { arc, link } = hairLens(len);
   const a = arcPoints(x, y, angle, arc).at(-1);
-  return { mx: a.x, my: a.y + link, mpx: a.x, mpy: a.y + link, tx: a.x, ty: a.y + 2 * link, tpx: a.x, tpy: a.y + 2 * link };
+  return { len, mx: a.x, my: a.y + link, mpx: a.x, mpy: a.y + link, tx: a.x, ty: a.y + 2 * link, tpx: a.x, tpy: a.y + 2 * link };
 }
 
 // Catmull-Rom 曲線：p1 到 p2 這一段，第 u 位置
@@ -201,7 +201,12 @@ export function whiskPose(s, W, H) {
   const a = fuchenAnchor(W, H);
   const x = s.x ?? a.x;
   const y = s.y ?? a.y;
-  if (!s.hair) s.hair = makeHair(x, y, s.angle, a.len);
+  // 視窗大小變了（拂塵跟著變大變小）：毛重新放好。直接把毛縮短，上一格的位置沒跟著動，
+  // 下一格會被當成很快的速度，把毛甩到頭頂上
+  if (!s.hair || s.hair.len !== a.len) {
+    s.hair = makeHair(x, y, s.angle, a.len);
+    s.pts = null;
+  }
   if (!s.pts) s.pts = hairShape(x, y, s.angle, a.len, s.hair);
   return { x, y, angle: s.angle, len: a.len, pts: s.pts };
 }
