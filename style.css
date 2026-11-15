@@ -693,3 +693,12 @@ body.over-ring * {
   top: calc(100% + 6px);
   transform: translateX(-50%);
 }
+/* 滑鼠移到拂塵上：可以拿起來；拿著的時候：握住 */
+body.over-whisk,
+body.over-whisk * {
+  cursor: grab !important;
+}
+body.holding-whisk,
+body.holding-whisk * {
+  cursor: grabbing !important;
+}

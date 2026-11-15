@@ -1,9 +1,14 @@
-// 畫九天玄女的拂塵和它掃出來的雲氣（js/fuchen.js 決定怎麼動，這裡只負責畫）。
+// 畫九天玄女的拂塵、它掃出來的雲氣、和大門下半部的雲海（js/fuchen.js 決定怎麼動，這裡只負責畫和接滑鼠／手指）。
 // 拂塵圖（assets/elements/fuchen.webp）：上面是玉柄（不彎），下面的毛切成一條一條橫的，
 // 每一條照 hairOffset 往旁邊偏，接起來就是彎的毛。
-import { fuchenAnchor, createFuchen, stepFuchen, hairOffset } from "./fuchen.js";
+// 雲海用開場動畫的雲圖（跟網站其他畫面同一個畫風），一張正、一張左右翻過來接著排，慢慢往右飄。
+import { createFuchen, stepFuchen, hairOffset, whiskPose, hitWhisk, FOG_COLS, FOG_ROWS } from "./fuchen.js";
+import { LOOK, lookAssets } from "./gate.js";
 
 const STRIPS = 28; // 毛切成幾條
+const CLOUD_TOP = 0.46; // 雲圖的上緣放在畫面高度的哪裡（雲頂大約在 0.58）
+const CLOUD_ALPHA = 0.88; // 雲海整體的不透明度（底下的台階隱約看得到）
+const CLOUD_SCALE = 3; // 雲海用 1/3 解析度畫（雲本來就很柔，看不出差別）
 
 export class FuchenView {
   constructor(canvas, kit) {
@@ -14,9 +19,24 @@ export class FuchenView {
     this.active = false;
     this.mouse = { x: -9999, y: -9999, vx: 0, vy: 0 };
     this.click = null;
+    this.release = false;
+    this.wasHeld = false;
     this.last = 0; // 上一次畫的時間
     this.debt = 0; // 還沒走的時間（格）
+    this.resize();
+    // 拿著拂塵的是哪一根手指（或滑鼠）：別的手指按、移動、放開都不算
+    this.owner = null;
+    const mine = (e) => this.owner === null || e.pointerId === this.owner;
+    const letGo = () => {
+      this.release = true;
+      this.owner = null;
+      this.touchGrab = false;
+    };
+    this.mousey = false; // 最後一次是滑鼠（游標要跟著換）
     window.addEventListener("pointermove", (e) => {
+      if (!mine(e)) return;
+      // 拿著的時候滑鼠鍵已經沒按著（在視窗外放開的）：放下
+      if (this.owner !== null && e.pointerType === "mouse" && e.buttons === 0) letGo();
       // 一格裡可能有好幾次移動：加起來才是這一格滑鼠走了多遠
       if (this.mouse.x > -9000) {
         this.mouse.vx += e.clientX - this.mouse.x;
@@ -24,13 +44,65 @@ export class FuchenView {
       }
       this.mouse.x = e.clientX;
       this.mouse.y = e.clientY;
+      this.mousey = e.pointerType === "mouse";
+      if (this.mousey) this.setCursor(this.onIt(this.mouse));
     });
     window.addEventListener("pointerdown", (e) => {
+      if (!mine(e)) return;
       if (e.target.closest && e.target.closest("button, a, nav, header")) return;
-      this.click = { x: e.clientX, y: e.clientY };
+      this.mouse.x = e.clientX; // 手機：按下去之前沒有移動過
+      this.mouse.y = e.clientY;
+      this.mousey = e.pointerType === "mouse";
+      const q = { x: e.clientX, y: e.clientY };
+      // 這裡說拿得起來才交給 stepFuchen（兩邊判斷一致，誰拿著也一定記得到）
+      if (this.onIt(q)) {
+        this.click = q;
+        this.owner = e.pointerId;
+        if (e.pointerType === "mouse") e.preventDefault(); // 拖的時候不要選到字
+        if (e.pointerType === "touch") this.touchGrab = true; // pointerdown 比 touchstart 先到
+      }
     });
-    this.resize();
+    const up = (e) => {
+      if (mine(e)) letGo();
+    };
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    window.addEventListener("blur", letGo); // 切到別的視窗：放下
+    // 手機：拿起拂塵的那根手指在按著，頁面才不捲動（從外面滑進來的、按在連結上的照常）
+    this.touchGrab = false;
+    window.addEventListener(
+      "touchstart",
+      (e) => {
+        if (this.touchGrab) e.preventDefault();
+      },
+      { passive: false }
+    );
+    window.addEventListener(
+      "touchmove",
+      (e) => {
+        if (this.touchGrab) e.preventDefault();
+      },
+      { passive: false }
+    );
     window.addEventListener("resize", () => this.resize());
+    // 還剩多少雲：每格一個像素的小圖（透明度），放大後把雲海挖洞
+    this.fogC = document.createElement("canvas");
+    this.fogC.width = FOG_COLS;
+    this.fogC.height = FOG_ROWS;
+    this.fogX = this.fogC.getContext("2d");
+    this.fogImg = this.fogX.createImageData(FOG_COLS, FOG_ROWS);
+    this.layer = document.createElement("canvas");
+  }
+
+  onIt(q) {
+    return this.active && this.s.alpha > 0.5 && hitWhisk(this.s, this.w, this.h, q);
+  }
+
+  // 游標：移到拂塵上 → 可以拿；拿著 → 握住
+  setCursor(over) {
+    const cls = document.body.classList;
+    cls.toggle("over-whisk", over && !this.s.held);
+    cls.toggle("holding-whisk", this.s.held);
   }
 
   resize() {
@@ -52,30 +124,82 @@ export class FuchenView {
     this.debt -= n;
     const mouse = { x: this.mouse.x, y: this.mouse.y, vx: this.mouse.vx / n, vy: this.mouse.vy / n };
     for (let i = 0; i < n; i++) {
-      stepFuchen(s, { W: this.w, H: this.h, active: this.active, mouse, click: i === 0 ? this.click : null });
+      const first = i === 0;
+      stepFuchen(s, { W: this.w, H: this.h, active: this.active, mouse, click: first ? this.click : null, release: first && this.release });
     }
     this.click = null;
+    this.release = false;
     this.mouse.vx = 0;
     this.mouse.vy = 0;
+    // 游標：拂塵會自己飄走，滑鼠不動也要每格重看一次
+    if (this.mousey || s.held !== this.wasHeld) this.setCursor(this.mousey && this.onIt(this.mouse));
+    this.wasHeld = s.held;
     const ctx = this.ctx;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.clearRect(0, 0, this.w, this.h);
     if (s.alpha <= 0) return;
+    this.drawFog(ctx);
     this.drawWisps(ctx);
     this.drawWhisk(ctx);
   }
 
+  // 雲海：先畫雲圖，再用「還剩多少雲」當透明度挖洞（拂塵掃過的地方雲散開）
+  drawFog(ctx) {
+    const { clouds } = this.kit;
+    const L = this.layer;
+    if (!clouds) return;
+    const lw = Math.ceil(this.w / CLOUD_SCALE);
+    const lh = Math.ceil(this.h / CLOUD_SCALE);
+    if (L.width !== lw || L.height !== lh) {
+      L.width = lw;
+      L.height = lh;
+    }
+    const x = L.getContext("2d");
+    x.globalCompositeOperation = "source-over";
+    x.clearRect(0, 0, lw, lh);
+    // 一張正、一張翻過來：接縫兩邊是同一個邊，看不出接在哪
+    const bh = lh * (1 - CLOUD_TOP) * 1.02;
+    const bw = (bh * clouds.width) / clouds.height;
+    const y0 = lh * CLOUD_TOP;
+    const drift = ((this.s.t * 0.05) / CLOUD_SCALE) % (bw * 2);
+    for (let i = -2; i * bw < lw; i++) {
+      const left = i * bw + drift;
+      if (left + bw < 0) continue;
+      x.save();
+      if (i % 2) {
+        x.translate(left + bw, 0);
+        x.scale(-1, 1);
+        x.drawImage(clouds, 0, y0, bw, bh);
+      } else {
+        x.drawImage(clouds, left, y0, bw, bh);
+      }
+      x.restore();
+    }
+    // 挖洞
+    const { fog } = this.s;
+    const px = this.fogImg.data;
+    for (let i = 0; i < fog.length; i++) px[i * 4 + 3] = 255 * fog[i];
+    this.fogX.putImageData(this.fogImg, 0, 0);
+    x.globalCompositeOperation = "destination-in";
+    x.imageSmoothingEnabled = true;
+    x.imageSmoothingQuality = "high";
+    x.drawImage(this.fogC, 0, 0, lw, lh);
+    x.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = this.s.alpha * CLOUD_ALPHA;
+    ctx.drawImage(L, 0, 0, this.w, this.h);
+    ctx.globalAlpha = 1;
+  }
+
   drawWhisk(ctx) {
     const { whisk, meta } = this.kit;
-    const a = fuchenAnchor(this.w, this.h);
+    const a = whiskPose(this.s, this.w, this.h);
     const k = a.len / whisk.height;
     const dw = whisk.width * k;
     const rootY = whisk.height * meta.root;
     ctx.save();
     ctx.globalAlpha = this.s.alpha;
     ctx.translate(a.x, a.y);
-    // 整支跟著毛擺一點點（像手輕輕握著）
-    ctx.rotate(this.s.bend * 0.0006);
+    ctx.rotate(a.angle);
     // 玉柄
     ctx.drawImage(whisk, 0, 0, whisk.width, rootY, -dw / 2, 0, dw, rootY * k);
     // 毛：一條一條往旁邊偏。每條是斜的（上緣偏 o0、下緣偏 o1，跟上下兩條剛好接上），毛才是連續的、不會一段一段
@@ -98,7 +222,7 @@ export class FuchenView {
 
   drawWisps(ctx) {
     const { wisp } = this.kit;
-    const a = fuchenAnchor(this.w, this.h);
+    const a = whiskPose(this.s, this.w, this.h);
     const ww = a.len * 0.9;
     const wh = (ww * wisp.height) / wisp.width;
     for (const w of this.s.wisps) {
@@ -125,7 +249,10 @@ export async function loadFuchenKit() {
       img("assets/elements/fuchen.webp"),
       img("assets/elements/cloud-wisp.webp")
     ]);
-    return { meta: meta.fuchen, whisk, wisp };
+    // 雲海的圖晚一點到也沒關係：先有拂塵，雲到了再出現
+    const kit = { meta: meta.fuchen, whisk, wisp, clouds: null };
+    img(lookAssets(LOOK).clouds).then((im) => (kit.clouds = im), () => {});
+    return kit;
   } catch (_) {
     return null;
   }
