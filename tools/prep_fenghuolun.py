@@ -83,7 +83,7 @@ OUT.mkdir(parents=True, exist_ok=True)
 atlas.save(OUT / "fenghuolun.webp", quality=72, method=6)
 
 # 輪子圓盤
-# 從影片第一格剪（H3 重新編碼後輪子跟起始圖差幾像素，要對齊影片裡的輪子）
+# 從影片第一格剪（位置跟起始圖一樣，但 H3 會稍微重畫細節和顏色，用影片的才跟火焰底下的輪子一致）
 start = np.asarray(Image.open(files[0]).convert("RGB")).astype(float)
 gray = start.mean(axis=2)
 centers = [wheel_center(gray, (765, 559)), wheel_center(gray, (1157, 560))]
