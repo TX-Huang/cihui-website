@@ -1,16 +1,17 @@
 """新丹鳳（金母頁）：把 AI Video 做的拍翅影片（綠背景）變成動畫圖集，光柱、光暈的圖也一起整理。
 用法: python -I tools/prep_phoenix2.py
-輸入: assets/raw/chatgpt2/phoenix2-cruise-frames/0001～0107.png（H3 影片拆好的格子，1920x1088）
-      2026-11-15 換成 cruise：真的在往前飛（翅膀一直拍、不會停，身體跟著上下、尾羽被風往後吹）。
-      舊的 phoenix2-fly 是原地拍翅、最後一秒會停住，使用者覺得飛過去不自然。
+輸入: assets/raw/chatgpt2/phoenix2-flap-frames/0001～0046.png（H3 影片拆好的格子，1920x1088，純綠 #00FF00 背景）
+      2026-11-15 換成 flap：使用者要鳳凰「持續拍翅膀，這個飛行路線應該沒辦法滑翔」。
+      AI Video 從一段長影片的中間切出一圈（不會在接頭慢下來），每 2 格取 1 格：一次拍翅 0.96 秒，一圈拍 2 次。
+      之前的 cruise 每拍一下翅膀會停在水平約 0.4 秒，看起來在滑翔。
       assets/raw/chatgpt2/compare/light-rays-1.png、warm-glow-1.png（FLUX 黑底，畫面上用「濾色」疊上去）
 輸出: assets/phoenix2/fly.webp/.json、rays.webp、glow.webp
 
 做法：
-1. 選格子：第 1～106 格每 2 格取 1 格（53 格）。第 107 格跟第 1 格一樣，不取（接回第 1 格剛好）。
-   每格播多久照翅膀動多少（wing_timing）：翅膀停住的地方快速帶過，看起來一直在拍、不會滑翔。
+1. 46 格全用，每格播 1 個影片格（24 格／秒，一圈 1.92 秒）。第 46 格接回第 1 格剛好（AI Video 量過）。
    影片裡身體本來就跟著拍翅上下，網頁上不用再加起伏。
-2. 去背：每一格背景的綠都不太一樣（量過：(7,236,15)～(29,198,45)），所以每一格自己量四個角的綠。
+   翅膀往下拍到最低時，有 4 格（13、14、36、37）羽毛尖碰到影片的下緣，會被切平：最下面幾排慢慢變透明，看不出切口。
+2. 去背：每一格自己量四個角的綠（這版都是純綠，但照樣量，換影片也能用）。
    跟綠的距離 → 透明度；邊緣把混進來的綠扣掉，殘留的綠壓掉。
 3. 鳥的身體在影片裡本來就不太動（量過），所以不對齊，全部格子共用一個裁切框。
    另外記下第 1 格鳥的框（ref）：畫面上用這個框對齊鳥的位置和大小。
@@ -28,7 +29,8 @@ RAW = Path("assets/raw/chatgpt2")
 OUT = Path("assets/phoenix2")
 CELL_W = 560
 COLS = 8
-PICK = list(range(1, 107, 2))
+PICK = list(range(1, 47))
+BOTTOM_FADE = 16  # 影片最下面幾排慢慢變透明（羽毛尖碰到下緣會被切平）
 
 
 def key(path):
@@ -41,26 +43,9 @@ def key(path):
     rgb = np.clip((im - (1 - av) * bg) / av, 0, 255)
     rgb[..., 1] = np.minimum(rgb[..., 1], np.maximum(rgb[..., 0], rgb[..., 2]))
     a[a < 0.04] = 0
+    a[-BOTTOM_FADE:] *= np.linspace(1, 0, BOTTOM_FADE)[:, None]
     # 不調淡：使用者 2026-11-15 定案「只有鳳凰是油畫風」，鳳凰保持原本的鮮豔
     return np.dstack([rgb, a * 255]).clip(0, 255).astype(np.uint8)
-
-
-def wing_timing():
-    """每一格影片該播多久（原影片 1 格 = 1）：翅膀沒在動的格子快速帶過。
-    使用者 2026-11-15：「希望鳳凰可以持續拍翅膀，這個飛行路線應該沒辦法滑翔」。
-    量過：這段影片每拍一下，翅膀會停在水平位置約 10 格（0.4 秒）；接回開頭前後也慢下來（H3 把最後一格釘住的關係）。
-    看起來像在滑翔。做法：用鳥的上緣、下緣（翅膀張到最高、最低的地方）每格變多少當「翅膀在動多少」，
-    動得少的格子播得短（最短 0.2 格），動得多的照原速。整段從 4.4 秒變 3.3 秒，一次拍翅約 1.6 秒。"""
-    tops, bots = [], []
-    for i in range(1, 108):
-        im = np.asarray(Image.open(RAW / "phoenix2-cruise-frames" / f"{i:04d}.png").convert("RGB").resize((480, 272))).astype(float)
-        bg = np.median(np.concatenate([im[:10, :10].reshape(-1, 3), im[-10:, -10:].reshape(-1, 3)]), axis=0)
-        ys, _ = np.nonzero(np.sqrt(((im - bg) ** 2).sum(axis=2)) > 90)
-        tops.append(ys.min())
-        bots.append(ys.max())
-    act = np.abs(np.diff(tops)) + np.abs(np.diff(bots))  # act[i]：第 i+1 格到第 i+2 格翅膀動多少
-    act = np.convolve(act, [0.25, 0.5, 0.25], mode="same")  # 平滑一點，快慢之間不會突然切換
-    return np.clip((act + 0.5) / 4, 0.2, 1.0)
 
 
 def bbox(mask):
@@ -69,7 +54,7 @@ def bbox(mask):
 
 
 def fly():
-    frames = [key(RAW / "phoenix2-cruise-frames" / f"{i:04d}.png") for i in PICK]
+    frames = [key(RAW / "phoenix2-flap-frames" / f"{i:04d}.png") for i in PICK]
     H, W = frames[0].shape[:2]
     union = np.zeros((H, W), bool)
     for f in frames:
@@ -83,14 +68,11 @@ def fly():
     rows = (len(frames) + COLS - 1) // COLS
     atlas = Image.new("RGBA", (COLS * CELL_W, rows * ch), (0, 0, 0, 0))
     rects = []
-    d = wing_timing()
     for i, f in enumerate(frames):
         cell = Image.fromarray(f, "RGBA").crop(box).resize((CELL_W, ch), Image.LANCZOS)
         x, y = (i % COLS) * CELL_W, (i // COLS) * ch
         atlas.alpha_composite(cell, (x, y))
-        # 每一格播多久（以原影片的格數算）：每 2 格取 1，翅膀沒在動的地方快速帶過（wing_timing）
-        p = PICK[i] - 1
-        rects.append([x, y, CELL_W, ch, round(float(d[p] + d[p + 1]), 3)])
+        rects.append([x, y, CELL_W, ch, 1])  # 每一格播 1 個影片格
     OUT.mkdir(parents=True, exist_ok=True)
     atlas.save(OUT / "fly.webp", quality=82, method=6)
     meta = {"atlas": list(atlas.size), "fps": 24, "frames": rects, "width": CELL_W, "height": ch, "ref": ref}
