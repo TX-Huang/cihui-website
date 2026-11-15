@@ -1,16 +1,18 @@
 // 九天玄女的拂塵：訪客可以拿起來揮，把霧拂開（「拂去塵埃」；標語「智慧之神，指引明路」）
 // - 平常：拂塵浮在右邊，照廟裡神像拿的角度：玉柄從頭往右下斜（約 35 度，手握那端在右下），
 //   毛從頭順著玉柄的反方向冒出來（往左上），繞一個柔順的弧再往下垂（重力）；整支都在畫面內；毛隨風慢慢擺
-// - 按住拂塵拖：拂塵跟著手走，有一點延遲但不會跳；毛往移動的反方向拖
+// - 按住拂塵拖：拂塵跟著手走，有一點延遲但不會跳；毛像真的毛一樣有慣性：往哪拖，毛尖就落在後面，
+//   停下來會晃過頭一點再慢慢停（不會一直晃）；毛不會被拉長、壓短或對折
 // - 放開：拂塵花 1～3 秒慢慢回到原位，不會跳
 // - 按在拂塵外面：拿不起來
-// - 大門下半部飄著一片雲海（開場動畫的雲）；拿著拂塵揮過去，毛掃過的地方霧變淡；放著不管，霧幾秒內慢慢回來
+// - 大門下半部飄著一片雲海（開場動畫的雲）；拿著拂塵揮過去，毛掃過的地方霧變淡；
+//   放著不管，雲慢慢合回來（約 6 秒回一半，掃開的路會留一陣子）
 // - 拂塵自己隨風擺：不會把霧掃掉
 // - 滑鼠快速劃過毛、點它、或拿著揮得快：甩一下、掃出一朵雲氣；1.5 秒內只掃出一朵，最多同時 3 朵
 // - 離開玄女頁：還拿著就放下，慢慢淡掉，也不會再掃出雲
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { fuchenAnchor, createFuchen, stepFuchen, hairOffset, whiskPose, whiskPoint, fogAt, MAX_WISPS, HAIR_ROOT } from "../js/fuchen.js";
+import { fuchenAnchor, createFuchen, stepFuchen, whiskPose, whiskPoint, fogAt, MAX_WISPS, HAIR_ROOT } from "../js/fuchen.js";
 
 const W = 1440;
 const H = 900;
@@ -19,6 +21,12 @@ const run = (s, n, env) => {
   for (let i = 0; i < n; i++) stepFuchen(s, { W, H, active: true, mouse: still, ...env });
 };
 const at = (p) => ({ x: p.x, y: p.y, vx: 0, vy: 0 });
+// 毛尖相對頭的位置
+const tipRel = (s) => {
+  const p = whiskPose(s, W, H);
+  const t = whiskPoint(p, 1);
+  return { x: t.x - p.x, y: t.y - p.y, len: p.len };
+};
 
 test("rests on the right, held like the temple statues: handle slanting down-right from the head, hair hanging straight down", () => {
   for (const [w, h] of [[1440, 900], [1024, 768], [390, 844]]) {
@@ -53,10 +61,32 @@ test("rests on the right, held like the temple statues: handle slanting down-rig
   }
 });
 
-test("the jade handle stays put; the hair bends more toward the tip", () => {
-  assert.equal(hairOffset(0, 30), 0);
-  assert.ok(Math.abs(hairOffset(0.5, 30)) < Math.abs(hairOffset(1, 30)));
-  assert.ok(Math.abs(hairOffset(1, 30) - 30) < 1e-9, "the tip moves by the full bend");
+test("waving it hard (about once a second): the hair never stretches, shrinks, or folds into a sharp corner", () => {
+  const s = createFuchen();
+  run(s, 60);
+  const grab = whiskPoint(whiskPose(s, W, H), 0.2);
+  run(s, 1, { mouse: at(grab), click: grab });
+  for (let i = 0; i < 240; i++) {
+    const m = { x: grab.x - 250 + 250 * Math.cos(i * 0.11), y: grab.y + 80 * Math.sin(i * 0.17), vx: 0, vy: 0 };
+    run(s, 1, { mouse: m });
+    const p = whiskPose(s, W, H);
+    for (let t = HAIR_ROOT + 0.04; t <= 0.97; t += 0.02) {
+      const a = whiskPoint(p, t - 0.02);
+      const b = whiskPoint(p, t);
+      const c = whiskPoint(p, t + 0.02);
+      const turn = Math.abs(Math.atan2(c.x - b.x, c.y - b.y) - Math.atan2(b.x - a.x, b.y - a.y));
+      assert.ok(Math.min(turn, 2 * Math.PI - turn) < Math.PI / 2, `no sharp fold (${((turn * 180) / Math.PI).toFixed(0)} deg)`);
+    }
+    let len = 0;
+    let prev = whiskPoint(p, HAIR_ROOT);
+    for (let t = HAIR_ROOT + 0.01; t <= 1.0001; t += 0.01) {
+      const q = whiskPoint(p, t);
+      len += Math.hypot(q.x - prev.x, q.y - prev.y);
+      prev = q;
+    }
+    const want = (1 - HAIR_ROOT) * p.len;
+    assert.ok(Math.abs(len - want) < want * 0.04, `hair length ${len.toFixed(1)} vs ${want.toFixed(1)}`);
+  }
 });
 
 test("idle: a small, slow sway, no clouds, the fog stays", () => {
@@ -64,12 +94,14 @@ test("idle: a small, slow sway, no clouds, the fog stays", () => {
   run(s, 60);
   const { len } = fuchenAnchor(W, H);
   const fog0 = fogAt(s, W * 0.5, H * 0.85, W, H);
-  let last = s.bend;
+  const rest = tipRel(s);
+  let last = rest;
   for (let i = 0; i < 60 * 20; i++) {
     run(s, 1);
-    assert.ok(Math.abs(s.bend) <= len * 0.08, `small (${s.bend.toFixed(1)})`);
-    assert.ok(Math.abs(s.bend - last) <= 1.5, "slow");
-    last = s.bend;
+    const r = tipRel(s);
+    assert.ok(Math.hypot(r.x - rest.x, r.y - rest.y) <= len * 0.08, `small (${(r.x - rest.x).toFixed(1)})`);
+    assert.ok(Math.hypot(r.x - last.x, r.y - last.y) <= 1.5, "slow");
+    last = r;
   }
   assert.equal(s.wisps.length, 0, "no clouds by itself");
   const tip = whiskPoint(whiskPose(s, W, H), 1);
@@ -106,17 +138,36 @@ test("press on the whisk and drag: it follows the hand smoothly, the hair trails
   run(s, 60, { mouse: at({ x: grab.x - 600, y: grab.y }) });
   const p = whiskPose(s, W, H);
   assert.ok(Math.abs(p.x - (p0.x - 600)) < 20 && Math.abs(p.y - p0.y) < 20, `follows the hand (${p.x - p0.x}, ${p.y - p0.y})`);
-  // 往左移動：毛往右拖（局部座標往 +x 偏）
-  const s2 = createFuchen();
-  run(s2, 60);
-  const g2 = whiskPoint(whiskPose(s2, W, H), 0.6);
-  run(s2, 1, { mouse: at(g2), click: g2 });
-  let maxBend = 0;
-  for (let i = 1; i <= 15; i++) {
-    run(s2, 1, { mouse: { x: g2.x - i * 12, y: g2.y, vx: -12, vy: 0 } });
-    maxBend = Math.max(maxBend, s2.bend);
+});
+
+test("the hair has inertia: it trails behind the way you drag, swings past a little when you stop, then settles", () => {
+  // 往左拖：毛尖落在右邊
+  const s = createFuchen();
+  run(s, 60);
+  const rest = tipRel(s);
+  const g = whiskPoint(whiskPose(s, W, H), 0.2);
+  run(s, 1, { mouse: at(g), click: g });
+  let lastTip = whiskPoint(whiskPose(s, W, H), 1);
+  let maxTrail = 0;
+  for (let i = 1; i <= 25; i++) {
+    run(s, 1, { mouse: { x: g.x - i * 12, y: g.y, vx: -12, vy: 0 } });
+    const tip = whiskPoint(whiskPose(s, W, H), 1);
+    assert.ok(Math.hypot(tip.x - lastTip.x, tip.y - lastTip.y) <= rest.len * 0.08, "no jitter");
+    lastTip = tip;
+    maxTrail = Math.max(maxTrail, tipRel(s).x - rest.x);
   }
-  assert.ok(maxBend > 5, `hair trails behind (${maxBend.toFixed(1)})`);
+  assert.ok(maxTrail > rest.len * 0.08, `tip trails to the right (${maxTrail.toFixed(1)})`);
+  // 停下來：晃過頭（往左）一點，再慢慢停
+  const stop = { x: g.x - 300, y: g.y };
+  let minX = Infinity;
+  for (let i = 0; i < 90; i++) {
+    run(s, 1, { mouse: at(stop) });
+    minX = Math.min(minX, tipRel(s).x);
+  }
+  assert.ok(minX < rest.x - rest.len * 0.01, `swings past (${(minX - rest.x).toFixed(1)})`);
+  run(s, 60 * 4, { mouse: at(stop) });
+  const r = tipRel(s);
+  assert.ok(Math.hypot(r.x - rest.x, r.y - rest.y) < rest.len * 0.04, `settles (${(r.x - rest.x).toFixed(1)}, ${(r.y - rest.y).toFixed(1)})`);
 });
 
 test("letting go: it drifts back home over 1-3 seconds, no jumps", () => {
@@ -177,11 +228,11 @@ test("sweeping the held whisk clears the fog where the hair passes; it slowly co
   const untouched = fogAt(s, W * 0.45, H * 0.99, W, H);
   assert.ok(swept < untouched * 0.5, `swept clear (${swept.toFixed(2)} vs ${untouched.toFixed(2)})`);
   run(s, 1, { release: true });
-  run(s, 60);
-  const after1s = fogAt(s, W * 0.45, tip.y, W, H);
-  assert.ok(after1s < untouched * 0.8, "still clearer one second later (not instant)");
-  run(s, 60 * 8);
-  assert.ok(fogAt(s, W * 0.45, tip.y, W, H) > swept + 0.1, "the fog comes back");
+  run(s, 120);
+  const after2s = fogAt(s, W * 0.45, tip.y, W, H);
+  assert.ok(after2s < swept + (untouched - swept) * 0.4, `the path stays open a while (2 s: ${after2s.toFixed(2)})`);
+  run(s, 60 * 10);
+  assert.ok(fogAt(s, W * 0.45, tip.y, W, H) > swept + (untouched - swept) * 0.6, "the clouds slowly close again");
 });
 
 test("a quick swipe across the hair flicks it and sweeps out one cloud", () => {
@@ -189,20 +240,21 @@ test("a quick swipe across the hair flicks it and sweeps out one cloud", () => {
   run(s, 120);
   const p = whiskPose(s, W, H);
   const mid = whiskPoint(p, 0.75);
-  let maxBend = 0;
+  const rest = tipRel(s);
+  let maxMove = 0;
   // 快速往左劃過毛
   for (let x = mid.x + 150; x > mid.x - 150; x -= 25) {
     stepFuchen(s, { W, H, active: true, mouse: { x, y: mid.y, vx: -25, vy: 0 } });
-    maxBend = Math.max(maxBend, Math.abs(s.bend));
+    maxMove = Math.max(maxMove, Math.abs(tipRel(s).x - rest.x));
   }
-  let pinned = 0;
   for (let i = 0; i < 40; i++) {
     stepFuchen(s, { W, H, active: true, mouse: still });
-    maxBend = Math.max(maxBend, Math.abs(s.bend));
-    if (Math.abs(s.bend) >= p.len * 0.35 - 1e-6) pinned++;
+    maxMove = Math.max(maxMove, Math.abs(tipRel(s).x - rest.x));
   }
-  assert.ok(pinned <= 3, `swings back instead of sticking at the limit (${pinned} frames)`);
-  assert.ok(maxBend > p.len * 0.1, `flicks (${maxBend.toFixed(1)})`);
+  assert.ok(maxMove > p.len * 0.1, `flicks (${maxMove.toFixed(1)})`);
+  run(s, 60 * 4);
+  const back = tipRel(s);
+  assert.ok(Math.abs(back.x - rest.x) < p.len * 0.05, "swings back instead of sticking");
   assert.equal(s.wisps.length, 1, "one cloud");
   // 馬上再劃一次：還在冷卻，不會多一朵
   for (let x = mid.x - 150; x < mid.x + 150; x += 25) stepFuchen(s, { W, H, active: true, mouse: { x, y: mid.y, vx: 25, vy: 0 } });

@@ -2,7 +2,7 @@
 // 拂塵圖（assets/elements/fuchen.webp）：上面是玉柄（不彎），下面的毛切成一條一條橫的，
 // 每一條照 hairOffset 往旁邊偏，接起來就是彎的毛。
 // 雲海用開場動畫的雲圖（跟網站其他畫面同一個畫風），一張正、一張左右翻過來接著排，慢慢往右飄。
-import { createFuchen, stepFuchen, whiskPose, hitWhisk, hairPath, HAIR_ROOT, HAIR_TURN, FOG_COLS, FOG_ROWS } from "./fuchen.js";
+import { createFuchen, stepFuchen, whiskPose, hitWhisk, hairPath, HAIR_ROOT, FOG_COLS, FOG_ROWS } from "./fuchen.js";
 import { LOOK, lookAssets } from "./gate.js";
 
 const CLOUD_TOP = 0.46; // 雲圖的上緣放在畫面高度的哪裡（雲頂大約在 0.58）
@@ -201,13 +201,11 @@ export class FuchenView {
     ctx.globalAlpha = this.s.alpha;
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high"; // 毛很細：縮小時用好一點的取樣，不然會一根一根鋸齒
-    // 毛：彎的那段（靠頭）切成很細的條，沿著 hairPath 排、每條轉成那一段的方向；
-    // 直直垂的那段整塊一起畫（只斜一點點跟著風擺），不切條，才不會看到一條一條的接縫
+    // 毛：拂塵圖的毛切成一條一條（每條剛好一段、不多讀一列，接縫才不會有線），沿著毛的形狀排、每條轉成那一段的方向
     const pts = hairPath(a);
     const n = pts.length - 1;
     const sh = (whisk.height - rootY) / n;
-    const bendEnd = Math.round(HAIR_TURN * n);
-    for (let i = 0; i < bendEnd; i++) {
+    for (let i = 0; i < n; i++) {
       const p0 = pts[i];
       const p1 = pts[i + 1];
       const dx = p1.x - p0.x;
@@ -218,14 +216,6 @@ export class FuchenView {
       ctx.drawImage(whisk, 0, rootY + sh * i, whisk.width, sh, -dw / 2, 0, dw, Math.hypot(dx, dy) + 0.6);
       ctx.restore();
     }
-    const top = pts[bendEnd];
-    const tip = pts[n];
-    const hh = tip.y - top.y;
-    ctx.save();
-    ctx.translate(top.x, top.y);
-    ctx.transform(1, 0, (tip.x - top.x) / hh, 1, 0, 0);
-    ctx.drawImage(whisk, 0, rootY + sh * bendEnd, whisk.width, sh * (n - bendEnd), -dw / 2, 0, dw, hh);
-    ctx.restore();
     // 玉柄：圖裡是從頭往上，轉過來變成從頭往右下
     ctx.translate(a.x, a.y);
     ctx.rotate(Math.PI - a.angle);
