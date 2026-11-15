@@ -10,8 +10,8 @@
 
 export const MAX_SPARKS = 60;
 const THROW = 160; // 飛一圈幾格
-const TIP = [0.94, 0.06]; // 火焰中心在槍圖裡的位置（tools/prep_weapons.py 量的槍尖，往內一點）
-const SPEAR_ASPECT = 900 / 885;
+const TIP = [0.95, 0.055]; // 火焰中心在槍圖裡的位置（tools/prep_weapons.py 量的槍尖，往內一點）
+const SPEAR_ASPECT = 900 / 897;
 const WHEELS_ASPECT = 1.8; // 一對風火輪連火焰的寬高比（tools/prep_fenghuolun.py 裁出來的）
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));

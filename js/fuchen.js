@@ -7,7 +7,7 @@
 export const MAX_WISPS = 3;
 const COOL = 90; // 甩一下之後 1.5 秒內不會再掃出雲
 const WISP_LIFE = 300; // 一朵雲 5 秒
-const ASPECT = 600 / 900; // 拂塵圖的寬高比（tools/prep_weapons.py）
+const ASPECT = 394 / 900; // 拂塵圖的寬高比（tools/prep_weapons.py）
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 

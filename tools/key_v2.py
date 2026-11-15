@@ -7,7 +7,7 @@ FLUX 畫不出純色背景（有筆觸、顏色也不太一樣），所以不量
   綠底：綠比紅藍高多少；洋紅底：紅藍比綠高多少；藍底：藍比紅綠高多少；黑底：多亮。
   背景那種顏色越突出 → 越透明，邊緣用一小段漸變；邊緣把混進來的背景色壓掉。
 最後只留大塊的（主體），背景上零星的小點、小火星拿掉。
-再用 tools/tone.py 把顏色調淡（使用者 2026-11-15 選「素材調淡」配月白網頁），後面的 prep 程式都吃調好的。
+需要的話再用 tools/tone.py 調淡（TONE；原本風格的素材不用調）。
 """
 from pathlib import Path
 
@@ -26,15 +26,15 @@ OUT = RAW / "keyed"
 # 名稱: (來源檔, 背景, 保留小塊的最小面積比例)
 # TIGHT：背景突出到角落典型值的幾成就算背景（預設 0.7；稻穗原圖在穀粒外畫了一圈淡粉紅的光，要更嚴）
 TIGHT = {}
-# 調淡的強度（1 = 跟比較圖一樣；0 = 不調）
+# 調淡的強度（1 = 跟比較圖一樣；0 = 不調，預設不調：原本風格已經很淡雅）
 TONE = {}
 ITEMS = {
-    # 2026-11-15 定案：只有鳳凰是油畫風；鯉魚、蟠桃樹、金蓮、稻穗、虎爺、青鳥換回原本的圖。
-    # 下面四樣是新加的元素，暫時用油畫版（調淡），之後換成 AI Video 用原本風格重畫的版本
-    "fuchen": ("fuchen-2.png", "black", 0.0005),
-    "cloud-wisp": ("cloud-wisp-4.png", "black", 0.002),
-    "qiankunquan": ("qiankunquan-2.png", "green", 0.002),
-    "huojianqiang": ("huojianqiang-2.png", "green", 0.0005),
+    # 2026-11-15 定案：只有鳳凰是油畫風；其他都用原本（柔和）的風格。
+    # 下面四樣是 AI Video 用原本風格重畫的（使用者挑：拂塵 2、雲氣 1、乾坤圈 1、火尖槍 2），不調淡
+    "fuchen": ("fuchen-soft-2.png", "black", 0.0005),
+    "cloud-wisp": ("cloud-wisp-soft-1.png", "black", 0.002),
+    "qiankunquan": ("qiankunquan-soft-1-clean.png", "green", 0.002),
+    "huojianqiang": ("huojianqiang-soft-2-clean.png", "green", 0.0005),
 }
 
 
@@ -98,7 +98,7 @@ for name, (src, bg, min_frac) in ITEMS.items():
     out, a = key(rgb, bg, TIGHT.get(name, 0.7))
     a = keep_big(a, min_frac)
     a[a < 0.03] = 0
-    out = tone(out, TONE.get(name, 1.0))
+    out = tone(out, TONE.get(name, 0))
     img = Image.fromarray(np.dstack([out, a * 255]).clip(0, 255).astype(np.uint8), "RGBA")
     img.save(OUT / f"{name}.png")
     ys, xs = np.nonzero(a > 0.5)
