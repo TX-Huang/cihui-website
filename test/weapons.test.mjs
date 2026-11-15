@@ -127,3 +127,67 @@ test("the wind-fire wheels float at the bottom centre, between the ring and the 
     lastY = y;
   }
 });
+
+// 風火輪：按住加速（使用者 2026-11-15 選的：不滿畫面跑，原地轉快）
+// - 平常：慢慢轉（約 5 秒一圈），火是原本的大小
+// - 按住風火輪不放：越轉越快（約 2～3 秒到最快），火慢慢燒旺（變大）；轉速一格一格慢慢變，不會突然跳
+// - 最快也不會快到看起來倒轉（每格轉不到半根輻條）
+// - 放開：慢慢減速、火慢慢變小，幾秒內回到平常的樣子
+// - 按在別的地方、或不在三太子頁：不會加速
+import { hitWheels, flameScale } from "../js/weapons.js";
+
+test("the wind-fire wheels can be pressed: hit test covers the wheels only", () => {
+  const p = wheelsPose(W, H, 0);
+  assert.ok(hitWheels(W, H, 0, { x: p.x - p.w * 0.25, y: p.y }), "left wheel");
+  assert.ok(hitWheels(W, H, 0, { x: p.x + p.w * 0.25, y: p.y }), "right wheel");
+  const r = ringHome(W, H);
+  assert.ok(!hitWheels(W, H, 0, { x: r.x, y: r.y }), "not the ring");
+  assert.ok(!hitWheels(W, H, 0, { x: W / 2, y: H * 0.3 }), "not the gate");
+});
+
+test("holding the wheels spins them up and the fire grows; letting go winds them down", () => {
+  const s = createWeapons();
+  run(s, 60);
+  const speed = () => {
+    const a = s.wheelAngle;
+    run(s, 1, { hold: hold.v });
+    return s.wheelAngle - a;
+  };
+  const hold = { v: false };
+  const idle = speed();
+  assert.ok(idle > 0 && idle < 0.03, "slow when idle");
+  assert.equal(flameScale(s), 1, "normal fire");
+  // 按住 3 秒
+  hold.v = true;
+  let last = idle;
+  let n = 0;
+  let max = 0;
+  for (; n < 180; n++) {
+    const v = speed();
+    assert.ok(Math.abs(v - last) <= 0.006, "speeds up smoothly");
+    assert.ok(v < Math.PI / 10, "never so fast it looks like it turns backwards");
+    max = Math.max(max, v);
+    last = v;
+  }
+  assert.ok(max > idle * 6, `much faster (${max.toFixed(3)} vs ${idle.toFixed(3)})`);
+  assert.ok(flameScale(s) > 1.2, `the fire grows (${flameScale(s).toFixed(2)})`);
+  // 放開：慢慢回來
+  hold.v = false;
+  let back = 0;
+  for (; back < 600; back++) {
+    const v = speed();
+    assert.ok(Math.abs(v - last) <= 0.006, "slows down smoothly");
+    last = v;
+    if (v < idle * 1.1) break;
+  }
+  assert.ok(back >= 90 && back <= 360, `winds down over a few seconds (${back} frames)`);
+  run(s, 300);
+  assert.ok(flameScale(s) < 1.02, "fire back to normal");
+});
+
+test("holding does nothing when the 三太子 page is not showing", () => {
+  const s = createWeapons();
+  run(s, 60);
+  for (let i = 0; i < 120; i++) stepWeapons(s, { W, H, active: false, random: Math.random, hold: true });
+  assert.equal(flameScale(s), 1);
+});

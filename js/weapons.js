@@ -7,12 +7,17 @@
 // 火尖槍：斜立在右邊，輕輕浮動；槍尖的火一直冒出小火星。
 // 風火輪：一對浮在下方中間（腳踏風火輪）。火焰是 AI Video 做的影片（tools/prep_fenghuolun.py），
 //   影片裡輪子幾乎不轉，所以輪子另外剪下來由程式慢慢順時針轉（wheelAngle）。
+//   按住風火輪不放：越轉越快、火慢慢燒旺；放開慢慢減速（rev：0 = 平常、1 = 最快）。
 
 export const MAX_SPARKS = 60;
 const THROW = 160; // 飛一圈幾格
 const TIP = [0.95, 0.055]; // 火焰中心在槍圖裡的位置（tools/prep_weapons.py 量的槍尖，往內一點）
 const SPEAR_ASPECT = 900 / 897;
 const WHEELS_ASPECT = 2.12; // 一對風火輪連火焰的寬高比（tools/prep_fenghuolun.py 裁出來的）
+const SPIN_IDLE = 0.02; // 平常每格轉多少（約 5 秒一圈）
+const SPIN_MAX = 0.18; // 最快（10 根輻條，每根 0.63：每格轉不到半根，看起來不會倒轉）
+const REV_UP = 0.02; // 按著：每格往「最快」靠 2%（約 2～3 秒到）
+const REV_DOWN = 0.015; // 放開：每格往「平常」靠 1.5%（約 4～5 秒回來）
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -35,8 +40,19 @@ export function wheelsPose(W, H, t = 0) {
   return { x: W / 2, y: H - h / 2 - H * 0.03 + 3 * Math.sin(t * 0.02), w, h };
 }
 
+// 這一點按在風火輪上嗎
+export function hitWheels(W, H, t, q) {
+  const p = wheelsPose(W, H, t);
+  return !!q && Math.abs(q.x - p.x) < p.w * 0.48 && Math.abs(q.y - p.y) < p.h * 0.45;
+}
+
+// 火焰放大多少（1 = 原本；最快的時候 1.3）
+export function flameScale(s) {
+  return 1 + 0.3 * s.rev;
+}
+
 export function createWeapons() {
-  return { t: 0, alpha: 0, turn: 0, spin: 0, thrown: false, u: 0, sparks: [], wheelAngle: 0 };
+  return { t: 0, alpha: 0, turn: 0, spin: 0, thrown: false, u: 0, sparks: [], wheelAngle: 0, rev: 0 };
 }
 
 export function ringPose(s, W, H) {
@@ -51,7 +67,7 @@ export function ringPose(s, W, H) {
   return { x, y, size: home.size, turn: s.turn, spin: s.spin };
 }
 
-export function stepWeapons(s, { W, H, active, random, click }) {
+export function stepWeapons(s, { W, H, active, random, click, hold }) {
   s.t++;
   s.alpha = active ? Math.min(1, s.alpha + 1 / 60) : Math.max(0, s.alpha - 1 / 60);
 
@@ -71,7 +87,8 @@ export function stepWeapons(s, { W, H, active, random, click }) {
     }
   }
   s.turn += 0.006;
-  s.wheelAngle += 0.02; // 約 5 秒轉一圈
+  s.rev += active && hold ? (1 - s.rev) * REV_UP : -s.rev * REV_DOWN;
+  s.wheelAngle += SPIN_IDLE + (SPIN_MAX - SPIN_IDLE) * s.rev;
 
   // 火星：從槍尖冒出來，往上飄、慢慢淡掉
   for (const p of s.sparks) {
