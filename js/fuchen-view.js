@@ -190,6 +190,7 @@ export class FuchenView {
     ctx.globalAlpha = 1;
   }
 
+  // 照神像拿拂塵的樣子：毛從頭直直垂下來，玉柄從頭往右下斜（玉柄畫在毛上面，頭的金箍蓋住毛根）
   drawWhisk(ctx) {
     const { whisk, meta } = this.kit;
     const a = whiskPose(this.s, this.w, this.h);
@@ -199,9 +200,6 @@ export class FuchenView {
     ctx.save();
     ctx.globalAlpha = this.s.alpha;
     ctx.translate(a.x, a.y);
-    ctx.rotate(a.angle);
-    // 玉柄
-    ctx.drawImage(whisk, 0, 0, whisk.width, rootY, -dw / 2, 0, dw, rootY * k);
     // 毛：一條一條往旁邊偏。每條是斜的（上緣偏 o0、下緣偏 o1，跟上下兩條剛好接上），毛才是連續的、不會一段一段
     const hairH = whisk.height - rootY;
     for (let i = 0; i < STRIPS; i++) {
@@ -209,7 +207,7 @@ export class FuchenView {
       const sh = hairH / STRIPS;
       const o0 = hairOffset(i / STRIPS, this.s.bend);
       const o1 = hairOffset((i + 1) / STRIPS, this.s.bend);
-      const y0 = sy * k;
+      const y0 = (sy - rootY) * k;
       const dh = sh * k;
       const skew = (o1 - o0) / dh;
       ctx.save();
@@ -217,6 +215,9 @@ export class FuchenView {
       ctx.drawImage(whisk, 0, sy, whisk.width, sh + 1, -dw / 2, y0, dw, dh + k);
       ctx.restore();
     }
+    // 玉柄：圖裡是從頭往上，轉過來變成從頭往右下
+    ctx.rotate(Math.PI - a.angle);
+    ctx.drawImage(whisk, 0, 0, whisk.width, rootY, -dw / 2, -rootY * k, dw, rootY * k);
     ctx.restore();
   }
 

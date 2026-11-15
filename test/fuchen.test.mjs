@@ -1,5 +1,6 @@
 // 九天玄女的拂塵：訪客可以拿起來揮，把霧拂開（「拂去塵埃」；標語「智慧之神，指引明路」）
-// - 平常：拂塵斜斜地浮在右邊（玉柄在右上、毛往左下，約 30 度），整支都在畫面內；毛隨風慢慢擺
+// - 平常：拂塵浮在右邊，照廟裡神像拿的角度：玉柄從頭往右下斜（約 35 度，手握那端在右下），
+//   毛從頭直直垂下來（重力）；整支都在畫面內；毛隨風慢慢擺
 // - 按住拂塵拖：拂塵跟著手走，有一點延遲但不會跳；毛往移動的反方向拖
 // - 放開：拂塵花 1～3 秒慢慢回到原位，不會跳
 // - 按在拂塵外面：拿不起來
@@ -19,16 +20,19 @@ const run = (s, n, env) => {
 };
 const at = (p) => ({ x: p.x, y: p.y, vx: 0, vy: 0 });
 
-test("rests tilted on the right: handle upper-right, hair lower-left, fully on screen", () => {
+test("rests on the right, held like the temple statues: handle slanting down-right from the head, hair hanging straight down", () => {
   for (const [w, h] of [[1440, 900], [1024, 768], [390, 844]]) {
     const s = createFuchen();
     for (let i = 0; i < 60; i++) stepFuchen(s, { W: w, H: h, active: true, mouse: still });
-    const p = whiskPose(s, w, h);
+    const p = whiskPose(s, w, h); // x, y = 頭（毛掛的地方）
+    const hand = whiskPoint(p, 0); // 玉柄另一端（手握的地方）
     const tip = whiskPoint(p, 1);
-    assert.ok(p.x > w * 0.6 && p.x < w, `handle on the right (${p.x})`);
-    assert.ok(tip.x < p.x - p.len * 0.3 && tip.y > p.y + p.len * 0.6, "hair hangs to the lower left");
-    assert.ok(p.angle > 0.35 && p.angle < 0.7, `about 30 degrees (${p.angle})`);
-    for (const q of [p, tip]) {
+    assert.ok(p.x > w * 0.6 && p.x < w, `on the right (${p.x})`);
+    const slant = Math.atan2(hand.x - p.x, hand.y - p.y);
+    assert.ok(slant > 0.45 && slant < 0.8, `handle slants down-right about 35 degrees (${slant.toFixed(2)})`);
+    assert.ok(Math.abs(tip.x - p.x) < p.len * 0.08, `hair hangs straight down (${(tip.x - p.x).toFixed(1)})`);
+    assert.ok(tip.y > p.y + p.len * 0.5, "long hair below the head");
+    for (const q of [p, hand, tip]) {
       assert.ok(q.x > 0 && q.x < w && q.y > h * 0.1 && q.y < h * 0.92, "on screen");
     }
     assert.ok(p.len >= 160, "big enough to see");
@@ -118,7 +122,7 @@ test("letting go: it drifts back home over 1-3 seconds, no jumps", () => {
     assert.ok(Math.hypot(p.x - last.x, p.y - last.y) <= 12, "glides, no jumps");
     last = p;
     n++;
-    if (Math.hypot(p.x - home.x, p.y - home.y) < 6) break;
+    if (Math.hypot(p.x - home.x, p.y - home.y) < home.len * 0.03) break; // 平常會輕輕上下浮，差一點點就算到了
   }
   assert.ok(n >= 60 && n <= 180, `takes 1-3 s (${n} frames)`);
 });

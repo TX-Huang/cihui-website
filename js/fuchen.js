@@ -1,10 +1,11 @@
 // 九天玄女的拂塵：訪客可以拿起來揮，把霧拂開（「拂去塵埃」；呼應標語「智慧之神，指引明路」）。
 // 純計算（方便測試），畫面在 js/fuchen-view.js。時間單位是「格」（60 格 ≈ 1 秒）。
 //
-// 拂塵的姿勢：玉柄頂端在 (x, y)，整支轉 angle（0 = 直直往下垂；正的 = 毛往左下）。
-// 平常斜斜地浮在右邊；按住它就拿起來，跟著手走；放開就慢慢飄回原位。
-// bend：毛尖往旁邊偏多少（像素，拂塵自己的座標）。像彈簧一樣被拉回「風」要的位置，所以擺得慢、不會抖；
-// 拂塵在動的時候，毛往移動的反方向拖。毛的每一段照 hairOffset 偏：玉柄不動，越往毛尖偏越多。
+// 拂塵的姿勢照廟裡神像拿的樣子：(x, y) 是頭（毛掛的地方），玉柄從頭往右下斜 angle（從垂直量；
+// 另一端是手握的地方），毛從頭直直垂下來（重力）。
+// 平常浮在右邊；按住它就拿起來，跟著手走；放開就慢慢飄回原位。
+// bend：毛尖往左右偏多少（像素）。像彈簧一樣被拉回「風」要的位置，所以擺得慢、不會抖；
+// 拂塵在動的時候，毛往移動的反方向拖。毛的每一段照 hairOffset 偏：毛根不動，越往毛尖偏越多。
 //
 // 雲海：大門下半部飄著一片雲（畫面用開場動畫的雲圖）。這裡只記「每個地方還剩多少雲」
 // （FOG_COLS × FOG_ROWS 格，每格 0～1）。拂塵的毛掃過的地方雲散開，放著不管幾秒內慢慢合回來。
@@ -16,7 +17,7 @@ const COOL = 90; // 甩一下之後 1.5 秒內不會再掃出雲
 const WISP_LIFE = 300; // 一朵雲 5 秒
 const ASPECT = 394 / 900; // 拂塵圖的寬高比（tools/prep_weapons.py）
 const ROOT = 0.376; // 毛從整支的哪裡開始（weapons.json 的 fuchen.root）
-const REST_TILT = 0.5; // 平常斜 約 29 度
+const REST_TILT = 0.6; // 玉柄平常斜 約 34 度（神像拿拂塵的角度）
 const FOG_BACK = 0.01; // 霧每格補回「差多少」的 1%：1 秒補回約一半，5 秒幾乎補滿
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -25,11 +26,11 @@ const smooth = (a, b, x) => {
   return t * t * (3 - 2 * t);
 };
 
-// 拂塵平常的位置：x, y 是玉柄頂端，len 是整支的長度。
-// 斜著放，毛尖往左下；右邊留給神明的名字（右側那一排）
+// 拂塵平常的位置：x, y 是頭，len 是整支（玉柄 + 毛）的長度。
+// 玉柄往右下、毛往下；右邊留給神明的名字（右側那一排）
 export function fuchenAnchor(W, H) {
-  const len = clamp(Math.min(H * 0.42, W * 0.55), 160, 420);
-  return { x: W * 0.86, y: H * 0.28, len };
+  const len = clamp(Math.min(H * 0.48, W * 0.6), 180, 480);
+  return { x: W * 0.8, y: H * 0.26, len };
 }
 
 // 毛的第 s 段（0 = 毛根、1 = 毛尖）往旁邊偏多少
@@ -57,7 +58,7 @@ export function createFuchen() {
     vy: 0,
     angle: REST_TILT,
     held: false,
-    grab: null, // 拿起來時，手抓在哪裡（相對玉柄頂端）
+    grab: null, // 拿起來時，手抓在哪裡（相對頭）
     press: null, // 按下去的時間、位置（放開時判斷算不算「點一下」）
     lastTip: null,
     fog
@@ -69,32 +70,37 @@ export function whiskPose(s, W, H) {
   return { x: s.x ?? a.x, y: s.y ?? a.y, angle: s.angle, len: a.len, bend: s.bend };
 }
 
-// 拂塵上第 t 段（0 = 玉柄頂端、1 = 毛尖）在畫面上的位置（跟著毛彎）
+// 拂塵上第 t 段在畫面上的位置（拂塵圖由上到下：0 = 玉柄末端（手握）、ROOT = 頭、1 = 毛尖）
 export function whiskPoint(p, t) {
+  if (t <= ROOT) {
+    const d = (ROOT - t) * p.len; // 從頭沿著玉柄往右下
+    return { x: p.x + d * Math.sin(p.angle), y: p.y + d * Math.cos(p.angle) };
+  }
   const h = (t - ROOT) / (1 - ROOT);
-  const ox = h > 0 ? hairOffset(h, p.bend) : 0;
-  const ly = t * p.len;
-  const c = Math.cos(p.angle);
-  const sn = Math.sin(p.angle);
-  return { x: p.x + ox * c - ly * sn, y: p.y + ox * sn + ly * c };
+  return { x: p.x + hairOffset(h, p.bend), y: p.y + (t - ROOT) * p.len };
 }
 
-// 某一點在拂塵自己的座標：lx 往旁邊、ly 沿著拂塵往下
-function toLocal(p, q) {
+// 這一點在毛上嗎（from：從毛的第幾成開始算）
+function onHair(p, q, from = 0) {
+  const hairLen = (1 - ROOT) * p.len;
+  const dy = q.y - p.y;
+  if (dy < hairLen * from || dy > hairLen) return false;
+  const h = dy / hairLen;
+  const half = p.len * ASPECT * 0.5 * (0.35 + 0.65 * h); // 毛根窄、毛尖散開
+  return Math.abs(q.x - p.x - hairOffset(h, p.bend)) < half;
+}
+
+// 這一點在玉柄上嗎（寬鬆一點，好抓）
+function onHandle(p, q) {
   const dx = q.x - p.x;
   const dy = q.y - p.y;
-  const c = Math.cos(p.angle);
-  const sn = Math.sin(p.angle);
-  return { lx: dx * c + dy * sn, ly: -dx * sn + dy * c };
+  const along = dx * Math.sin(p.angle) + dy * Math.cos(p.angle);
+  const across = dx * Math.cos(p.angle) - dy * Math.sin(p.angle);
+  return along > -p.len * 0.03 && along < ROOT * p.len && Math.abs(across) < p.len * ASPECT * 0.2;
 }
 
-function onWhisk(p, q, from = 0) {
-  if (!q) return false;
-  const { lx, ly } = toLocal(p, q);
-  if (ly < p.len * from || ly > p.len) return false;
-  const h = (ly / p.len - ROOT) / (1 - ROOT);
-  const off = h > 0 ? hairOffset(h, p.bend) : 0;
-  return Math.abs(lx - off) < p.len * ASPECT * 0.5;
+function onWhisk(p, q) {
+  return !!q && (onHair(p, q) || onHandle(p, q));
 }
 
 // 這一點在拂塵上嗎（畫面用：滑鼠游標、手機上按住拂塵時不要捲動頁面）
@@ -173,8 +179,8 @@ function moveWhisk(s, a, mouse) {
   }
   s.x += s.vx;
   s.y += s.vy;
-  // 整支跟著移動方向斜一點（往左移：毛被拖在右邊）
-  const tilt = REST_TILT + clamp(s.vx * 0.012, -0.3, 0.3);
+  // 玉柄跟著移動方向斜一點點（像手腕帶著）
+  const tilt = REST_TILT + clamp(s.vx * 0.006, -0.15, 0.15);
   s.angle += (tilt - s.angle) * 0.08;
 }
 
@@ -183,7 +189,7 @@ function bendHair(s, pose, active, mouse) {
   const len = pose.len;
   const wind = len * 0.035 * (Math.sin(s.t * 0.011) + 0.5 * Math.sin(s.t * 0.027 + 1));
   s.bendV -= s.vx * 0.04;
-  if (active && !s.held && mouse && onWhisk(pose, mouse, 0.35)) {
+  if (active && !s.held && mouse && onHair(pose, mouse, 0.15)) {
     const vx = mouse.vx || 0;
     s.bendV += clamp(vx, -40, 40) * 0.015;
     if (Math.abs(vx) > 12) flick(s, whiskPoint(pose, 1), Math.sign(vx), len);
