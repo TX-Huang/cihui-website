@@ -8,6 +8,7 @@
 
 做法：
 1. 選格子：第 1～106 格每 2 格取 1 格（53 格）。第 107 格跟第 1 格一樣，不取（接回第 1 格剛好）。
+   每格播多久照翅膀動多少（wing_timing）：翅膀停住的地方快速帶過，看起來一直在拍、不會滑翔。
    影片裡身體本來就跟著拍翅上下，網頁上不用再加起伏。
 2. 去背：每一格背景的綠都不太一樣（量過：(7,236,15)～(29,198,45)），所以每一格自己量四個角的綠。
    跟綠的距離 → 透明度；邊緣把混進來的綠扣掉，殘留的綠壓掉。
@@ -44,6 +45,24 @@ def key(path):
     return np.dstack([rgb, a * 255]).clip(0, 255).astype(np.uint8)
 
 
+def wing_timing():
+    """每一格影片該播多久（原影片 1 格 = 1）：翅膀沒在動的格子快速帶過。
+    使用者 2026-11-15：「希望鳳凰可以持續拍翅膀，這個飛行路線應該沒辦法滑翔」。
+    量過：這段影片每拍一下，翅膀會停在水平位置約 10 格（0.4 秒）；接回開頭前後也慢下來（H3 把最後一格釘住的關係）。
+    看起來像在滑翔。做法：用鳥的上緣、下緣（翅膀張到最高、最低的地方）每格變多少當「翅膀在動多少」，
+    動得少的格子播得短（最短 0.2 格），動得多的照原速。整段從 4.4 秒變 3.3 秒，一次拍翅約 1.6 秒。"""
+    tops, bots = [], []
+    for i in range(1, 108):
+        im = np.asarray(Image.open(RAW / "phoenix2-cruise-frames" / f"{i:04d}.png").convert("RGB").resize((480, 272))).astype(float)
+        bg = np.median(np.concatenate([im[:10, :10].reshape(-1, 3), im[-10:, -10:].reshape(-1, 3)]), axis=0)
+        ys, _ = np.nonzero(np.sqrt(((im - bg) ** 2).sum(axis=2)) > 90)
+        tops.append(ys.min())
+        bots.append(ys.max())
+    act = np.abs(np.diff(tops)) + np.abs(np.diff(bots))  # act[i]：第 i+1 格到第 i+2 格翅膀動多少
+    act = np.convolve(act, [0.25, 0.5, 0.25], mode="same")  # 平滑一點，快慢之間不會突然切換
+    return np.clip((act + 0.5) / 4, 0.2, 1.0)
+
+
 def bbox(mask):
     ys, xs = np.nonzero(mask)
     return xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
@@ -64,17 +83,19 @@ def fly():
     rows = (len(frames) + COLS - 1) // COLS
     atlas = Image.new("RGBA", (COLS * CELL_W, rows * ch), (0, 0, 0, 0))
     rects = []
+    d = wing_timing()
     for i, f in enumerate(frames):
         cell = Image.fromarray(f, "RGBA").crop(box).resize((CELL_W, ch), Image.LANCZOS)
         x, y = (i % COLS) * CELL_W, (i // COLS) * ch
         atlas.alpha_composite(cell, (x, y))
-        # 每一格播多久（以原影片的格數算）：每 2 格取 1
-        rects.append([x, y, CELL_W, ch, 2])
+        # 每一格播多久（以原影片的格數算）：每 2 格取 1，翅膀沒在動的地方快速帶過（wing_timing）
+        p = PICK[i] - 1
+        rects.append([x, y, CELL_W, ch, round(float(d[p] + d[p + 1]), 3)])
     OUT.mkdir(parents=True, exist_ok=True)
     atlas.save(OUT / "fly.webp", quality=82, method=6)
     meta = {"atlas": list(atlas.size), "fps": 24, "frames": rects, "width": CELL_W, "height": ch, "ref": ref}
     (OUT / "fly.json").write_text(json.dumps(meta), encoding="utf-8")
-    print("fly", len(frames), "frames, cell", (CELL_W, ch), "atlas", atlas.size, "ref", ref, f"{(OUT / 'fly.webp').stat().st_size // 1024} KB")
+    print("fly", len(frames), "frames,", round(sum(r[4] for r in rects) / 24, 2), "s per loop, cell", (CELL_W, ch), "atlas", atlas.size, "ref", ref, f"{(OUT / 'fly.webp').stat().st_size // 1024} KB")
 
 
 def light(src, dst, width, crop=None, round_fade=False):
