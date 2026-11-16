@@ -25,6 +25,7 @@ const CURTAIN_H = D.y1 - D.y0;
 // 字的間距固定，門洞多大就掛幾排幾列（見 js/layout.js）
 const { cols: COLS, rows: ROWS } = curtainGrid(CURTAIN_W, CURTAIN_H);
 const PAD = 160;
+const FLOOR_FADE = 36; // 珠簾最下面在地板邊緣前淡掉的距離（設計座標）
 const CANVAS_W = CURTAIN_W + PAD * 2;
 const CANVAS_H = CURTAIN_H + PAD * 2;
 const FONT = `600 12px "Noto Serif TC", "Songti TC", "PMingLiU", serif`;
@@ -78,6 +79,17 @@ function layout() {
   canvas.style.height = `${CANVAS_H}px`;
   canvas.style.left = `${CURTAIN_X - PAD}px`;
   canvas.style.top = `${CURTAIN_Y - PAD}px`;
+  // 道場門：珠簾只畫在最裡面那層木框的門口裡（晃出去、往上拉的部分像是被木框擋住，不會跑到白牆上、蓋到匾），
+  // 最下面在地板邊緣前慢慢淡掉。油畫版的廟門沒有 opening：珠簾在拱門後面，本來就被擋住
+  const O = GATE.opening;
+  if (O) {
+    const left = CURTAIN_X - PAD;
+    const top = CURTAIN_Y - PAD;
+    canvas.style.clipPath = `inset(${O.y0 - top}px ${left + CANVAS_W - O.x1}px ${top + CANVAS_H - O.y1}px ${O.x0 - left}px)`;
+    const fade = `linear-gradient(to bottom, #000 ${O.y1 - top - FLOOR_FADE}px, transparent ${O.y1 - top}px)`;
+    canvas.style.maskImage = fade;
+    canvas.style.webkitMaskImage = fade;
+  }
 
   const wrap = $("gateWrap").style;
   wrap.width = `${GATE.w}px`;
@@ -154,7 +166,7 @@ function buildCloth(d, { rolled }) {
 
 // ── 珠簾放下來：先用大重力快速落下，落到底後短暫加大阻力（煞車），再回到平常的輕柔晃動 ──
 // 實測（26×32 珠簾，node 模擬）：重力 0.9 時 0.57 秒就垂到 9 成，太急；
-// 現在 0.28：約 1.2 秒垂到 9 成，慢慢落下，最長還是約 1.16 倍（多出來的部分藏在台階後面）
+// 現在 0.28：約 1.2 秒垂到 9 成，慢慢落下，最長還是約 1.16 倍（道場門的 door 長度已經算進去：拉長後剛好垂到地板邊緣，見 js/gate.js）
 const DROP_GRAVITY = 0.28;
 const DROP_TRIGGER = 0.7; // 落到 7 成長度就開始煞車，避免衝過頭拉太長
 const BRAKE_DAMPING = 0.88;

@@ -2,7 +2,7 @@
 
 // 大門要縮放多少倍才放得進畫面
 // 桌機：整座門都看得到，盡量大。
-// 手機：整座三開間放不下，改成「中間那一間剛好塞滿寬度」，兩側的門會超出畫面。
+// 手機：整座門放不下，改成「中間那一段（gate.centerBay）剛好塞滿寬度」，兩側會超出畫面。
 export function fitGate(vw, vh, gate) {
   if (vw <= 720) {
     const bay = gate.centerBay.x1 - gate.centerBay.x0;

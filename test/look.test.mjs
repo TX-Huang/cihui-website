@@ -13,9 +13,9 @@ import { GATE, gateFor, lookAssets, LOOK } from "../js/gate.js";
 const html = readFileSync("index.html", "utf8");
 const css = readFileSync("style.css", "utf8");
 
-test("without ?look=oil nothing changes: moon-white gate, background and intro", () => {
+test("without ?look=oil: the moon-white look (its gate is now the dojo gate, see test/gate-dojo.test.mjs), background and intro", () => {
   assert.equal(LOOK, "moon");
-  assert.equal(GATE.src, "assets/gate-grand.webp");
+  assert.equal(GATE.src, "assets/gate-dojo.webp");
   assert.deepEqual(gateFor("moon"), GATE);
   assert.deepEqual(gateFor("nonsense"), GATE);
   const a = lookAssets("moon");
