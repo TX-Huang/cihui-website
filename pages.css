@@ -934,7 +934,7 @@ footer .credit {
 }
 
 /* 核心交集：--apart 1 = 分開、0 = 合在一起；--label 兩個名字、--word「完整的能量防護」看得到多少。
-   捲到時 js/blueprint-view.js 播一次；沒有 JavaScript（或要求減少動畫）就是合起來的樣子 */
+   每次捲到時 js/blueprint-view.js 播；沒有 JavaScript（或要求減少動畫）就是合起來的樣子 */
 .bp-merge {
   --apart: 0;
   --label: 0;

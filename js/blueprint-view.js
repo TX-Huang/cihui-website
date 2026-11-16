@@ -2,7 +2,7 @@
 // 內容本來就寫在網頁上（光明燈的運勢線也是）；這裡只加：季節背景、旁邊的「一年」細線、三層護持的圓、祭改小問答、
 // 核心交集（兩團光合起來）、蓮花開。
 // 每一段各自出錯只會少那一段。要求減少動畫時：不做淡入淡出，核心交集直接是合起來的樣子。
-import { STOPS, jiegaiPlan, money, seasonMix, railStop, tierAt, mergeAt, mergeFrame, MERGE_MS } from "./blueprint.js";
+import { STOPS, jiegaiPlan, money, seasonMix, railStop, tierAt, mergeAt, mergeFrame, MERGE_MS, mergeCue } from "./blueprint.js";
 
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const $ = (id) => document.getElementById(id);
@@ -110,7 +110,7 @@ function setupQuiz() {
   update();
 }
 
-// ── 核心交集：捲到時播一次（兩團光合起來 → 「完整的能量防護」出現）；要求減少動畫就直接是合起來的樣子 ──
+// ── 核心交集：每次捲到時播（兩團光合起來 → 「完整的能量防護」出現）；要求減少動畫就直接是合起來的樣子 ──
 function setupMerge() {
   const merge = $("merge");
   const stage = merge?.querySelector(".merge-stage");
@@ -122,28 +122,38 @@ function setupMerge() {
     merge.style.setProperty("--word", f.word.toFixed(3));
   };
   set(mergeFrame(0));
+  let frame = 0;
   const play = () => {
     const t0 = performance.now();
     const tick = (now) => {
       set(mergeFrame(now - t0));
-      if (now - t0 < MERGE_MS) requestAnimationFrame(tick);
+      if (now - t0 < MERGE_MS) frame = requestAnimationFrame(tick);
     };
-    requestAnimationFrame(tick);
+    frame = requestAnimationFrame(tick);
   };
-  // 大半進到畫面、而且停留一下才播（從旁邊細線快速捲過去時不會在沒人看的時候播掉）
+  // 每次捲回來都再播一次（什麼時候播、什麼時候回到開頭由 mergeCue 決定）：
+  // 大半進到畫面、停留 0.3 秒才播（快速捲過去不會在沒人看的時候播掉）；完全看不到時才回到開頭
+  let state = "ready";
   let wait = 0;
-  const seen = new IntersectionObserver(
-    (entries) => {
+  const cue = (ratio) => {
+    const out = mergeCue(state, ratio);
+    state = out.state;
+    if (out.act === "wait") wait = setTimeout(() => cue(null), 300);
+    else if (out.act === "cancel") clearTimeout(wait);
+    else if (out.act === "play") play();
+    else if (out.act === "reset") {
       clearTimeout(wait);
-      if (entries[entries.length - 1].intersectionRatio >= 0.8)
-        wait = setTimeout(() => {
-          seen.disconnect();
-          play();
-        }, 300);
+      cancelAnimationFrame(frame);
+      set(mergeFrame(0));
+    }
+  };
+  new IntersectionObserver(
+    (entries) => {
+      const e = entries[entries.length - 1];
+      cue(e.isIntersecting ? e.intersectionRatio : 0);
     },
     { threshold: [0, 0.8] }
-  );
-  seen.observe(stage);
+  ).observe(stage);
 }
 
 // ── 蓮花開：捲到那一段時慢慢開 ──

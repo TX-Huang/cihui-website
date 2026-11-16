@@ -99,7 +99,7 @@ export function mergeAt(p) {
   return 1 - smooth(p);
 }
 
-// 核心交集的動畫（捲到時播一次）：播了 ms 毫秒 →
+// 核心交集的動畫（每次捲到時播）：播了 ms 毫秒 →
 //   apart：兩團光還分開多少（1 = 分開、0 = 合在一起）
 //   label：「光明燈」「新春祭改」兩個字看得到多少
 //   word：「完整的能量防護」看得到多少
@@ -113,4 +113,18 @@ export function mergeFrame(ms) {
     label: 1 - smooth((t - 0.08) / 0.24),
     word: smooth((t - 0.72) / 0.28)
   };
+}
+
+// 核心交集什麼時候播、什麼時候回到開頭（每次捲回來都再播一次）。
+// state：ready（在開頭等著）、waiting（大半進到畫面，等 0.3 秒確定有人在看）、played（播過了）
+// ratio：這一段看得到幾成（0～1）；null = 那 0.3 秒到了
+// act：wait 開始等、cancel 不等了、play 開始播、reset 回到開頭（只在完全看不到時）
+// 「大半」= 八成；瀏覽器在八成那條線回報時可能給 0.7999，所以比 0.79
+const NEAR_FULL = 0.79;
+export function mergeCue(state, ratio) {
+  if (ratio === null) return state === "waiting" ? { state: "played", act: "play" } : { state, act: null };
+  if (ratio <= 0) return { state: "ready", act: state === "ready" ? null : "reset" };
+  if (state === "ready" && ratio >= NEAR_FULL) return { state: "waiting", act: "wait" };
+  if (state === "waiting" && ratio < NEAR_FULL) return { state: "ready", act: "cancel" };
+  return { state, act: null };
 }

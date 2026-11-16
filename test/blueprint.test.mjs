@@ -19,9 +19,11 @@
 // 6. 光明燈：一張運勢線的圖，舊年運勢線往下、新年運勢線往上，在元旦交會（新年那條是金色）。
 //    2026-11-16 使用者：「點燈看看」的小動畫差別太小，拿掉（按鈕、那團燈光、「示意」的說明都拿掉）
 // 7. 核心交集：光明燈（金）和祭改（粉）兩團光。2026-11-16 使用者：要做成動畫，「完整的防護」不能跟後面的字疊在一起（很亂）。
-//    捲到這一段時自動播一次（約 3.5 秒）：兩團光從分開慢慢合成一團 →
+//    捲到這一段時自動播（約 3.5 秒）：兩團光從分開慢慢合成一團 →
 //    「光明燈」「新春祭改」兩個字在兩團光碰到之前就淡掉 → 合起來以後「完整的能量防護」才慢慢出現。
-//    兩組字任何時候都不會同時看得到。沒有 JavaScript、或要求減少動畫：直接是合起來的樣子
+//    兩組字任何時候都不會同時看得到。沒有 JavaScript、或要求減少動畫：直接是合起來的樣子。
+//    2026-11-16 使用者：可以重複播放 → 每次捲回這一段就再播一次（先完全離開畫面、再大半進到畫面）。
+//    回到開頭只在完全看不到的時候發生（不會在眼前跳回去）；還在畫面裡就停在合起來的樣子，不會一直重播
 // 9. 沒有 JavaScript 時，只有互動才有用的東西（祭改的合計）不顯示，其他內容照樣看得到
 // 10. 用語照簡報原文（2026-11-15 審查：「核心交集」不叫「兩盞光合一」，「一家之主代表祈求」不加字）
 // 8. 動畫都很慢、很順（優雅不躁動）；要求減少動畫時不動。
@@ -29,7 +31,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { LAMPS, JIEGAI_BASE, JIEGAI_ADDONS, STOPS, jiegaiPlan, money, seasonMix, railStop, tierAt, handover, handoverPaths, mergeAt, mergeFrame, MERGE_MS } from "../js/blueprint.js";
+import { LAMPS, JIEGAI_BASE, JIEGAI_ADDONS, STOPS, jiegaiPlan, money, seasonMix, railStop, tierAt, handover, handoverPaths, mergeAt, mergeFrame, MERGE_MS, mergeCue } from "../js/blueprint.js";
 
 const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
 const html = read("services.html");
@@ -209,7 +211,7 @@ test("handover curves: last year's energy falls, the new year's rises, they cros
   assert.ok(Math.abs(old[20] - fresh[20]) < 1e-9, "cross in the middle");
 });
 
-test("核心交集 plays once: the lights merge, the two names fade before they touch, then 完整的能量防護 appears (never both)", () => {
+test("核心交集 plays when reached: the lights merge, the two names fade before they touch, then 完整的能量防護 appears (never both)", () => {
   assert.ok(MERGE_MS >= 3000 && MERGE_MS <= 4500, `${MERGE_MS} ms`);
   assert.deepEqual(mergeFrame(0), { apart: 1, label: 1, word: 0 }, "starts apart, names showing");
   assert.deepEqual(mergeFrame(MERGE_MS), { apart: 0, label: 0, word: 1 }, "ends merged, only 完整的能量防護");
@@ -230,8 +232,33 @@ test("核心交集 plays once: the lights merge, the two names fade before they 
   const setup = view.slice(view.indexOf("function setupMerge"), view.indexOf("function setupScrollPieces"));
   assert.match(setup, /if \(.*\breduce\b.*\) return/, "reduced motion keeps the CSS (merged) picture");
   assert.match(setup, /"IntersectionObserver" in window/, "old browsers without it keep the merged picture instead of getting stuck half-way");
-  assert.match(setup, /intersectionRatio\s*>=\s*0\.8/, "plays only when the stage is really in view");
+  assert.match(setup, /cue\([^)]*intersectionRatio/, "how much of the stage is in view decides when it plays (see mergeCue)");
   assert.match(setup, /mergeFrame\(/);
+});
+
+test("核心交集 replays every time you come back to it, and only rewinds when nobody can see it", () => {
+  // mergeCue(狀態, 看到的比例)；比例是 null = 停留 0.3 秒的計時到了
+  const step = (state, ratio) => mergeCue(state, ratio);
+  assert.deepEqual(step("ready", 0.9), { state: "waiting", act: "wait" }, "mostly in view: wait a moment");
+  assert.deepEqual(step("ready", 0.7999), { state: "waiting", act: "wait" }, "the browser may report the 80% line as 0.7999");
+  assert.deepEqual(step("waiting", null), { state: "played", act: "play" }, "still there after the wait: play");
+  assert.deepEqual(step("waiting", 0.5), { state: "ready", act: "cancel" }, "scrolled past quickly: do not play unseen");
+  assert.deepEqual(step("ready", null), { state: "ready", act: null }, "a stale timer does nothing");
+  assert.deepEqual(step("played", 0.9), { state: "played", act: null }, "stays merged while on screen (no endless replay)");
+  assert.deepEqual(step("played", 0.4), { state: "played", act: null }, "half visible: no rewind in front of you");
+  assert.deepEqual(step("played", 0), { state: "ready", act: "reset" }, "fully out of view: rewind to the start");
+  assert.deepEqual(step("waiting", 0), { state: "ready", act: "reset" });
+  assert.deepEqual(step("ready", 0), { state: "ready", act: null }, "already at the start");
+  // 走一趟：看到 → 播 → 離開 → 回來 → 又播
+  let s = "ready";
+  const acts = [];
+  for (const r of [0.9, null, 0.5, 0, 0.3, 0.9, null]) {
+    const out = step(s, r);
+    s = out.state;
+    if (out.act) acts.push(out.act);
+  }
+  assert.deepEqual(acts, ["wait", "play", "reset", "wait", "play"], "plays again on the second visit");
+  assert.match(read("js/blueprint-view.js"), /mergeCue\(/, "the page uses it");
 });
 
 test("the lotus opens slowly as you reach that part", () => {
