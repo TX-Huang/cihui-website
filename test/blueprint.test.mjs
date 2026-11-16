@@ -22,8 +22,10 @@
 //    捲到這一段時自動播（約 3.5 秒）：兩團光從分開慢慢合成一團 →
 //    「光明燈」「新春祭改」兩個字在兩團光碰到之前就淡掉 → 合起來以後「完整的能量防護」才慢慢出現。
 //    兩組字任何時候都不會同時看得到。沒有 JavaScript、或要求減少動畫：直接是合起來的樣子。
-//    2026-11-16 使用者：可以重複播放 → 每次捲回這一段就再播一次（先完全離開畫面、再大半進到畫面）。
-//    回到開頭只在完全看不到的時候發生（不會在眼前跳回去）；還在畫面裡就停在合起來的樣子，不會一直重播
+//    2026-11-16 使用者：可以重複播放 → 每次捲回這一段就從頭播（先完全離開畫面、再大半進到畫面）。
+//    回到開頭只在完全看不到的時候發生（不會在眼前跳回去）。
+//    2026-11-16 使用者：要循環播放 → 在畫面裡就一直循環：合起來 → 停一下 → 慢慢倒著分開
+//    （先淡掉「完整的能量防護」，兩團光分開後名字才出現）→ 停一下 → 再合起來。整圈都很順，沒有跳回去的地方
 // 9. 沒有 JavaScript 時，只有互動才有用的東西（祭改的合計）不顯示，其他內容照樣看得到
 // 10. 用語照簡報原文（2026-11-15 審查：「核心交集」不叫「兩盞光合一」，「一家之主代表祈求」不加字）
 // 8. 動畫都很慢、很順（優雅不躁動）；要求減少動畫時不動。
@@ -31,7 +33,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { LAMPS, JIEGAI_BASE, JIEGAI_ADDONS, STOPS, jiegaiPlan, money, seasonMix, railStop, tierAt, handover, handoverPaths, mergeAt, mergeFrame, MERGE_MS, mergeCue } from "../js/blueprint.js";
+import { LAMPS, JIEGAI_BASE, JIEGAI_ADDONS, STOPS, jiegaiPlan, money, seasonMix, railStop, tierAt, handover, handoverPaths, mergeAt, mergeFrame, MERGE_MS, mergeCue, mergeLoop, LOOP_MS } from "../js/blueprint.js";
 
 const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
 const html = read("services.html");
@@ -233,10 +235,29 @@ test("核心交集 plays when reached: the lights merge, the two names fade befo
   assert.match(setup, /if \(.*\breduce\b.*\) return/, "reduced motion keeps the CSS (merged) picture");
   assert.match(setup, /"IntersectionObserver" in window/, "old browsers without it keep the merged picture instead of getting stuck half-way");
   assert.match(setup, /cue\([^)]*intersectionRatio/, "how much of the stage is in view decides when it plays (see mergeCue)");
-  assert.match(setup, /mergeFrame\(/);
+  assert.match(setup, /cancelAnimationFrame\(frame\)/, "rewinding stops the loop (no loop left running off screen)");
 });
 
-test("核心交集 replays every time you come back to it, and only rewinds when nobody can see it", () => {
+test("核心交集 loops while on screen: merge, hold, part again slowly, hold, merge — smooth all the way round", () => {
+  assert.ok(LOOP_MS >= 2 * MERGE_MS + 2000 && LOOP_MS <= 14000, `one round is ${LOOP_MS} ms`);
+  assert.deepEqual(mergeLoop(0), mergeFrame(0), "starts apart, names showing");
+  assert.deepEqual(mergeLoop(MERGE_MS), mergeFrame(MERGE_MS), "merged after the first half");
+  assert.deepEqual(mergeLoop(MERGE_MS + 1000), mergeFrame(MERGE_MS), "holds merged for a while");
+  assert.deepEqual(mergeLoop(LOOP_MS - 300), mergeFrame(0), "holds apart for a moment before merging again");
+  // 兩圈走下來：每一格都很順（包括一圈接下一圈的地方）、兩組字不會同時出現、名字只在兩團光沒碰到時出現
+  let prev = mergeLoop(0);
+  for (let t = 16; t <= LOOP_MS * 2; t += 16) {
+    const f = mergeLoop(t);
+    assert.ok(f.label === 0 || f.word === 0, `never both sets of words at ${t} ms`);
+    if (f.label > 0) assert.ok(f.apart >= 160 / 192, `names only while the lights are apart (${t} ms)`);
+    for (const k of ["apart", "label", "word"]) assert.ok(Math.abs(f[k] - prev[k]) < 0.03, `${k} moves smoothly at ${t} ms`);
+    prev = f;
+  }
+  for (const t of [0, 1234, 5000, 9999]) assert.deepEqual(mergeLoop(t + LOOP_MS), mergeLoop(t), "every round is the same");
+  assert.match(read("js/blueprint-view.js"), /mergeLoop\(/, "the page loops it");
+});
+
+test("核心交集 starts from the beginning every time you come back to it, and only rewinds when nobody can see it", () => {
   // mergeCue(狀態, 看到的比例)；比例是 null = 停留 0.3 秒的計時到了
   const step = (state, ratio) => mergeCue(state, ratio);
   assert.deepEqual(step("ready", 0.9), { state: "waiting", act: "wait" }, "mostly in view: wait a moment");
@@ -244,7 +265,7 @@ test("核心交集 replays every time you come back to it, and only rewinds when
   assert.deepEqual(step("waiting", null), { state: "played", act: "play" }, "still there after the wait: play");
   assert.deepEqual(step("waiting", 0.5), { state: "ready", act: "cancel" }, "scrolled past quickly: do not play unseen");
   assert.deepEqual(step("ready", null), { state: "ready", act: null }, "a stale timer does nothing");
-  assert.deepEqual(step("played", 0.9), { state: "played", act: null }, "stays merged while on screen (no endless replay)");
+  assert.deepEqual(step("played", 0.9), { state: "played", act: null }, "keeps looping while on screen (no restart from the beginning)");
   assert.deepEqual(step("played", 0.4), { state: "played", act: null }, "half visible: no rewind in front of you");
   assert.deepEqual(step("played", 0), { state: "ready", act: "reset" }, "fully out of view: rewind to the start");
   assert.deepEqual(step("waiting", 0), { state: "ready", act: "reset" });

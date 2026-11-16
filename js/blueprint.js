@@ -99,7 +99,7 @@ export function mergeAt(p) {
   return 1 - smooth(p);
 }
 
-// 核心交集的動畫（每次捲到時播）：播了 ms 毫秒 →
+// 核心交集的動畫（循環的前半圈；倒著播就是後半圈）：播了 ms 毫秒 →
 //   apart：兩團光還分開多少（1 = 分開、0 = 合在一起）
 //   label：「光明燈」「新春祭改」兩個字看得到多少
 //   word：「完整的能量防護」看得到多少
@@ -115,8 +115,23 @@ export function mergeFrame(ms) {
   };
 }
 
-// 核心交集什麼時候播、什麼時候回到開頭（每次捲回來都再播一次）。
-// state：ready（在開頭等著）、waiting（大半進到畫面，等 0.3 秒確定有人在看）、played（播過了）
+// 核心交集一直循環：合起來（MERGE_MS）→ 停一下 → 倒著慢慢分開（MERGE_MS）→ 停一下 → 再合起來。
+// 倒著播也一樣：先淡掉「完整的能量防護」，兩團光分開以後名字才出現，所以兩組字不會同時出現
+const HOLD_MERGED = 2400;
+const HOLD_APART = 1200;
+export const LOOP_MS = 2 * MERGE_MS + HOLD_MERGED + HOLD_APART;
+export function mergeLoop(ms) {
+  let t = ((ms % LOOP_MS) + LOOP_MS) % LOOP_MS;
+  if (t < MERGE_MS) return mergeFrame(t);
+  t -= MERGE_MS;
+  if (t < HOLD_MERGED) return mergeFrame(MERGE_MS);
+  t -= HOLD_MERGED;
+  if (t < MERGE_MS) return mergeFrame(MERGE_MS - t);
+  return mergeFrame(0);
+}
+
+// 核心交集什麼時候開始循環、什麼時候回到開頭（每次捲回來都從頭開始）。
+// state：ready（在開頭等著）、waiting（大半進到畫面，等 0.3 秒確定有人在看）、played（在循環中）
 // ratio：這一段看得到幾成（0～1）；null = 那 0.3 秒到了
 // act：wait 開始等、cancel 不等了、play 開始播、reset 回到開頭（只在完全看不到時）
 // 「大半」= 八成；瀏覽器在八成那條線回報時可能給 0.7999，所以比 0.79
