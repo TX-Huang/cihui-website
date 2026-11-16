@@ -70,12 +70,6 @@ export function tierAt(dx, dy, R) {
   return null;
 }
 
-// 點燈：LIGHT_MS 毫秒慢慢亮起來（起步、到頂都慢）
-export const LIGHT_MS = 2600;
-export function lampGlow(ms) {
-  return smooth(ms / LIGHT_MS);
-}
-
 // 運勢交替的兩條線（0～1，n+1 個點）：舊年往下、新年往上，在中間（元旦）交會
 export function handover(n) {
   const sig = (x) => 1 / (1 + Math.exp(-8 * (x - 0.5)));
@@ -91,7 +85,32 @@ export function handover(n) {
   return { old, fresh };
 }
 
-// 兩盞光合一：p（捲到這一段的進度 0～1）→ 兩團光還分開多少（1 = 分開、0 = 合在一起）
+// 運勢線圖（viewBox 320×160）上的兩條線和元旦那一點的高度。
+// services.html 直接寫著這些數字（沒有 JavaScript 也看得到）；測試確認兩邊一樣，改了這裡就要把新數字貼回網頁
+export function handoverPaths() {
+  const { old, fresh } = handover(40);
+  const y = (v) => (140 - v * 112).toFixed(1);
+  const path = (vals) => vals.map((v, i) => `${i ? "L" : "M"}${(8 + (304 * i) / 40).toFixed(1)} ${y(v)}`).join(" ");
+  return { old: path(old), fresh: path(fresh), dotY: y(fresh[20]) };
+}
+
+// 捲動的進度 p（0～1）→ 1 慢慢變 0（蓮花開用）
 export function mergeAt(p) {
   return 1 - smooth(p);
+}
+
+// 核心交集的動畫（捲到時播一次）：播了 ms 毫秒 →
+//   apart：兩團光還分開多少（1 = 分開、0 = 合在一起）
+//   label：「光明燈」「新春祭改」兩個字看得到多少
+//   word：「完整的能量防護」看得到多少
+// 順序：先淡掉兩個名字（兩團光幾乎還沒動、一定還沒碰到），再慢慢合起來，合起來以後才出現「完整的能量防護」。
+// 兩組字不會同時出現
+export const MERGE_MS = 3600;
+export function mergeFrame(ms) {
+  const t = ms / MERGE_MS;
+  return {
+    apart: 1 - smooth((t - 0.25) / 0.47),
+    label: 1 - smooth((t - 0.08) / 0.24),
+    word: smooth((t - 0.72) / 0.28)
+  };
 }

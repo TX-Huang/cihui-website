@@ -1,7 +1,8 @@
 // 服務頁「從容修行的年度藍圖」的互動和動畫（計算在 js/blueprint.js）。
-// 內容本來就寫在網頁上；這裡只加：季節背景、旁邊的「一年」細線、三層護持的圓、點燈、祭改小問答、兩盞光合一、蓮花開。
-// 每一段各自出錯只會少那一段。要求減少動畫時：不做淡入淡出，點燈直接亮。
-import { STOPS, jiegaiPlan, money, seasonMix, railStop, tierAt, lampGlow, LIGHT_MS, handover, mergeAt } from "./blueprint.js";
+// 內容本來就寫在網頁上（光明燈的運勢線也是）；這裡只加：季節背景、旁邊的「一年」細線、三層護持的圓、祭改小問答、
+// 核心交集（兩團光合起來）、蓮花開。
+// 每一段各自出錯只會少那一段。要求減少動畫時：不做淡入淡出，核心交集直接是合起來的樣子。
+import { STOPS, jiegaiPlan, money, seasonMix, railStop, tierAt, mergeAt, mergeFrame, MERGE_MS } from "./blueprint.js";
 
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const $ = (id) => document.getElementById(id);
@@ -65,50 +66,33 @@ function setupYear() {
   return update;
 }
 
-// ── 三層護持：點圈或點名字，那一層亮起來 ──
+// ── 三層護持：滑鼠移到哪一圈（或右邊那一列），那一圈和那一列一起亮 ──
+// 移開後留在最後亮的那一層（滑過中間的空隙不會閃回去）。手機沒有滑鼠：點一下也會亮；鍵盤移到名字上也會亮
 function setupTiers() {
   const rings = $("rings");
   const wrap = rings?.closest(".bp-tiers");
   if (!wrap) return;
+  let now = null;
   const pick = (tier) => {
+    if (!tier || tier === now) return;
+    now = tier;
     for (const el of wrap.querySelectorAll("[data-tier]")) el.classList.toggle("is-on", el.dataset.tier === tier);
     for (const b of wrap.querySelectorAll("button[data-tier]")) b.setAttribute("aria-pressed", String(b.dataset.tier === tier));
   };
-  rings.addEventListener("click", (e) => {
+  const ringAt = (e) => {
     const r = rings.getBoundingClientRect();
-    const tier = tierAt(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2), r.width / 2);
-    if (tier) pick(tier);
-  });
-  for (const b of wrap.querySelectorAll("button[data-tier]")) b.addEventListener("click", () => pick(b.dataset.tier));
+    return tierAt(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2), r.width / 2);
+  };
+  // 手指滑過去捲頁面不算「懸浮」（手機用點的）
+  const hovering = (e) => e.pointerType !== "touch";
+  rings.addEventListener("pointermove", (e) => hovering(e) && pick(ringAt(e)));
+  rings.addEventListener("click", (e) => pick(ringAt(e)));
+  for (const row of wrap.querySelectorAll(".tier-list li[data-tier]")) row.addEventListener("pointerenter", (e) => hovering(e) && pick(row.dataset.tier));
+  for (const b of wrap.querySelectorAll("button[data-tier]")) {
+    b.addEventListener("click", () => pick(b.dataset.tier));
+    b.addEventListener("focus", () => pick(b.dataset.tier));
+  }
   pick("core");
-}
-
-// ── 光明燈：兩條運勢線；按「點燈」慢慢亮 ──
-function setupLamp() {
-  const fig = $("lamp");
-  const button = $("lampButton");
-  if (!fig || !button) return;
-  const { old, fresh } = handover(40);
-  const path = (vals) => vals.map((v, i) => `${i ? "L" : "M"}${(8 + (304 * i) / 40).toFixed(1)} ${(140 - v * 112).toFixed(1)}`).join(" ");
-  fig.querySelector(".curve-old").setAttribute("d", path(old));
-  fig.querySelector(".curve-new").setAttribute("d", path(fresh));
-  fig.querySelector(".curve-dot").setAttribute("cy", (140 - fresh[20] * 112).toFixed(1));
-  const set = (g) => fig.style.setProperty("--glow", g.toFixed(3));
-  set(0);
-  button.addEventListener("click", () => {
-    if (fig.classList.contains("is-lit")) return;
-    fig.classList.add("is-lit");
-    // 不用 disabled：鍵盤的焦點留在按鈕上，讀螢幕軟體也會唸出新的字
-    button.textContent = "燈亮了（示意）";
-    button.setAttribute("aria-disabled", "true");
-    if (reduce) return set(1);
-    const t0 = performance.now();
-    const tick = (now) => {
-      set(lampGlow(now - t0));
-      if (now - t0 < LIGHT_MS) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  });
 }
 
 // ── 祭改小問答：勾了什麼 → 哪些項目亮起來、合計多少 ──
@@ -126,9 +110,44 @@ function setupQuiz() {
   update();
 }
 
-// ── 兩盞光合一、蓮花開：捲到那一段時慢慢發生 ──
-function setupScrollPieces() {
+// ── 核心交集：捲到時播一次（兩團光合起來 → 「完整的能量防護」出現）；要求減少動畫就直接是合起來的樣子 ──
+function setupMerge() {
   const merge = $("merge");
+  const stage = merge?.querySelector(".merge-stage");
+  // 減少動畫、或很舊的瀏覽器（沒有 IntersectionObserver）：用 CSS 預設（合起來的樣子），不會卡在一半
+  if (!stage || reduce || !("IntersectionObserver" in window)) return;
+  const set = (f) => {
+    merge.style.setProperty("--apart", f.apart.toFixed(3));
+    merge.style.setProperty("--label", f.label.toFixed(3));
+    merge.style.setProperty("--word", f.word.toFixed(3));
+  };
+  set(mergeFrame(0));
+  const play = () => {
+    const t0 = performance.now();
+    const tick = (now) => {
+      set(mergeFrame(now - t0));
+      if (now - t0 < MERGE_MS) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  };
+  // 大半進到畫面、而且停留一下才播（從旁邊細線快速捲過去時不會在沒人看的時候播掉）
+  let wait = 0;
+  const seen = new IntersectionObserver(
+    (entries) => {
+      clearTimeout(wait);
+      if (entries[entries.length - 1].intersectionRatio >= 0.8)
+        wait = setTimeout(() => {
+          seen.disconnect();
+          play();
+        }, 300);
+    },
+    { threshold: [0, 0.8] }
+  );
+  seen.observe(stage);
+}
+
+// ── 蓮花開：捲到那一段時慢慢開 ──
+function setupScrollPieces() {
   const lotus = $("lotus");
   // 這一段的進度：段落上緣從畫面八成高走到兩成高 = 0 → 1
   const progress = (el) => {
@@ -136,7 +155,6 @@ function setupScrollPieces() {
     return Math.min(1, Math.max(0, (innerHeight * 0.8 - r.top) / (innerHeight * 0.6)));
   };
   return () => {
-    if (merge) merge.style.setProperty("--apart", reduce ? "0" : mergeAt(progress(merge)).toFixed(3));
     if (lotus) lotus.style.setProperty("--bloom", reduce ? "1" : (1 - mergeAt(progress(lotus))).toFixed(3));
   };
 }
@@ -145,9 +163,9 @@ const updates = [];
 for (const [name, setup] of [
   ["一年細線", setupYear],
   ["三層護持", setupTiers],
-  ["光明燈", setupLamp],
   ["祭改小問答", setupQuiz],
-  ["捲動的小動畫", setupScrollPieces]
+  ["核心交集", setupMerge],
+  ["蓮花", setupScrollPieces]
 ]) {
   try {
     const u = setup();

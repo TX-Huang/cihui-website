@@ -607,7 +607,7 @@ footer .credit {
 .journey {
   background: linear-gradient(to bottom, var(--paper), var(--tint, var(--paper)) 320px);
 }
-/* 只有互動才有用的東西（合計、點燈按鈕、「點一圈」）：沒有 JavaScript 時不顯示 */
+/* 只有互動才有用的東西（祭改的合計）：沒有 JavaScript 時不顯示 */
 .journey:not(.is-live) .js-only {
   display: none;
 }
@@ -706,7 +706,7 @@ footer .credit {
   box-shadow: 0 0 0 4px rgba(212, 170, 90, 0.18), 0 0 16px rgba(212, 170, 90, 0.6);
 }
 
-/* 三層護持：三個同心圓，點哪一圈哪一圈亮；外圈有一顆光點很慢地繞 */
+/* 三層護持：三個同心圓，滑鼠移到哪一圈（或右邊那一列）就一起亮；外圈有一顆光點很慢地繞 */
 .bp-tiers {
   display: grid;
   grid-template-columns: 240px 1fr;
@@ -765,10 +765,11 @@ footer .credit {
 .tier-list li {
   padding: 12px 16px;
   border-radius: 12px;
-  transition: background-color 900ms var(--ease);
+  transition: background-color 900ms var(--ease), box-shadow 900ms var(--ease);
 }
 .tier-list li.is-on {
   background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 24px rgba(212, 170, 90, 0.28);
 }
 .tier-name {
   display: block;
@@ -779,24 +780,25 @@ footer .credit {
   letter-spacing: 0.08em;
   color: var(--gold-text);
   cursor: pointer;
+  transition: text-shadow 900ms var(--ease);
+}
+/* 亮起來的那一列：名字發出金色的光 */
+.tier-list li.is-on .tier-name {
+  text-shadow: 0 0 12px rgba(212, 170, 90, 0.75), 0 0 2px rgba(212, 170, 90, 0.5);
 }
 .tier-desc {
   font-size: 15px;
 }
 
-/* 光明燈：兩條運勢線，點燈後新年那條亮起來、中間一團燈光（--glow：0～1） */
+/* 光明燈：兩條運勢線，舊年往下（灰）、新年往上（金，微微發光），在元旦交會 */
 .lamp {
-  position: relative;
   margin: 0 0 16px;
   padding: 16px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.4);
   border: 1px solid var(--line);
-  --glow: 0;
 }
 .handover {
-  position: relative;
-  z-index: 1;
   display: block;
   width: 100%;
   max-width: 480px;
@@ -810,12 +812,11 @@ footer .credit {
 }
 .curve-old {
   stroke: #8b8178;
-  opacity: calc(1 - var(--glow) * 0.65);
+  opacity: 0.6;
 }
 .curve-new {
   stroke: var(--gold);
-  opacity: calc(0.35 + var(--glow) * 0.65);
-  filter: drop-shadow(0 0 calc(var(--glow) * 6px) rgba(212, 170, 90, 0.9));
+  filter: drop-shadow(0 0 4px rgba(212, 170, 90, 0.7));
 }
 .curve-axis {
   stroke: rgba(168, 132, 74, 0.35);
@@ -823,53 +824,15 @@ footer .credit {
 }
 .curve-dot {
   fill: var(--gold);
-  filter: drop-shadow(0 0 calc(var(--glow) * 10px) rgba(255, 210, 120, 1));
+  filter: drop-shadow(0 0 6px rgba(255, 210, 120, 1));
 }
 .handover text {
   font-family: var(--sans);
   font-size: 11px;
   fill: var(--text-soft);
 }
-.lamp-light {
-  position: absolute;
-  left: 50%;
-  top: 44%;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 214, 140, 0.85), rgba(255, 214, 140, 0) 68%);
-  opacity: var(--glow);
-  transform: translate(-50%, -50%) scale(calc(0.6 + var(--glow) * 0.4));
-  pointer-events: none;
-}
-.lamp-button {
-  position: relative;
-  z-index: 1;
-  display: block;
-  margin: 8px auto;
-  padding: 8px 28px;
-  border: 1px solid var(--gold);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.7);
-  font: 500 15px var(--sans);
-  letter-spacing: 0.12em;
-  color: var(--gold-text);
-  cursor: pointer;
-  transition: background-color 600ms var(--ease), box-shadow 600ms var(--ease);
-}
-.lamp-button:hover {
-  background: #fff;
-  box-shadow: 0 0 16px rgba(212, 170, 90, 0.35);
-}
-.lamp-button[aria-disabled="true"] {
-  cursor: default;
-  border-color: transparent;
-  background: none;
-  box-shadow: none;
-}
 .lamp figcaption {
-  position: relative;
-  z-index: 1;
+  margin-top: 12px;
   text-align: center;
   font-size: 14px;
   color: var(--text-soft);
@@ -970,9 +933,12 @@ footer .credit {
   color: var(--gold-text);
 }
 
-/* 兩盞光合一：--apart 1 = 分開，0 = 合在一起（沒有 JavaScript 時停在一半） */
+/* 核心交集：--apart 1 = 分開、0 = 合在一起；--label 兩個名字、--word「完整的能量防護」看得到多少。
+   捲到時 js/blueprint-view.js 播一次；沒有 JavaScript（或要求減少動畫）就是合起來的樣子 */
 .bp-merge {
-  --apart: 0.5;
+  --apart: 0;
+  --label: 0;
+  --word: 1;
 }
 .merge-stage {
   position: relative;
@@ -995,15 +961,15 @@ footer .credit {
 }
 .glow-lamp {
   background: radial-gradient(circle, rgba(240, 200, 120, 0.75), rgba(240, 200, 120, 0) 70%);
-  transform: translateX(calc(-50% - var(--apart) * 96px));
+  transform: translateX(calc(-50% - var(--apart) * 96px)) scale(calc(1 + var(--word) * 0.25));
 }
 .glow-gai {
   background: radial-gradient(circle, rgba(236, 170, 180, 0.7), rgba(236, 170, 180, 0) 70%);
-  transform: translateX(calc(-50% + var(--apart) * 96px));
+  transform: translateX(calc(-50% + var(--apart) * 96px)) scale(calc(1 + var(--word) * 0.25));
 }
 .glow-lamp,
 .glow-gai {
-  color: rgba(47, 42, 37, calc(0.3 + var(--apart) * 0.7));
+  color: rgba(47, 42, 37, var(--label));
 }
 .merge-word {
   position: absolute;
@@ -1015,7 +981,7 @@ footer .credit {
   font-weight: 600;
   letter-spacing: 0.12em;
   color: var(--gold-text);
-  opacity: calc(1 - var(--apart));
+  opacity: var(--word);
 }
 
 /* 蟠桃、蓮花：首頁已經有的圖；蓮花捲到時慢慢從花苞開成花（--bloom：0～1） */
