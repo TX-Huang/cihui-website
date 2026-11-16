@@ -26,6 +26,16 @@
 //    回到開頭只在完全看不到的時候發生（不會在眼前跳回去）。
 //    2026-11-16 使用者：要循環播放 → 在畫面裡就一直循環：合起來 → 停一下 → 慢慢倒著分開
 //    （先淡掉「完整的能量防護」，兩團光分開後名字才出現）→ 停一下 → 再合起來。整圈都很順，沒有跳回去的地方
+// 11. 全年平安藍圖（2026-11-16 使用者選 A「一年的線」）：一條從元旦到歲末的線，四站放在真的時間上
+//     （元旦在最左、新春離它不遠、農曆八月約在七成的地方）。「不定期」不是一個點，是沿著整年的一條淡粉帶子（隨時都能回娘家）。
+//     顏色照三層護持：核心（元旦、新春）實心金點、自由（八月）空心金圈、隨喜（不定期）淡粉帶子。
+//     捲到這裡（大半看得到、停 0.3 秒）時，光從元旦慢慢走到歲末（約 3 秒）；光走到哪一站，那一站才亮。
+//     每次捲回來都從頭走一次（完全看不到時才回到開頭，跟核心交集一樣）。沒有 JavaScript、或要求減少動畫：整條直接是亮的。
+//     點任何一站，慢慢捲回上面那一段。「祭改與祈福模組」改成「祭改與祈福」（「模組」像電腦用語）。
+//     加一句：核心只要小燈 $1,200 ＋ 祭改 $700，一年 $1,900 起（數字跟 js/blueprint.js 一樣）。
+//     手機上字不會疊在一起（線上面放元旦、八月，線下面放新春、不定期；右半邊的字往左長），最窄的 320 寬也一樣，字也不會斷行。
+//     2026-11-16 審查：線上的點也能點（點是連結的一部分）；點了以後鍵盤的位置跟著過去；
+//     光還沒走到的站只是點變灰、字變淡一點，字還是看得清楚（不整個變透明）；列印時整條是亮的。
 // 9. 沒有 JavaScript 時，只有互動才有用的東西（祭改的合計）不顯示，其他內容照樣看得到
 // 10. 用語照簡報原文（2026-11-15 審查：「核心交集」不叫「兩盞光合一」，「一家之主代表祈求」不加字）
 // 8. 動畫都很慢、很順（優雅不躁動）；要求減少動畫時不動。
@@ -33,7 +43,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { LAMPS, JIEGAI_BASE, JIEGAI_ADDONS, STOPS, jiegaiPlan, money, seasonMix, railStop, tierAt, handover, handoverPaths, mergeAt, mergeFrame, MERGE_MS, mergeCue, mergeLoop, LOOP_MS } from "../js/blueprint.js";
+import { LAMPS, JIEGAI_BASE, JIEGAI_ADDONS, STOPS, jiegaiPlan, money, seasonMix, railStop, tierAt, handover, handoverPaths, mergeAt, mergeFrame, MERGE_MS, viewCue, mergeLoop, LOOP_MS, coreFrom, yearFrame, YEAR_MS, stopAt } from "../js/blueprint.js";
 
 const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
 const html = read("services.html");
@@ -231,11 +241,13 @@ test("核心交集 plays when reached: the lights merge, the two names fade befo
   // 沒有 JavaScript 時是合起來的樣子；捲到才播；要求減少動畫直接到最後
   assert.match(read("pages.css"), /\.bp-merge\s*\{[^}]*--apart:\s*0;[^}]*--label:\s*0;[^}]*--word:\s*1/, "no-JS default is the merged picture");
   const view = read("js/blueprint-view.js");
-  const setup = view.slice(view.indexOf("function setupMerge"), view.indexOf("function setupScrollPieces"));
+  const setup = view.slice(view.indexOf("function setupMerge"), view.indexOf("function setupYearLine"));
   assert.match(setup, /if \(.*\breduce\b.*\) return/, "reduced motion keeps the CSS (merged) picture");
   assert.match(setup, /"IntersectionObserver" in window/, "old browsers without it keep the merged picture instead of getting stuck half-way");
-  assert.match(setup, /cue\([^)]*intersectionRatio/, "how much of the stage is in view decides when it plays (see mergeCue)");
-  assert.match(setup, /cancelAnimationFrame\(frame\)/, "rewinding stops the loop (no loop left running off screen)");
+  assert.match(setup, /playWhenSeen\(/, "plays when seen (shared with 全年平安藍圖)");
+  const helper = view.slice(view.indexOf("function playWhenSeen"), view.indexOf("function setupMerge"));
+  assert.match(helper, /cue\([^)]*intersectionRatio/, "how much of it is in view decides when it plays (see viewCue)");
+  assert.match(helper, /cancelAnimationFrame\(frame\)/, "rewinding stops the loop (no loop left running off screen)");
 });
 
 test("核心交集 loops while on screen: merge, hold, part again slowly, hold, merge — smooth all the way round", () => {
@@ -254,12 +266,15 @@ test("核心交集 loops while on screen: merge, hold, part again slowly, hold, 
     prev = f;
   }
   for (const t of [0, 1234, 5000, 9999]) assert.deepEqual(mergeLoop(t + LOOP_MS), mergeLoop(t), "every round is the same");
-  assert.match(read("js/blueprint-view.js"), /mergeLoop\(/, "the page loops it");
+  const view = read("js/blueprint-view.js");
+  assert.match(view, /playWhenSeen\(stage, mergeLoop, set\);/, "the page loops it (no end time given)");
+  assert.match(view, /function playWhenSeen\(el, frameAt, set, until = Infinity\)/, "no end time = keeps going");
+  assert.match(view, /if \(ms < until\) frame = requestAnimationFrame\(tick\)/, "the next frame is asked for until the end time (forever for 核心交集)");
 });
 
 test("核心交集 starts from the beginning every time you come back to it, and only rewinds when nobody can see it", () => {
-  // mergeCue(狀態, 看到的比例)；比例是 null = 停留 0.3 秒的計時到了
-  const step = (state, ratio) => mergeCue(state, ratio);
+  // viewCue(狀態, 看到的比例)；比例是 null = 停留 0.3 秒的計時到了
+  const step = (state, ratio) => viewCue(state, ratio);
   assert.deepEqual(step("ready", 0.9), { state: "waiting", act: "wait" }, "mostly in view: wait a moment");
   assert.deepEqual(step("ready", 0.7999), { state: "waiting", act: "wait" }, "the browser may report the 80% line as 0.7999");
   assert.deepEqual(step("waiting", null), { state: "played", act: "play" }, "still there after the wait: play");
@@ -279,7 +294,7 @@ test("核心交集 starts from the beginning every time you come back to it, and
     if (out.act) acts.push(out.act);
   }
   assert.deepEqual(acts, ["wait", "play", "reset", "wait", "play"], "plays again on the second visit");
-  assert.match(read("js/blueprint-view.js"), /mergeCue\(/, "the page uses it");
+  assert.match(read("js/blueprint-view.js"), /viewCue\(/, "the page uses it");
 });
 
 test("the lotus opens slowly as you reach that part", () => {
@@ -293,6 +308,174 @@ test("the lotus opens slowly as you reach that part", () => {
     assert.ok(d <= prev && prev - d < 0.03, `smooth at ${p.toFixed(2)}`);
     prev = d;
   }
+});
+
+// 全年平安藍圖的那條線（沒有 JavaScript 也在網頁上）
+const yearBox = html.match(/<div class="plan-line" id="planLine">[\s\S]*?<\/ol>[\s\S]*?<\/div>/)?.[0] ?? "";
+const yearRows = yearBox.match(/<li[\s\S]*?<\/li>/g) || [];
+const atOf = (row) => {
+  const m = row.match(/style="--at:\s*([\d.]+)"/);
+  return m ? Number(m[1]) : null;
+};
+
+test("全年平安藍圖: one line from 元旦 to 歲末; the stops sit at their real time of year and link back up", () => {
+  assert.ok(yearBox, "the line is in the page (works without JavaScript)");
+  const want = [
+    { id: "yuandan", tier: "core", text: ["元旦", "啟動光明燈", "核心預留"] },
+    { id: "xinchun", tier: "core", text: ["新春", "祭改與祈福", "核心預留"] },
+    { id: "bayue", tier: "free", text: ["農曆八月", "蟠桃盛會普施", "自由評估"] },
+    { id: "shengdan", tier: "joy", text: ["不定期", "聖誕與週年慶回娘家", "隨喜同樂"] }
+  ];
+  assert.deepEqual(want.map((w) => w.id), STOPS.map((s) => s.id), "same order as the year");
+  assert.equal(yearRows.length, want.length, "one entry per stop");
+  yearRows.forEach((row, i) => {
+    const w = want[i];
+    assert.match(row, new RegExp(`<a href="#stop-${w.id}"`), `${w.id}: links back up to its part`);
+    assert.match(html, new RegExp(`id="stop-${w.id}"`), `${w.id}: the part it links to exists`);
+    assert.match(row, new RegExp(`class="[^"]*\\byp-${w.tier}\\b`), `${w.id}: ${w.tier} colour`);
+    const words = row.replace(/<[^>]+>/g, "|").split("|").map((s) => s.trim()).filter(Boolean);
+    assert.deepEqual(words, w.text, `${w.id}: says ${w.text.join(" / ")}`);
+  });
+  const ats = yearRows.map(atOf);
+  assert.equal(ats[0], 0, "元旦 starts the line");
+  assert.ok(ats[1] > 0.05 && ats[1] < 0.15, `新春 a little after (lunar new year: late Jan to mid Feb), got ${ats[1]}`);
+  assert.ok(ats[2] > 0.6 && ats[2] < 0.8, `農曆八月 about seven tenths in (around September), got ${ats[2]}`);
+  assert.equal(ats[3], null, "不定期 is not a point");
+  assert.match(yearBox, /class="plan-band"/, "不定期 is a soft band along the whole year");
+  assert.match(yearBox, />歲末</, "the line ends at 歲末");
+  assert.doesNotMatch(yearBox, /模組/, "no computer word 模組 on the line (the 新春 part keeps the slide's own wording)");
+});
+
+test("全年平安藍圖: labels never overlap — on each side of the line, one grows right and one grows left from further along", () => {
+  const side = (row) => (/\byp-up\b/.test(row) ? "up" : /\byp-down\b/.test(row) ? "down" : null);
+  const sides = yearRows.map(side);
+  assert.deepEqual(sides, ["up", "down", "up", "down"], "元旦、八月 above; 新春、不定期 below");
+  for (const s of ["up", "down"]) {
+    const rows = yearRows.filter((r) => side(r) === s);
+    const right = rows.filter((r) => !/\byp-end\b/.test(r));
+    const left = rows.filter((r) => /\byp-end\b/.test(r));
+    assert.equal(right.length, 1, `${s}: one label grows right`);
+    assert.equal(left.length, 1, `${s}: one label grows left`);
+    assert.ok((atOf(right[0]) ?? 1) < (atOf(left[0]) ?? 1), `${s}: the right-growing one starts first`);
+  }
+  // 字不斷行；最窄的手機（320 寬，線長 264px）用小一點的字，同一邊的兩組字中間至少還有 8px
+  const css = read("pages.css");
+  assert.match(css, /\.year-plan a\s*\{[^}]*white-space:\s*nowrap/, "labels never wrap");
+  const narrow = css.slice(css.indexOf("/* 全年平安藍圖")).match(/@media \(max-width: 360px\)\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
+  const size = Number(narrow.match(/\.year-plan \.what\s*\{[^}]*font-size:\s*(\d+)px/)?.[1]);
+  const pad = Number(narrow.match(/\.year-plan a\s*\{[^}]*padding-left:\s*(\d+)px/)?.[1]);
+  const padEnd = Number(narrow.match(/\.yp-end a\s*\{[^}]*padding-right:\s*(\d+)px/)?.[1]);
+  assert.ok(size <= 14 && pad <= 8 && padEnd <= 8, `320 wide: smaller words (${size}px) and padding (${pad}/${padEnd}px)`);
+  const W = 264;
+  const width = (row) => {
+    const words = row.replace(/<[^>]+>/g, "|").split("|").map((t) => t.trim()).filter(Boolean);
+    return Math.max(...words.map((w, i) => w.length * (i === 1 ? size : 13))) + (/\byp-end\b/.test(row) ? padEnd : pad);
+  };
+  for (const s of ["up", "down"]) {
+    const rows = yearRows.filter((r) => side(r) === s);
+    const right = rows.find((r) => !/\byp-end\b/.test(r));
+    const left = rows.find((r) => /\byp-end\b/.test(r));
+    const rightEnd = (atOf(right) ?? 1) * W + width(right);
+    const leftStart = (atOf(left) ?? 1) * W - width(left);
+    assert.ok(leftStart - rightEnd >= 8, `${s}, 320 wide: ${rightEnd.toFixed(0)}px then ${leftStart.toFixed(0)}px`);
+  }
+});
+
+test("全年平安藍圖: 核心 is light on the pocket — 小燈 + 祭改 is $1,900 a year", () => {
+  const small = LAMPS.find((l) => l.id === "small");
+  assert.equal(coreFrom(), small.price + JIEGAI_BASE.price);
+  assert.equal(coreFrom(), 1900);
+  const sum = html.match(/<p class="year-sum">[\s\S]*?<\/p>/)?.[0] ?? "";
+  assert.match(sum, /小燈[\s\S]*祭改[\s\S]*起/, "says what it is made of");
+  for (const v of [small.price, JIEGAI_BASE.price, coreFrom()]) assert.ok(sum.includes(`>${money(v)}<`), `says ${money(v)}`);
+});
+
+test("全年平安藍圖: the light walks slowly from 元旦 to 歲末; a stop lights only when the light reaches it", () => {
+  assert.ok(YEAR_MS >= 2500 && YEAR_MS <= 4000, `${YEAR_MS} ms`);
+  const ats = [0, 0.1, 0.7, 1]; // 不定期 = 整年，光走完才亮
+  const start = yearFrame(0, ats);
+  assert.equal(start.lit, 0);
+  assert.equal(start.head, 0, "the walking light fades in");
+  assert.deepEqual(start.on, [true, false, false, false], "元旦 lights as the light sets off");
+  const end = yearFrame(YEAR_MS, ats);
+  assert.deepEqual(end, { lit: 1, head: 0, on: [true, true, true, true] }, "all lit at 歲末, the walking light gone");
+  assert.deepEqual(yearFrame(YEAR_MS * 3, ats), end, "stays lit");
+  assert.equal(yearFrame(YEAR_MS / 2, ats).head, 1, "the walking light is bright on the way");
+  let prev = start;
+  for (let t = 16; t <= YEAR_MS + 16; t += 16) {
+    const f = yearFrame(t, ats);
+    assert.ok(f.lit >= prev.lit && f.lit - prev.lit < 0.03, `walks smoothly, never back (${t} ms)`);
+    assert.ok(Math.abs(f.head - prev.head) < 0.06, `the walking light fades smoothly (${t} ms)`);
+    f.on.forEach((on, i) => assert.equal(on, f.lit >= ats[i], `stop ${i} lights exactly when reached (${t} ms)`));
+    prev = f;
+  }
+});
+
+test("全年平安藍圖: no JavaScript or reduced motion → the whole line is lit; otherwise it plays like 核心交集", () => {
+  const css = read("pages.css");
+  assert.match(css, /\.plan-line\s*\{[^}]*--lit:\s*1;[^}]*--head:\s*0/, "no-JS default: all lit, no walking light");
+  // 法會活動頁已經有自己的 .year-line（農曆一年那條線）：這裡的名字不能跟它撞到
+  const from = css.indexOf("/* 全年平安藍圖");
+  const to = css.indexOf(".year-sum strong");
+  assert.ok(from > 0 && to > from, "the line's styles sit together");
+  const outside = css.slice(0, from) + css.slice(to);
+  assert.doesNotMatch(outside, /\.plan-(line|track|glow|band|head|end)\b/, "nothing else styles the line's parts");
+  assert.doesNotMatch(yearBox, /class="year-(line|track|glow|band|head|end)"/, "no names shared with the events page");
+  assert.match(css, /\.plan-line\.is-live li:not\(\.is-lit\) a::before\s*\{[^}]*grayscale/, "with the script, a stop's dot waits grey for the light");
+  assert.doesNotMatch(css, /\.plan-line\.is-live li:not\(\.is-lit\)\s*\{[^}]*opacity/, "the words do not fade away (they stay readable while waiting)");
+  assert.match(css, /\.plan-line\.is-live li:not\(\.is-lit\) \.what\s*\{[^}]*color:\s*var\(--text-soft\)/, "waiting words are only a little softer (contrast 4.8)");
+  const print = [...css.matchAll(/@media print\s*\{[\s\S]*?\n\}/g)].map((m) => m[0]).join("\n");
+  assert.match(print, /\.plan-line\s*\{[^}]*--lit:\s*1\s*!important/, "printing: the whole line is lit");
+  assert.match(print, /\.plan-line li \.what\s*\{[^}]*color:\s*var\(--text\)\s*!important/, "printing: no soft waiting words");
+  assert.match(print, /\.plan-line li a::before\s*\{[^}]*filter:\s*none\s*!important/, "printing: no grey waiting dots");
+  // 線、點、帶子都是背景畫的：瀏覽器預設不印背景，要特別說「照印」；也不要被切成兩頁
+  assert.match(print, /\.plan-line[^{]*\{[^}]*(?<!-)print-color-adjust:\s*exact/, "printing: the line, dots and band are printed (not dropped as backgrounds)");
+  assert.match(print, /\.plan-line[^{]*::before[^{]*\{[^}]*print-color-adjust:\s*exact/, "…including the dots and stems");
+  assert.match(print, /\.plan-line\s*\{[^}]*break-inside:\s*avoid/, "printing: the line is not cut across two pages");
+  assert.match(print, /\.bp-year\s*\{[^}]*break-inside:\s*avoid/, "printing: the heading stays on the same page as its line");
+  assert.match(print, /\.plan-line \*::before[^{]*\{[^}]*transition:\s*none/, "printing: the dots do not stop half-way through fading either");
+  // 還沒亮的站：滑鼠移上去、鍵盤移到上面，字一樣會變金色（要蓋得過等光的淡色）
+  assert.match(css, /\.plan-line \.year-plan li a:hover \.what,\s*\.plan-line \.year-plan li a:focus-visible \.what\s*\{[^}]*color:\s*var\(--gold-text\)/, "hover / focus turns the words gold even while waiting");
+  const view = read("js/blueprint-view.js");
+  const setup = view.slice(view.indexOf("function setupYearLine"), view.indexOf("function setupScrollPieces"));
+  assert.match(setup, /glide\(/, "the links scroll up slowly (like the rail)");
+  assert.match(setup, /if \(.*\breduce\b.*\) return/, "reduced motion keeps the lit line");
+  assert.match(setup, /"IntersectionObserver" in window/, "old browsers keep the lit line");
+  assert.match(setup, /playWhenSeen\(/, "mostly in view for 0.3 s → plays; rewinds only when out of view");
+  assert.match(setup, /yearFrame\(/);
+  assert.match(setup, /playWhenSeen\(line, \(ms\) => yearFrame\(ms, ats\), set, YEAR_MS\)/, "plays once and stops at 歲末 (no endless loop)");
+  assert.match(setup, /stopAt\(li\.style\.getPropertyValue\("--at"\)\)/, "each stop's place comes from the page (see stopAt)");
+  // 點了以後：鍵盤的位置（下一個 Tab）跟著到那一段，不會留在下面
+  const glideFn = view.slice(view.indexOf("function glide"), view.indexOf("function setupYear("));
+  assert.match(glideFn, /setAttribute\("tabindex", "-1"\)/, "the part can take the focus");
+  assert.match(glideFn, /\.focus\(\{ preventScroll: true \}\)/, "focus moves there without jumping the slow scroll");
+  assert.ok(setup.indexOf("glide(") < setup.search(/if \(.*\breduce\b.*\) return/), "links work even with reduced motion");
+  assert.match(view, /\["全年平安藍圖", setupYearLine\]/, "set up on its own (if it fails, only this part is lost)");
+  assert.match(view.slice(view.indexOf("function setupYear("), view.indexOf("function setupTiers")), /glide\(/, "the rail uses the same slow scroll");
+});
+
+test("全年平安藍圖: a stop's place on the line comes from the page; 不定期 (no place) counts as the whole year", () => {
+  assert.equal(stopAt(""), 1, "no place = the whole year: lights when the light has walked all of it");
+  assert.equal(stopAt(" "), 1);
+  assert.equal(stopAt("0"), 0, "元旦 (0) is a real place, not 'none'");
+  assert.equal(stopAt(" 0.1"), 0.1);
+  assert.equal(stopAt("0.7"), 0.7);
+  const ats = yearRows.map((r) => stopAt(r.match(/style="--at:([^"]*)"/)?.[1] ?? ""));
+  assert.deepEqual(ats, [0, 0.1, 0.7, 1], "the places read from the page");
+});
+
+test("全年平安藍圖 colours follow the three tiers: 核心 solid gold, 自由 a hollow gold ring, 隨喜 a soft pink band", () => {
+  const css = read("pages.css");
+  assert.match(css, /\.yp-core a::before\s*\{[^}]*background:[^;]*(var\(--gold\)|#c9a463)/, "核心: solid gold dot");
+  assert.match(css, /\.yp-free a::before\s*\{[^}]*background:\s*var\(--paper-light\)[^}]*border:[^;]*var\(--gold\)/, "自由: hollow ring");
+  // 點是連結的一部分：點那顆點也會捲上去
+  assert.match(css, /\.year-plan a::before\s*\{/, "the dot belongs to the link");
+  assert.doesNotMatch(css, /\.year-plan li::(before|after)|\.yp-[a-z]+::(before|after)/, "no dot or stem outside the link");
+  // 細線停在點的邊上，不會穿過空心圈（字到線中間是 16px）
+  const dot = Number(css.match(/\.year-plan a::before\s*\{[^}]*width:\s*(\d+)px/)?.[1]);
+  const stem = Number(css.match(/\.year-plan a::after\s*\{[^}]*height:\s*(\d+)px/)?.[1]);
+  assert.equal(stem + dot / 2, 16, `the stem (${stem}px) stops at the dot's edge (dot ${dot}px)`);
+  assert.match(css, /\.plan-band\s*\{[^}]*236,\s*170,\s*180/, "隨喜: the same soft pink as 祭改's light");
 });
 
 test("motion: reduced-motion visitors get no animation on this page", () => {

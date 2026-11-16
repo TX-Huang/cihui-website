@@ -615,6 +615,10 @@ footer .credit {
 .journey section {
   scroll-margin-top: 72px;
 }
+/* 點一年細線、全年平安藍圖跳過來時，鍵盤的位置也移到這一段（不是可以按的東西，不畫框） */
+.journey section[tabindex="-1"]:focus {
+  outline: none;
+}
 .when {
   margin: 0 0 4px;
   font-family: var(--sans);
@@ -1017,24 +1021,226 @@ footer .credit {
   padding-left: 20px;
 }
 
-/* 全年平安藍圖：四站排一排 */
+/* 全年平安藍圖：一條從元旦到歲末的線，四站放在真的時間上（--at：0 = 元旦、1 = 歲末）。
+   --lit：光走到哪裡（0～1）；--head：走在最前面那一點光看得到多少。
+   沒有 JavaScript（或要求減少動畫）就是整條亮的；js/blueprint-view.js 捲到時讓光從元旦慢慢走到歲末，走到哪一站那一站才亮。
+   顏色照三層護持：核心實心金點、自由空心金圈、隨喜（不定期）是沿著整年的淡粉帶子。
+   字放在線的上下兩邊：每一邊一個往右長、一個（右半邊的）往左長，手機上也不會疊在一起 */
+.plan-line {
+  --lit: 1;
+  --head: 0;
+  --y: 96px; /* 線在這一塊裡的高度 */
+  position: relative;
+  height: 192px;
+  margin: 0 8px 16px;
+}
+.plan-track,
+.plan-glow,
+.plan-band,
+.plan-head {
+  position: absolute;
+  left: 0;
+  top: var(--y);
+}
+.plan-track {
+  right: 0;
+  height: 2px;
+  transform: translateY(-50%);
+  background: rgba(168, 132, 74, 0.22);
+}
+.plan-glow {
+  width: calc(var(--lit) * 100%);
+  height: 2px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, #e8c98a, var(--gold));
+  box-shadow: 0 0 8px rgba(212, 170, 90, 0.6);
+}
+.plan-head {
+  left: calc(var(--lit) * 100%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, #fff6df 0 20%, rgba(240, 200, 120, 0.9) 45%, rgba(240, 200, 120, 0) 72%);
+  box-shadow: 0 0 16px rgba(240, 200, 120, 0.8);
+  opacity: var(--head);
+}
+.plan-band {
+  right: 0;
+  height: 16px;
+  border-radius: 8px;
+  transform: translateY(-50%);
+  background: rgba(236, 170, 180, 0.28);
+  opacity: calc(0.3 + var(--lit) * 0.7);
+}
 .year-plan {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin: 0 0 16px;
+  position: absolute;
+  inset: 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 .year-plan li {
+  position: absolute;
+  left: calc(var(--at, 1) * 100%);
+}
+.yp-up {
+  bottom: calc(100% - var(--y) + 16px);
+}
+.yp-down {
+  top: calc(var(--y) + 16px);
+}
+.yp-end {
+  transform: translateX(-100%);
+  text-align: right;
+}
+/* 整組字連同線上的點和細線都是連結：點字、點那顆點都會捲上去 */
+.year-plan a {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 12px;
-  border-top: 2px solid var(--gold);
-  background: var(--card);
-  border-radius: 0 0 12px 12px;
+  gap: 2px;
+  padding-left: 12px;
+  line-height: 1.5;
+  white-space: nowrap; /* 不斷行 */
+  color: inherit;
+  text-decoration: none;
+}
+.yp-end a {
+  padding-left: 0;
+  padding-right: 12px;
+}
+.year-plan .when {
+  margin: 0;
+}
+.year-plan .what {
   font-size: 15px;
+  color: var(--text);
+  transition: color 900ms var(--ease);
+}
+.year-plan .small {
+  font-size: 13px;
+  color: var(--gold-text);
+}
+.yp-joy .small {
+  color: #8f4f5c;
+}
+/* 前面加 .plan-line … li，才蓋得過下面「等光」的淡色（還沒亮的站，滑鼠移上去也會變金色） */
+.plan-line .year-plan li a:hover .what,
+.plan-line .year-plan li a:focus-visible .what {
+  color: var(--gold-text);
+}
+/* 站上的點（在線上）和連到字的細線 */
+.year-plan a::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  transition: box-shadow 900ms var(--ease), filter 900ms var(--ease), opacity 900ms var(--ease);
+}
+.year-plan a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 1px;
+  height: 10px; /* 字到線中間 16px，減掉點的半徑 6px：停在點的邊上，不穿過空心圈 */
+  background: rgba(168, 132, 74, 0.4);
+}
+/* 往左長的字：點和細線在字的右邊（前面加 .year-plan，才蓋得過上面的 left: 0） */
+.year-plan .yp-end a::before,
+.year-plan .yp-end a::after {
+  left: 100%;
+}
+.yp-up a::before {
+  top: calc(100% + 16px);
+}
+.yp-down a::before {
+  top: -16px;
+}
+.yp-up a::after {
+  top: 100%;
+}
+.yp-down a::after {
+  bottom: 100%;
+}
+.yp-core a::before {
+  background: radial-gradient(circle at 40% 35%, #fff6df, #e8c98a 60%, #c9a463);
+  box-shadow: 0 0 12px rgba(212, 170, 90, 0.7);
+}
+.yp-free a::before {
+  background: var(--paper-light);
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 10px rgba(212, 170, 90, 0.45);
+}
+.year-plan .yp-joy a::before {
+  content: none; /* 不定期沒有點：整年那條粉色帶子就是它 */
+}
+.year-plan .yp-joy a::after {
+  background: rgba(201, 120, 135, 0.45);
+}
+.plan-end {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% - var(--y) + 12px);
+  font-size: 13px;
+  color: var(--text-soft);
+}
+/* 光還沒走到的站：點是灰的、字淡一點（字還是看得清楚，對比 4.8）；光走到才亮起來 */
+.plan-line.is-live li:not(.is-lit) a::before {
+  filter: grayscale(1);
+  opacity: 0.5;
+  box-shadow: none;
+}
+.plan-line.is-live li:not(.is-lit) .what {
+  color: var(--text-soft);
+}
+/* 列印：整條直接是亮的（不管光走到哪裡） */
+@media print {
+  .plan-line {
+    --lit: 1 !important;
+    --head: 0 !important;
+    break-inside: avoid; /* 不要被切成兩頁 */
+  }
+  .bp-year {
+    break-inside: avoid; /* 標題和線印在同一頁 */
+  }
+  /* 線、點、帶子都是背景畫的：瀏覽器預設不印背景，這裡說「照印」；也不停在變色的一半 */
+  .plan-line,
+  .plan-line *,
+  .plan-line *::before,
+  .plan-line *::after {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    transition: none !important;
+  }
+  .plan-line li .what {
+    color: var(--text) !important;
+  }
+  .plan-line li a::before {
+    filter: none !important;
+    opacity: 1 !important;
+  }
+}
+/* 很窄的手機（320 寬，線只有 264px）：字小一點、空白少一點，線上同一邊的兩組字才不會碰到 */
+@media (max-width: 360px) {
+  .year-plan .what {
+    font-size: 14px;
+  }
+  .year-plan a {
+    padding-left: 8px;
+  }
+  .yp-end a {
+    padding-left: 0;
+    padding-right: 8px;
+  }
+}
+.year-sum strong {
+  font-weight: 600;
+  color: var(--gold-text);
 }
 @media (max-width: 1100px) {
   .year-rail .rail-label {
@@ -1049,9 +1255,6 @@ footer .credit {
   .rings {
     width: 200px;
     margin: 0 auto;
-  }
-  .year-plan {
-    grid-template-columns: repeat(2, 1fr);
   }
   .quiz label {
     grid-template-columns: 24px 1fr auto;

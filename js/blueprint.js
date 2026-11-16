@@ -130,16 +130,39 @@ export function mergeLoop(ms) {
   return mergeFrame(0);
 }
 
-// 核心交集什麼時候開始循環、什麼時候回到開頭（每次捲回來都從頭開始）。
-// state：ready（在開頭等著）、waiting（大半進到畫面，等 0.3 秒確定有人在看）、played（在循環中）
+// 核心交集、全年平安藍圖什麼時候開始播、什麼時候回到開頭（每次捲回來都從頭開始）。
+// state：ready（在開頭等著）、waiting（大半進到畫面，等 0.3 秒確定有人在看）、played（播了）
 // ratio：這一段看得到幾成（0～1）；null = 那 0.3 秒到了
 // act：wait 開始等、cancel 不等了、play 開始播、reset 回到開頭（只在完全看不到時）
 // 「大半」= 八成；瀏覽器在八成那條線回報時可能給 0.7999，所以比 0.79
 const NEAR_FULL = 0.79;
-export function mergeCue(state, ratio) {
+export function viewCue(state, ratio) {
   if (ratio === null) return state === "waiting" ? { state: "played", act: "play" } : { state, act: null };
   if (ratio <= 0) return { state: "ready", act: state === "ready" ? null : "reset" };
   if (state === "ready" && ratio >= NEAR_FULL) return { state: "waiting", act: "wait" };
   if (state === "waiting" && ratio < NEAR_FULL) return { state: "ready", act: "cancel" };
   return { state, act: null };
+}
+
+
+// 核心只要多少：小燈＋基本的祭改（全年平安藍圖下面那一句）
+export function coreFrom() {
+  return LAMPS.find((l) => l.id === "small").price + JIEGAI_BASE.price;
+}
+
+// 全年平安藍圖：光從元旦慢慢走到歲末。播了 ms 毫秒 →
+//   lit：光走到哪裡（0 = 元旦、1 = 歲末）
+//   head：走在最前面那一點光看得到多少（出發時淡入、到歲末淡出）
+//   on：每一站亮了沒（ats 是每一站在線上的位置；光走到了才亮）
+export const YEAR_MS = 3200;
+export function yearFrame(ms, ats) {
+  const t = clamp01(ms / YEAR_MS);
+  const lit = smooth(t);
+  const head = smooth(t / 0.15) * (1 - smooth((t - 0.85) / 0.15));
+  return { lit, head, on: ats.map((at) => lit >= at) };
+}
+
+// 每一站在線上的位置（網頁上寫的 --at，0～1）；不定期沒寫 = 整年都算，當成 1（光走完一整年才亮）
+export function stopAt(value) {
+  return value.trim() === "" ? 1 : Number(value);
 }
