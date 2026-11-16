@@ -1,0 +1,114 @@
+/* 新首頁（神話感版本，試做）：開場影片 → 經文光簾從天上降下來。規格在 test/new-home.test.mjs，畫面在 js/opening-view.js。
+   頂部選單用 pages.css 共用的樣式。
+   <html data-opening="…">：play 播影片、end 看過了、still 要求減少動畫（<head> 裡的小程式在畫面出來前就設好）；
+   影片結束或略過時，script 把它改成 end */
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: #dfe6ea;
+}
+
+/* 給讀螢幕軟體的標題（畫面上不顯示） */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 整個畫面。一根手指在上面滑是撥光簾（不是捲頁面）；兩根手指還是可以放大 */
+.opening {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  /* Safari 不認得 pinch-zoom，就用前一行的 none */
+  touch-action: none;
+  touch-action: pinch-zoom;
+  background: #dfe6ea;
+}
+/* 播的時候：影片還沒載入前，先墊第一格（只有要播才下載這張） */
+[data-opening="play"] .opening {
+  background: #dfe6ea url("assets/opening/opening-first.webp") center / cover no-repeat;
+}
+
+/* 最後一格的靜止圖：墊在影片後面（淡過去看不出接縫）；沒有 JavaScript、要求減少動畫、看過了就是它 */
+.opening-still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* 播的時候先藏起來：一打開看到的是第一格，不會先閃一下結尾（只是看不到，讀螢幕軟體還唸得到它的說明） */
+[data-opening="play"] .opening-still {
+  opacity: 0;
+}
+
+/* 影片：只有播的時候看得到（一打開就看得到，不淡入）；結束或略過時慢慢淡掉，露出最後一格 */
+.opening-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 900ms var(--ease);
+}
+[data-opening="play"] .opening-video {
+  opacity: 1;
+}
+/* 按上一頁回來：直接切掉（瀏覽器已經把影片倒回第一格，淡過去會先閃一下第一格） */
+[data-cut] .opening-video {
+  transition: none;
+}
+
+/* 光簾：畫在整個畫面上；滑鼠事件穿過去（撥簾子由 script 聽整個視窗） */
+.opening-curtain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.opening-skip {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 40;
+  padding: 8px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.35);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: var(--text);
+  font: 14px/1.4 var(--sans);
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transition: background-color 400ms var(--ease);
+}
+.opening-skip:hover,
+.opening-skip:focus-visible {
+  background: rgba(255, 255, 255, 0.65);
+}
+.opening-skip[hidden] {
+  display: none;
+}
+
+/* 要求減少動畫：不播影片（script 還沒跑之前也一樣），只看最後一格 */
+@media (prefers-reduced-motion: reduce) {
+  .opening-video {
+    display: none;
+  }
+  .opening-skip {
+    transition: none;
+  }
+}
