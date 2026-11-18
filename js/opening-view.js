@@ -3,7 +3,8 @@
 // 一開始怎麼開（播影片、看過了、要求減少動畫），new-home.html 的 <head> 已經先決定好，寫在 <html data-opening>。
 import { createCloth, step, push, charAt } from "./cloth.js";
 import { DEITIES } from "./deities.js";
-import { highlightRanges, isHighlighted } from "./highlight.js";
+import { placeSutra, isHighlighted } from "./highlight.js";
+import { paintLightGlyph } from "./light-curtain.js";
 import {
   SEEN_KEY,
   SIM,
@@ -64,19 +65,7 @@ function glyph(ch, hot, dpr) {
   const g = c.getContext("2d");
   g.scale(dpr, dpr);
   g.font = `600 14px "Noto Serif TC", "Songti TC", "PMingLiU", serif`;
-  g.textAlign = "center";
-  g.textBaseline = "middle";
-  // 深金邊：亮的天空上也看得清楚
-  g.lineJoin = "round";
-  g.lineWidth = 2.4;
-  g.strokeStyle = "rgba(110, 70, 20, 0.55)";
-  g.strokeText(ch, G / 2, G / 2 + 0.5);
-  g.shadowColor = hot ? "rgba(255, 236, 190, 1)" : "rgba(255, 190, 90, 1)";
-  g.shadowBlur = hot ? 12 : 8;
-  g.fillStyle = hot ? "#fff6dc" : "#ffd98a";
-  g.fillText(ch, G / 2, G / 2 + 0.5);
-  g.shadowBlur = 0;
-  g.fillText(ch, G / 2, G / 2 + 0.5);
+  paintLightGlyph(g, ch, hot, G); // 金色光暈、淡淡的深金邊（js/light-curtain.js，跟首頁道場門的珠簾一樣）
   glyphs.set(key, c);
   return c;
 }
@@ -97,9 +86,10 @@ function build(rolled) {
   sizeCanvas();
   const L = curtainLayout(innerWidth, innerHeight);
   const cloth = createCloth({ cols: L.cols, rows: L.rows, width: L.width, height: L.height });
-  const gold = highlightRanges(sutra.cloth, sutra.keys, L.cols, L.rows, sutra.id);
+  // 光簾收在兩旁：經文的起點挪到每一句重要句子都看得到的地方（金色句子不會藏在收起來的那段）
+  const { text, ranges: gold } = placeSutra(sutra.cloth, sutra.keys, L.cols, L.rows, sutra.id, (c) => strandRows(c, L.cols, L.rows), sutra.starts);
   for (const p of cloth.particles) {
-    p.ch = charAt(sutra.cloth, p.col, p.row, L.cols, L.rows);
+    p.ch = charAt(text, p.col, p.row, L.cols, L.rows);
     p.hot = isHighlighted(p.col, p.row, L.cols, L.rows, gold);
     p.visible = strandRows(p.col, L.cols, L.rows);
   }
@@ -213,7 +203,8 @@ function hangCurtain() {
 // 滑鼠、手指撥過去：光簾晃開
 addEventListener("pointermove", (e) => {
   if (!curtain.running || !curtain.cloth) return;
-  push(curtain.cloth, e.clientX - curtain.L.x0, e.clientY - curtain.L.y0, 60 * 60, 3);
+  // 收起來藏住的珠子不撥
+  push(curtain.cloth, e.clientX - curtain.L.x0, e.clientY - curtain.L.y0, 60 * 60, 3, (p) => p.row < p.visible);
   wake();
 });
 

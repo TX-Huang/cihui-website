@@ -77,10 +77,10 @@ function solveLink(l) {
   }
 }
 
-// 把 (x, y) 附近的點往外推。越近推越大力。
-export function push(cloth, x, y, radiusSq, strength) {
+// 把 (x, y) 附近的點往外推。越近推越大力。only（可以不給）：只推這些點（光簾收起來藏住的珠子不推）
+export function push(cloth, x, y, radiusSq, strength, only) {
   for (const p of cloth.particles) {
-    if (p.pinned) continue;
+    if (p.pinned || (only && !only(p))) continue;
     const dx = p.x - x;
     const dy = p.y - y;
     const ls = dx * dx + dy * dy;
@@ -92,10 +92,12 @@ export function push(cloth, x, y, radiusSq, strength) {
   }
 }
 
-export function nearest(cloth, x, y, maxDistSq) {
+// 離 (x, y) 最近的點。only（可以不給）：只找這些點（光簾收起來藏住的珠子不能抓、不會響）
+export function nearest(cloth, x, y, maxDistSq, only) {
   let best = null;
   let bestLs = maxDistSq;
   for (const p of cloth.particles) {
+    if (only && !only(p)) continue;
     const ls = (p.x - x) ** 2 + (p.y - y) ** 2;
     if (ls < bestLs) {
       best = p;

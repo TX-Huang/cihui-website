@@ -17,3 +17,17 @@ const ROW_GAP = 633 / 43;
 export function curtainGrid(w, h) {
   return { cols: Math.max(4, Math.round(w / COL_GAP)), rows: Math.max(4, Math.round(h / ROW_GAP)) };
 }
+
+// 光簾（金色發光的字，有光暈）：字距跟新首頁的光簾差不多、比原本的珠簾鬆，光暈才不會糊成一片金色方塊
+const LIGHT_COL_GAP = 26;
+const LIGHT_ROW_GAP = 17;
+export function lightGrid(w, h) {
+  return { cols: Math.max(4, Math.round(w / LIGHT_COL_GAP)), rows: Math.max(4, Math.round(h / LIGHT_ROW_GAP)) };
+}
+
+// 這座門的珠簾用哪一種格子：道場門是光簾，油畫版的廟門是原本的珠簾
+export function gridFor(gate) {
+  const w = gate.door.x1 - gate.door.x0;
+  const h = gate.door.y1 - gate.door.y0;
+  return gate.curtain === "light" ? lightGrid(w, h) : curtainGrid(w, h);
+}

@@ -64,16 +64,8 @@ export function curtainLayout(vw, vh) {
   };
 }
 
-// 每一串看得到幾個字：中間短、兩邊長（像收在兩旁的簾子）
-export function strandRows(col, cols, rows) {
-  const u = Math.abs(col / (cols - 1) - 0.5) * 2; // 0 中間 → 1 兩邊
-  return Math.round(rows * (0.32 + 0.68 * u * u));
-}
-
-// 每一串越往下越淡（像光慢慢散掉），但不會完全不見
-export function glyphAlpha(row, visible) {
-  return Math.max(0.25, 1 - 0.75 * (row / visible) ** 2);
-}
+// 每一串看得到幾個字（收在兩旁）、越往下越淡：跟首頁道場門的珠簾共用（js/light-curtain.js）
+export { strandRows, glyphAlpha } from "./light-curtain.js";
 
 // 光簾出現時先淡入
 export const FADE_MS = 900;

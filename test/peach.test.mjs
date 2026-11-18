@@ -62,7 +62,9 @@ test("the tree stands to the right of the doorway, fully on screen, big enough t
     const r = treeRect(vw, vh, ASPECT);
     const d = doorOnScreen(vw, vh);
     assert.ok(r.x >= 0 && r.y >= 0 && r.x + r.w <= vw && r.y + r.h <= vh, `${vw}x${vh}: on screen`);
-    assert.ok(r.x >= d.x1 + 4, `${vw}x${vh}: clear of the curtain doorway (tree x ${r.x.toFixed(0)}, door ends ${d.x1.toFixed(0)})`);
+    // 道場門的珠簾比較寬：手機上桃樹可以站在門口右前方、蓋到珠簾右邊最多三成五（桃樹畫在大門前面，點樹不會拉到珠簾）
+    const clear = GATE.treeOverDoor && vw <= 720 ? d.x1 - 0.35 * (d.x1 - d.x0) : d.x1 + 4;
+    assert.ok(r.x >= clear - 1e-9, `${vw}x${vh}: clear of the curtain doorway (tree x ${r.x.toFixed(0)}, must start at ${clear.toFixed(0)})`);
     assert.ok(r.w >= 80, `${vw}x${vh}: ${r.w.toFixed(0)} px wide`);
     assert.ok(Math.abs(r.w / r.h - ASPECT) < 1e-6, "not stretched");
   }

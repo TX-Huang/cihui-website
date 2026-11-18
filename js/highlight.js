@@ -13,7 +13,8 @@ function seeded(text) {
   };
 }
 
-function occurrences(text, key, total, rows) {
+// visibleRows(col)：這一串看得到幾個字（光簾收在兩旁時，下面藏起來的部分不能放金色句子）
+function occurrences(text, key, total, rows, cols, visibleRows) {
   const n = Array.from(text).length;
   const k = Array.from(key).length;
   const i = text.indexOf(key);
@@ -22,7 +23,10 @@ function occurrences(text, key, total, rows) {
   const out = [];
   for (let s = at; s + k <= total; s += n) {
     // 整句要在同一直行裡（不然一個字在這行最下面、其他跳到下一行最上面，很怪）
-    if (Math.floor(s / rows) === Math.floor((s + k - 1) / rows)) out.push({ start: s, end: s + k });
+    if (Math.floor(s / rows) !== Math.floor((s + k - 1) / rows)) continue;
+    const col = cols - 1 - Math.floor(s / rows);
+    if (visibleRows && (s % rows) + k > visibleRows(col)) continue;
+    out.push({ start: s, end: s + k });
   }
   return out;
 }
@@ -36,9 +40,10 @@ function score(ranges, rows, total) {
   return spread > 0.35 ? spread : -1;
 }
 
-export function highlightRanges(text, keys, cols, rows, seed = "") {
+// visibleRows（可以不給）：每一串看得到幾個字，金色句子只放在看得到的地方
+export function highlightRanges(text, keys, cols, rows, seed = "", visibleRows) {
   const total = cols * rows;
-  const options = keys.map((k) => occurrences(text, k, total, rows)).filter((o) => o.length);
+  const options = keys.map((k) => occurrences(text, k, total, rows, cols, visibleRows)).filter((o) => o.length);
   if (!options.length) return [];
   const rand = seeded(seed + text);
   let best = null;
@@ -59,4 +64,18 @@ export function isHighlighted(col, row, cols, rows, ranges) {
   const idx = (cols - 1 - col) * rows + row;
   for (const r of ranges) if (idx >= r.start && idx < r.end) return true;
   return false;
+}
+
+// 光簾收在兩旁時：經文從第幾個字開始掛（還是同一篇經文、同樣的順序，只是起點挪一下），
+// 才能讓每一句重要的句子都整句落在看得到的地方。starts：可以當起點的位置（每一句話的開頭，見 js/deities.js），
+// 照順序一個一個試（先試原本的開頭），第一個合格的就用（每次都一樣）
+export function placeSutra(text, keys, cols, rows, seed = "", visibleRows, starts) {
+  const chars = Array.from(text);
+  const total = cols * rows;
+  for (const off of starts ?? chars.keys()) {
+    const t = chars.slice(off).concat(chars.slice(0, off)).join("");
+    const ranges = highlightRanges(t, keys, cols, rows, seed, visibleRows);
+    if (ranges.length === keys.length && score(ranges, rows, total) > 0) return { text: t, ranges };
+  }
+  return { text, ranges: highlightRanges(text, keys, cols, rows, seed, visibleRows) };
 }

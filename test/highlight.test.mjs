@@ -1,24 +1,31 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { highlightRanges, isHighlighted } from "../js/highlight.js";
+import { highlightRanges, isHighlighted, placeSutra } from "../js/highlight.js";
 import { charAt } from "../js/cloth.js";
 import { DEITIES, ORDER } from "../js/deities.js";
-import { curtainGrid } from "../js/layout.js";
+import { gridFor } from "../js/layout.js";
+import { strandRows } from "../js/light-curtain.js";
 import { GATE } from "../js/gate.js";
 
-const { cols, rows } = curtainGrid(GATE.door.x1 - GATE.door.x0, GATE.door.y1 - GATE.door.y0);
+// 跟首頁一樣：道場門的光簾收在兩旁，重要句子只放在看得到的那段
+const { cols, rows } = gridFor(GATE);
 const total = cols * rows;
-const rangesOf = (id) => highlightRanges(DEITIES[id].cloth, DEITIES[id].keys, cols, rows, id);
+const visible = GATE.curtain === "light" ? (c) => strandRows(c, cols, rows, GATE.tieBack) : undefined;
+// 光簾：經文的起點挪到每一句都看得到的地方（js/highlight.js 的 placeSutra）
+const placed = (id) => {
+  const d = DEITIES[id];
+  return visible ? placeSutra(d.cloth, d.keys, cols, rows, id, visible, d.starts) : { text: d.cloth, ranges: highlightRanges(d.cloth, d.keys, cols, rows, id) };
+};
+const rangesOf = (id) => placed(id).ranges;
 
 // 金色的字照閱讀順序（右邊那欄先、由上往下）分成一段一段
 function goldRuns(id) {
-  const d = DEITIES[id];
-  const ranges = rangesOf(id);
+  const { text, ranges } = placed(id);
   const runs = [];
   let cur = "";
   for (let c = cols - 1; c >= 0; c--) {
     for (let r = 0; r < rows; r++) {
-      if (isHighlighted(c, r, cols, rows, ranges)) cur += charAt(d.cloth, c, r, cols, rows);
+      if (isHighlighted(c, r, cols, rows, ranges)) cur += charAt(text, c, r, cols, rows);
       else if (cur) {
         runs.push(cur);
         cur = "";

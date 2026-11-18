@@ -2,8 +2,9 @@ import { createCloth, step, push, nearest, charAt } from "./cloth.js";
 import { Chimes } from "./chimes.js";
 import { DEITIES, ORDER } from "./deities.js";
 import { GATE } from "./gate.js";
-import { fitGate, curtainGrid } from "./layout.js";
-import { highlightRanges, isHighlighted } from "./highlight.js";
+import { fitGate, gridFor } from "./layout.js";
+import { highlightRanges, isHighlighted, placeSutra } from "./highlight.js";
+import { strandRows, glyphAlpha, paintLightGlyph } from "./light-curtain.js";
 import { Petals } from "./petals.js";
 import { KoiPond, loadKoiKits } from "./koi.js";
 import { IntroView } from "./intro-view.js";
@@ -15,6 +16,7 @@ import { LotusView, loadLotusKit } from "./lotus-view.js";
 import { PeachView, loadPeachImage } from "./peach-view.js";
 import { GoldLightView, loadGoldLightKit } from "./goldlight-view.js";
 import { LakeView, loadLakeImage } from "./lake-view.js";
+import { addGateMist } from "./gate-mist-view.js";
 
 // ── 珠簾尺寸（拱門圖的設計座標，圖寬 1000） ──
 const D = GATE.door;
@@ -23,12 +25,15 @@ const CURTAIN_Y = D.y0;
 const CURTAIN_W = D.x1 - D.x0;
 const CURTAIN_H = D.y1 - D.y0;
 // 字的間距固定，門洞多大就掛幾排幾列（見 js/layout.js）
-const { cols: COLS, rows: ROWS } = curtainGrid(CURTAIN_W, CURTAIN_H);
+const { cols: COLS, rows: ROWS } = gridFor(GATE);
 const PAD = 160;
 const FLOOR_FADE = 36; // 珠簾最下面在地板邊緣前淡掉的距離（設計座標）
 const CANVAS_W = CURTAIN_W + PAD * 2;
 const CANVAS_H = CURTAIN_H + PAD * 2;
-const FONT = `600 12px "Noto Serif TC", "Songti TC", "PMingLiU", serif`;
+// 道場門（月白版）的珠簾是金色發光的光簾、收在兩旁讓中間露出神壇（跟新首頁的光簾同一個畫法，js/light-curtain.js）；
+// 油畫版的廟門還是原本的墨色字、整片掛滿
+const LIGHT = GATE.curtain === "light";
+const FONT = `600 ${LIGHT ? 14 : 12}px "Noto Serif TC", "Songti TC", "PMingLiU", serif`;
 
 const SIM = { gravity: 0.2, damping: 0.985, iterations: 5 };
 const TOUCH_R2 = 60 * 60;
@@ -116,7 +121,7 @@ function layout() {
 
 // ── 字圖集：所有字先畫在「同一張」大圖上，每格只要從大圖剪貼 ──
 // （每個字一張小圖的話，顯示卡要切換上千次，很慢）
-const GLYPH = 22; // 每個字的格子大小（設計座標）
+const GLYPH = LIGHT ? 30 : 22; // 每個字的格子大小（設計座標；光簾的字有光暈，格子大一點）
 const ATLAS_COLS = 16;
 let atlas = null;
 let atlasCtx = null;
@@ -133,8 +138,8 @@ function resetAtlas() {
   atlasCtx.textBaseline = "middle";
 }
 
-function glyph(ch, color) {
-  const key = ch + color;
+function glyph(ch, color, hot) {
+  const key = LIGHT ? ch + hot : ch + color;
   let g = glyphs.get(key);
   if (g) return g;
   if (!atlas || glyphs.size >= ATLAS_COLS * ATLAS_COLS) resetAtlas();
@@ -142,8 +147,18 @@ function glyph(ch, color) {
   const sx = (i % ATLAS_COLS) * atlasCell;
   const sy = Math.floor(i / ATLAS_COLS) * atlasCell;
   atlasCtx.setTransform(dpr, 0, 0, dpr, sx, sy);
-  atlasCtx.fillStyle = color;
-  atlasCtx.fillText(ch, GLYPH / 2, GLYPH / 2 + 0.5);
+  if (LIGHT) {
+    // 光暈只畫在自己的格子裡（不會滲到旁邊的字）
+    atlasCtx.save();
+    atlasCtx.beginPath();
+    atlasCtx.rect(0, 0, GLYPH, GLYPH);
+    atlasCtx.clip();
+    paintLightGlyph(atlasCtx, ch, hot, GLYPH);
+    atlasCtx.restore();
+  } else {
+    atlasCtx.fillStyle = color;
+    atlasCtx.fillText(ch, GLYPH / 2, GLYPH / 2 + 0.5);
+  }
   g = { sx, sy };
   glyphs.set(key, g);
   return g;
@@ -151,11 +166,18 @@ function glyph(ch, color) {
 
 function buildCloth(d, { rolled }) {
   cloth = createCloth({ cols: COLS, rows: ROWS, width: CURTAIN_W, height: CURTAIN_H });
-  // 都是墨色字，只有經文裡幾句重要的話用這位神尊的顏色標出來，散在不同地方（見 js/highlight.js）
-  const gold = highlightRanges(d.cloth, d.keys, COLS, ROWS, d.id);
+  // 經文裡幾句重要的話標出來，散在不同地方（見 js/highlight.js）：
+  // 油畫版的墨色珠簾用這位神尊的顏色標；道場門的光簾用比較亮的金色（js/light-curtain.js）
+  // 光簾收在兩旁：經文的起點挪到每一句重要句子都看得到的地方（金色句子不會藏在收起來的那段）
+  const { text, ranges: gold } = LIGHT
+    ? placeSutra(d.cloth, d.keys, COLS, ROWS, d.id, (c) => strandRows(c, COLS, ROWS, GATE.tieBack), d.starts)
+    : { text: d.cloth, ranges: highlightRanges(d.cloth, d.keys, COLS, ROWS, d.id) };
   for (const p of cloth.particles) {
-    p.ch = charAt(d.cloth, p.col, p.row, COLS, ROWS);
-    p.color = isHighlighted(p.col, p.row, COLS, ROWS, gold) ? d.theme.mark : d.theme.ink;
+    p.ch = charAt(text, p.col, p.row, COLS, ROWS);
+    p.hot = isHighlighted(p.col, p.row, COLS, ROWS, gold);
+    p.color = p.hot ? d.theme.mark : d.theme.ink;
+    // 光簾收在兩旁：每一串看得到幾個字（下面藏起來的還是在，物理照算，只是不畫）
+    p.visible = LIGHT ? strandRows(p.col, COLS, ROWS, GATE.tieBack) : ROWS;
     if (rolled && !p.pinned) {
       // 珠簾先收在門楣上，進場時自己垂下來
       p.y = p.oy = p.row * 1.2;
@@ -165,7 +187,7 @@ function buildCloth(d, { rolled }) {
 }
 
 // ── 珠簾放下來：先用大重力快速落下，落到底後短暫加大阻力（煞車），再回到平常的輕柔晃動 ──
-// 實測（26×32 珠簾，node 模擬）：重力 0.9 時 0.57 秒就垂到 9 成，太急；
+// 實測（原本 26×32 的墨色珠簾，node 模擬）：重力 0.9 時 0.57 秒就垂到 9 成，太急；
 // 現在 0.28：約 1.2 秒垂到 9 成，慢慢落下，最長還是約 1.16 倍（道場門的 door 長度已經算進去：拉長後剛好垂到地板邊緣，見 js/gate.js）
 const DROP_GRAVITY = 0.28;
 const DROP_TRIGGER = 0.7; // 落到 7 成長度就開始煞車，避免衝過頭拉太長
@@ -201,8 +223,20 @@ function draw() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
   const h = GLYPH / 2;
+  if (LIGHT) {
+    // 串字的細金線
+    ctx.strokeStyle = "rgba(200, 150, 70, 0.45)";
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    for (const p of cloth.particles) {
+      if (!p.down || p.row + 1 >= p.visible) continue;
+      ctx.moveTo(p.x + PAD, p.y + PAD);
+      ctx.lineTo(p.down.b.x + PAD, p.down.b.y + PAD);
+    }
+    ctx.stroke();
+  }
   for (const p of cloth.particles) {
-    if (!p.ch || p.ch === " " || p.ch === "　") continue;
+    if (p.row >= p.visible || !p.ch || p.ch === " " || p.ch === "　") continue;
     // 字跟著往下那條線轉：用向量直接算 cos/sin，不用三角函數
     let cos = 1;
     let sin = 0;
@@ -213,12 +247,14 @@ function draw() {
       cos = dy / len;
       sin = -dx / len;
     }
-    const g = glyph(p.ch, p.color);
+    const g = glyph(p.ch, p.color, p.hot);
     const x = p.x + PAD;
     const y = p.y + PAD;
+    ctx.globalAlpha = LIGHT ? glyphAlpha(p.row, p.visible) : 1; // 光簾每一串越往下越淡
     ctx.setTransform(cos * dpr, sin * dpr, -sin * dpr, cos * dpr, x * dpr, y * dpr);
     ctx.drawImage(atlas, g.sx, g.sy, atlasCell, atlasCell, -h, -h, GLYPH, GLYPH);
   }
+  ctx.globalAlpha = 1;
 }
 
 // 珠簾幾乎沒在動時就不重畫（畫面會保留上一格）
@@ -361,8 +397,11 @@ function local(e) {
   };
 }
 
+// 光簾收起來藏住的珠子不能撥、不能抓、不會響（墨色珠簾的 visible 是整串，全部都算）
+const shown = (p) => p.row < p.visible;
+
 function ringNear(x, y, force) {
-  const hit = nearest(cloth, x, y, CHIME_R2);
+  const hit = nearest(cloth, x, y, CHIME_R2, shown);
   if (!hit) {
     chimes.lastId = -1;
     return;
@@ -398,7 +437,7 @@ document.addEventListener("pointermove", (e) => {
     grabbed.x = grabbed.ox = x;
     grabbed.y = grabbed.oy = y;
   }
-  push(cloth, x, y, TOUCH_R2, TOUCH_FORCE);
+  push(cloth, x, y, TOUCH_R2, TOUCH_FORCE, shown);
   ringNear(x, y, false);
 });
 
@@ -407,7 +446,7 @@ document.addEventListener("pointerdown", (e) => {
   if (!cloth || moving || e.target.closest("button, a")) return;
   if (peach && peach.blocks(e.clientX, e.clientY)) return; // 點的是蟠桃樹或 QR 卡片
   const { x, y } = local(e);
-  const hit = nearest(cloth, x, y, GRAB_R2);
+  const hit = nearest(cloth, x, y, GRAB_R2, shown);
   if (hit && !hit.p.pinned) {
     grabbed = hit.p;
     grabbed.wasPinned = grabbed.pinned;
@@ -472,7 +511,7 @@ function setGate(transform, opacity, blurred, ms) {
   g.style.transform = transform;
   g.style.opacity = String(opacity);
   const mix = blurred ? 1 : 0;
-  for (const id of ["gateImg", "cloth", "plaque"]) {
+  for (const id of ["gateImg", "cloth", "plaque", "gateMist"]) {
     if (!$(id)) continue;
     const st = $(id).style;
     st.transition = tr(["opacity"]);
@@ -568,7 +607,8 @@ async function goTo(index) {
   await sleep(dur);
 
   // 進場時輕輕響一串
-  [2, 9, 16].forEach((c, k) =>
+  // 照珠簾有幾串挑三串（原本 26 串時是第 2、9、16 串）
+  [0.08, 0.36, 0.64].map((f) => Math.round(f * (COLS - 1))).forEach((c, k) =>
     setTimeout(() => chimes.strike({ id: -10 - k, col: c, cols: COLS, intensity: 0.35, force: true }), k * 320) // 一聲一聲慢慢響
   );
 
@@ -641,6 +681,8 @@ async function start() {
     if (deity) bakeMist(deity.theme.mist);
   });
   bakeBlurredGate();
+  // 道場門前慢慢飄的薄霧（油畫版的廟門沒有）：大門一好就放，跟著慢慢淡入（不等別的圖載完才突然出現）
+  if (GATE.mist) addGateMist(GATE);
 
   const first = Math.max(0, ORDER.indexOf(location.hash.slice(1)));
   if (first > 0) window.scrollTo(0, first * window.innerHeight);

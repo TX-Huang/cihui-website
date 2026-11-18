@@ -61,8 +61,10 @@ test("petals: each petal leaves the crown, tumbles and drifts, lands on its modu
 });
 
 // 4. 卡片放在樹的左邊（樹大部分看得到，才看得出花瓣從樹上飄過去），
-//    但不蓋到珠簾門洞；手機還是放在畫面中間
-test("on desktops the card sits beside the tree (most of the tree stays visible), clear of the doorway", async () => {
+//    但不蓋到珠簾門洞；手機還是放在畫面中間。
+//    2026-11-17：道場門的珠簾比較寬（掛在匾那一層），比較窄的桌機放不下樹旁邊，就跟平板一樣放畫面中間
+//    （卡片是點了樹才出現、一下就收的，蓋到珠簾沒關係）；寬螢幕還是放樹旁邊
+test("on desktops the card sits beside the tree (most of the tree stays visible), clear of the doorway — or in the middle when there is no room", async () => {
   const { fitGate } = await import("../js/layout.js");
   const { GATE } = await import("../js/gate.js");
   for (const [vw, vh] of [[1280, 720], [1440, 900], [1920, 1080], [2560, 1440]]) {
@@ -70,7 +72,12 @@ test("on desktops the card sits beside the tree (most of the tree stays visible)
     const b = qrBox(LINE_QR.length, tr, vw, vh);
     const s = fitGate(vw, vh, GATE);
     const doorRight = vw / 2 + (GATE.door.x1 - GATE.w / 2) * s;
-    assert.ok(b.card.x >= doorRight + 12 - 1e-9, `${vw}x${vh}: clear of the doorway`);
+    const beside = b.card.x >= doorRight + 12 - 1; // 卡片位置取整數像素
+    if (vw >= 1920) assert.ok(beside, `${vw}x${vh}: wide screens keep it beside the tree, clear of the doorway`);
+    if (!beside) {
+      assert.ok(Math.abs(b.card.x + b.card.w / 2 - vw / 2) <= 1, `${vw}x${vh}: no room beside the tree, so centred`);
+      continue;
+    }
     const covered = Math.max(0, b.card.x + b.card.w - tr.x);
     assert.ok(covered <= tr.w * 0.6, `${vw}x${vh}: covers ${Math.round((covered / tr.w) * 100)}% of the tree's width`);
     assert.ok(b.card.y >= 64 && b.card.y + b.card.h <= vh, `${vw}x${vh}: on screen, below the menu`);

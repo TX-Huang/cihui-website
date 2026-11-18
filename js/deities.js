@@ -6,19 +6,31 @@
 //   「欲明解說／欲明解脫」：道場誦本為「欲明解脫」（2026-11-08 確認）
 //   「五蘊自明／五蘊既明。三家會合」：道場誦本為「五蘊自明」（2026-11-08 確認）
 // 標點拿掉，句與句之間不留空；每輪結尾加一個全形空白。
-export const SUTRA =
-  "解脫非難難在定慧身心大定便生智慧智慧既生解脫亦易" +
-  "欲明解脫先除六賊耳不聽聲目不視色身不觸污意不著物鼻不妄嗅口不貪食" +
-  "六賊既空五蘊自明受想行識如鏡見形" +
-  "五蘊自明三家會合精氣與神長養活潑上下流通何難解脫" +
-  "　";
+// 標點拿掉以前先記下每一句從第幾個字開始（starts）：光簾收在兩旁時，經文的起點只能挪到一句話的開頭（見 js/highlight.js 的 placeSutra）
+function prep(raw) {
+  const starts = [0];
+  let n = 0;
+  for (const ch of raw) {
+    if (/[。，、；：]/.test(ch)) {
+      if (starts[starts.length - 1] !== n) starts.push(n);
+    } else if (!/[「」]/.test(ch)) n++;
+  }
+  return { text: raw.replace(/[。，、；：「」]/g, "") + "　", starts: starts.filter((s) => s < n) };
+}
+
+const JINMU = prep(
+  "解脫非難，難在定慧，身心大定，便生智慧，智慧既生，解脫亦易。" +
+    "欲明解脫，先除六賊，耳不聽聲，目不視色，身不觸污，意不著物，鼻不妄嗅，口不貪食。" +
+    "六賊既空，五蘊自明，受想行識，如鏡見形。" +
+    "五蘊自明，三家會合，精氣與神，長養活潑，上下流通，何難解脫。"
+);
+export const SUTRA = JINMU.text;
 
 // 另外三位神尊，各用自己經典裡最有代表性的一段（網路兩個以上來源比對，2026-11-09 道場誦本核對）。
 // 來源與比對記錄見 docs/sutras-candidates.md。
-const strip = (t) => t.replace(/[。，、；：「」]/g, "") + "　";
 
 // 《福德正神真經》本文：土地公自述開荒教民、受封、守護一方。誦本為「墾荒」（不是「懇荒」）
-const SUTRA_TUDI = strip(
+const TUDI = prep(
   "吾是三皇五帝后土之臣。本境真君。順天之志。開蒼辟地之炳。引人拓植。必配乾坤。喚醒愚民。墾荒教導純純。" +
     "人人敬我。我愛人群。有人問我名何姓。凡是共工氏之子炎帝子孫句龍。立志精忠威靈淳淳。後世人德高望重。" +
     "敕封「福德正神」。鎮守金域。管護社稷。保佑四境生靈。"
@@ -26,13 +38,13 @@ const SUTRA_TUDI = strip(
 
 // 《九天玄女治心消孽真經》本文第二段：無心為過、有心為惡、惡積為孽——把心治好就能消孽（經名的意思）。
 // 原文依善書圖書館版截取，另與四個網站比對；道場誦本為「猶可違」（網路版多作「尤」）、開頭保留「元君曰」（2026-11-09）
-const SUTRA_XUANNU = strip(
+const XUANNU = prep(
   "元君曰，無心者謂之過，有心者謂之惡，過出於不自知，惡成於有所恃，所以有過，許其自新，懺悔之條自在，為惡降之冥罰，禍淫之律難寬。" +
     "要之，上天以好生為心，豈有生之、而反殺之乎。書曰，天作孽，猶可違，自作孽、不可逭，非天之欲殺人也，實人自作孽而已。孽者，惡之積也"
 );
 
 // 《中壇元帥真經》本文：靈珠下凡、肉球出世、拜太乙真人、乾坤弓、風火輪。誦本為「金光洞裏」（網路版誤作「裹」）
-const SUTRA_NEZHA = strip(
+const NEZHA = prep(
   "吾是玉皇靈珠兒。上帝命我下凡塵。降生陳塘關總鎮。三年六月始出世。於母坐胎三季餘。一粒肉球如玄機。" +
     "雙親見此喜猶疑。未知懷我是妖精。肉球破開靈珠兒。出世能言自善走。神清氣魄異常人。本是上界降魔星。" +
     "太乙恩師為我渡。乾元山頂金光洞。金光洞裏鍊金剛。七歲能開乾坤弓。手提紫燄蛇牙寶。腳踏金霞風火輪。"
@@ -51,7 +63,8 @@ export const DEITIES = {
     title: "瑤池金母",
     subtitle: "慈悲為懷，護佑眾生",
     aside: "金母慈光照耀，願來到這裡的每一個人，心有所安。",
-    cloth: SUTRA,
+    cloth: JINMU.text,
+    starts: JINMU.starts, // 每一句從第幾個字開始
     keys: ["解脫非難難在定慧", "身心大定便生智慧", "五蘊自明三家會合"], // 珠簾上標成金色的句子（每句標一次，散在不同地方）
     note: 0,
     theme: { mark: "#b0893f", tint: "#ffffff", tintA: 0, mist: "rgba(255, 255, 255, 0.45)", ink: INK, gold: GOLD, petal: "#ead3cc" }
@@ -64,7 +77,8 @@ export const DEITIES = {
     title: "九天玄女",
     subtitle: "智慧之神，指引明路",
     aside: "傳說玄女授黃帝兵書，助其平定天下。",
-    cloth: SUTRA_XUANNU,
+    cloth: XUANNU.text,
+    starts: XUANNU.starts,
     keys: ["有心者謂之惡", "上天以好生為心", "孽者惡之積也"], // 珠簾上標成金色的句子（每句標一次，散在不同地方）
     note: 2,
     theme: { mark: "#6f63b8", tint: "#8c84c8", tintA: 0.32, mist: "rgba(240, 238, 255, 0.45)", ink: "#2c2a3a", gold: "#8e86b8", petal: "#d9d4ea" }
@@ -77,7 +91,8 @@ export const DEITIES = {
     title: "中壇元帥",
     subtitle: "腳踏風火，鎮守中壇",
     aside: "俗稱太子爺、哪吒三太子，護法除煞，守護一方。",
-    cloth: SUTRA_NEZHA,
+    cloth: NEZHA.text,
+    starts: NEZHA.starts,
     keys: ["本是上界降魔星", "七歲能開乾坤弓", "腳踏金霞風火輪"], // 珠簾上標成金色的句子（每句標一次，散在不同地方）
     note: 4,
     theme: { mark: "#c0662f", tint: "#e4a072", tintA: 0.3, mist: "rgba(255, 244, 236, 0.45)", ink: "#3a2a22", gold: "#b9794a", petal: "#efd2bd" }
@@ -90,7 +105,8 @@ export const DEITIES = {
     title: "福德正神",
     subtitle: "土地之神，福佑家園",
     aside: "俗稱土地公，守護土地與家宅，保佑五穀豐收、生意興隆。",
-    cloth: SUTRA_TUDI,
+    cloth: TUDI.text,
+    starts: TUDI.starts,
     keys: ["人人敬我我愛人群", "鎮守金域管護社稷", "保佑四境生靈"], // 珠簾上標成金色的句子（每句標一次，散在不同地方）
     note: 7,
     theme: { mark: "#8f7a26", tint: "#d6bb78", tintA: 0.3, mist: "rgba(255, 250, 236, 0.45)", ink: "#33301f", gold: "#a8914a", petal: "#ebdfba" }

@@ -206,7 +206,49 @@ body {
   width: 100%;
   height: 100%;
   user-select: none;
+}
+/* 油畫版的廟門有一圈淡淡的影子；道場門的邊緣是半透明的霧，加影子會在霧下面多一圈咖啡色，所以不加 */
+[data-look] .gate-img {
   filter: drop-shadow(0 24px 36px rgba(90, 70, 50, 0.16));
+}
+/* 道場門前慢慢飄的薄霧（js/gate-mist-view.js）：跟大門圖同一層、在圖上面、在珠簾下面 */
+.gate-mist {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  animation: gate-mist-in 2.4s ease-out both; /* 一出現就慢慢淡入 */
+}
+@keyframes gate-mist-in {
+  from {
+    opacity: 0;
+  }
+}
+.gate-mist-row {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+}
+.gate-mist-band {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  animation: gate-mist-drift 90s linear infinite;
+  will-change: transform;
+}
+.gate-mist-band canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* 慢慢橫移一個圖寬（圖是兩倍寬、左右接得起來）：一直循環，看不到接縫 */
+@keyframes gate-mist-drift {
+  to {
+    transform: translateX(-50%);
+  }
 }
 /* 換場用：預先模糊好的拱門，平常透明，換場時跟清楚的拱門交叉淡入淡出 */
 .gate-blur {
@@ -496,6 +538,10 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .gate-mist,
+  .gate-mist-band {
+    animation: none;
+  }
   .title .c,
   .copy.is-leaving .title .c {
     animation-duration: 1ms;

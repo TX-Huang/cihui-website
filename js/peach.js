@@ -21,18 +21,21 @@ const smooth = (t) => {
 };
 
 // 珠簾門洞右邊在畫面上的位置（跟 style.css 的 .gate-wrap 一樣：置中、底部在 101vh、從底部縮放）
+const GATE_DOOR_W = GATE.door.x1 - GATE.door.x0;
 function doorRight(vw, vh) {
   const s = fitGate(vw, vh, GATE);
   return vw / 2 + (GATE.door.x1 - GATE.w / 2) * s;
 }
 
-// 桃樹在畫面上的位置：大門右前方、站在畫面底部，不擋珠簾門洞
+// 桃樹在畫面上的位置：大門右前方、站在畫面底部，不擋珠簾門洞（道場門在手機上可以蓋到珠簾右邊一點，見 GATE.treeOverDoor）
 export function treeRect(vw, vh, aspect) {
   const phone = vw <= 720;
   const margin = phone ? 6 : Math.max(16, vw * 0.025);
   // 手機：畫面高的三成，但至少 120 像素寬（橫拿時畫面很矮）
   const hWant = phone ? Math.min(vh * 0.6, Math.max(vh * 0.3, 120 / aspect)) : Math.min(vh * 0.56, 600);
-  const xMin = doorRight(vw, vh) + 6;
+  // 道場門的珠簾比較寬：手機上桃樹可以站在門口右前方，蓋到珠簾右邊最多三成五（不然樹會太小）
+  const over = phone && GATE.treeOverDoor ? 0.35 * GATE_DOOR_W * fitGate(vw, vh, GATE) + 6 : 0;
+  const xMin = doorRight(vw, vh) + 6 - over;
   const w = Math.min(hWant * aspect, vw - margin - xMin);
   const h = w / aspect;
   return { x: vw - margin - w, y: vh - h - (phone ? vh * 0.03 : vh * 0.01), w, h };
