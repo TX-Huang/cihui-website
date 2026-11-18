@@ -135,3 +135,66 @@ test("every band gets the mask (so even the full-width floor band fades out at b
   assert.doesNotMatch(view, /if \(b\.clear\) \{\s*const m = maskFor/, "not only the bands with a clear middle");
   assert.match(view, /const m = maskFor\(b, gate\.w\);\s*row\.style\.maskImage = m;/);
 });
+
+// ── 2026-11-18 使用者：「再疊一層時隱時現的濃一點的霧」──
+// 10. 再加兩團比較濃的霧，會慢慢變濃、再慢慢散開（一次約 16～24 秒），同時也慢慢橫著飄：
+//     一團在兩邊（白牆下半到地板），一團在中間的地板和水面上；兩團錯開半拍（一邊濃的時候另一邊淡）。
+//     最濃不超過八成五；跟其他霧一樣不蓋字、匾、青鳥的橫樑，在珠簾後面，兩端淡掉。
+// 11. 使用者還是看不到（量過：霧濃淡變化時畫面只差 2～5／255）：白霧蓋在白牆上看不出來。
+//     所以濃的那兩團要有明暗：上面亮白、底下帶一點灰藍的陰影（真的霧堆就是這樣），在白牆上也看得出一團一團；
+//     而且飄過比較深的地方：木頭門框、走廊下面的燈牆、地上的倒影、大門兩旁的山。
+//     要求減少動畫：不動、不變，固定在淡淡的樣子。
+// 12. 20 秒一輪太慢，看不出霧在變（使用者 2026-11-18 選 A）：變濃再散開改成 12 秒一輪，還是慢慢的。
+
+test("two denser patches that slowly thicken and thin, half a beat apart", async () => {
+  const { MIST_PUFFS } = await import("../js/gate-mist.js");
+  assert.equal(MIST_PUFFS.length, 2);
+  for (const p of MIST_PUFFS) {
+    assert.equal(p.breathe, 12, `one thicken-and-thin takes ${p.breathe} s`);
+    assert.ok(p.peak > Math.max(...MIST_BANDS.map((b) => b.opacity)) && p.peak <= 0.85, `denser than the thin bands, still see-through (${p.peak})`);
+    assert.ok(p.seconds >= 60 && p.seconds <= 120, "also drifts slowly");
+    assert.ok(p.y1 <= GATE.h && p.y0 >= 560, "low: lower walls, floor and water");
+    for (let x = 0; x <= 1600; x += 20) assert.ok(visibleAt(p, x) >= 0 && visibleAt(p, x) <= 1);
+    assert.equal(visibleAt(p, 0), 0, "fades out at the ends like the other mist");
+  }
+  const [sides, middle] = MIST_PUFFS;
+  assert.equal(visibleAt(sides, 800), 0, "the side patch leaves the middle clear");
+  assert.ok(visibleAt(sides, 420) > 0.5 && visibleAt(sides, 1180) > 0.5);
+  assert.ok(visibleAt(middle, 800) > 0.9, "the middle patch is on the floor in the middle");
+  assert.ok(Math.abs(Math.abs(sides.delay - middle.delay) - sides.breathe / 2) < 1e-9, "half a beat apart");
+});
+
+test("the patches breathe with CSS (smooth in and out), and stay still and faint for reduced motion", () => {
+  const css = read("style.css");
+  assert.match(css, /@keyframes gate-mist-breathe\s*\{[\s\S]*?0%,\s*100%\s*\{\s*opacity:\s*0[\s\S]*?50%\s*\{\s*opacity:\s*var\(--peak\)/, "from nothing to its peak and back");
+  assert.match(css, /\.gate-mist-puff\s*\{[^}]*animation:\s*gate-mist-drift[^;]*,\s*gate-mist-breathe[^;]*ease-in-out infinite/, "drifts and breathes");
+  const reduced = css.slice(css.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
+  assert.match(reduced, /\.gate-mist-puff\s*\{[^}]*animation:\s*none;[^}]*opacity:\s*calc\(var\(--peak\) \* 0\.3\)/, "reduced motion: still and faint");
+  const view = read("js/gate-mist-view.js");
+  assert.match(view, /setProperty\("--peak", String\(p\.peak\)\)/);
+  assert.match(view, /animationDuration = `\$\{p\.seconds\}s, \$\{p\.breathe\}s`/, "drift and breathe on their own clocks");
+  assert.match(view, /animationDelay = `0s, \$\{p\.delay\}s`/);
+});
+
+test("the dense patches are shaded (bright tops, a soft grey-blue underside) so they show on white walls", async () => {
+  const { MIST_PUFFS } = await import("../js/gate-mist.js");
+  const view = read("js/gate-mist-view.js");
+  assert.match(view, /const SHADE = "\d+, \d+, \d+";/, "a grey-blue shade colour");
+  const shade = view.match(/const SHADE = "(\d+), (\d+), (\d+)";/).slice(1).map(Number);
+  assert.ok(shade[2] > shade[0] && Math.max(...shade) <= 200, `cool and clearly darker than the walls (${shade})`);
+  assert.match(view, /drawStrip\(10 \+ i, gate\.w, p\.y1 - p\.y0, 30, true\)/, "the dense patches are drawn shaded");
+  // 飄過比較深的地方：左邊的木頭門框和下面的燈牆（x 486–620），還有大門兩旁的山（x 170–330）
+  const [sides] = MIST_PUFFS;
+  for (const x of [200, 300, 500, 600]) assert.ok(visibleAt(sides, x) > 0.5, `over the darker parts at x ${x}`);
+  assert.ok(sides.y0 <= 640, "reaches up to the lower lamp walls");
+});
+
+// 13. 審查發現：一團一團畫（每團先陰影再亮面），後面那團的陰影會壓在前面那團的亮面上，頂部出現灰斑。
+//     要先把所有陰影畫完，再畫所有亮面，亮面才會全部在上面。
+test("all the grey-blue shadows are drawn first, then all the bright tops over them", () => {
+  const view = read("js/gate-mist-view.js");
+  const shadePass = view.search(/if \(shaded\) for \(const b of blobs\)[^\n]*SHADE/);
+  const brightPass = view.search(/for \(const b of blobs\) \{\s*\n[\s\S]*?BRIGHT/);
+  assert.ok(shadePass > 0, "a separate pass for every shadow");
+  assert.ok(brightPass > shadePass, "the bright pass comes after it");
+});

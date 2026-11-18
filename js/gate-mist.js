@@ -12,6 +12,16 @@ export const MIST_BANDS = [
   { y0: 230, y1: 330, opacity: 0.35, seconds: 115, dir: 1, clear: { x0: 470, x1: 1130 }, feather: 80 }
 ];
 
+// 再疊兩團比較濃的霧，會慢慢變濃、再慢慢散開（使用者 2026-11-18「再疊一層時隱時現的濃一點的霧」）。
+// peak：最濃的時候；breathe：濃一次再散開要幾秒；delay：兩團錯開半拍（一邊濃的時候另一邊淡）
+export const MIST_PUFFS = [
+  // 兩邊：從大門兩旁的山、白牆下半，一直飄進木頭門框和走廊下面的燈牆（比較深的地方才看得出霧）；
+  // 中間神壇那段（x 700–900）空出來
+  { y0: 600, y1: 980, peak: 0.8, seconds: 75, dir: -1, breathe: 12, delay: 0, clear: { x0: 700, x1: 900 }, feather: 90 },
+  // 中間：地板、倒影和水面
+  { y0: 860, y1: 1067, peak: 0.7, seconds: 95, dir: 1, breathe: 12, delay: -6, clear: null }
+];
+
 // 大門圖的寬（設計座標）；霧在圖的左右兩端 EDGE 以內慢慢淡到沒有（圖的兩端本來就是透明的，霧不能在那裡變成一條直直的邊）
 export const MIST_W = 1600;
 const EDGE = 160;
