@@ -1,8 +1,9 @@
 /* 服務頁「故事版」（services-story.html）。
    沒有 JavaScript、或要求減少動畫：就是一篇照順序讀的文章（宣紙底、深色字）。
-   js/story-view.js 確定可以做的時候，在 .story 加上 is-live：每一幕停在畫面上（sticky），字一句一句浮出來，
-   背景（--sky）跟著幕換顏色，每一幕的字色是 --ink、結尾那句小問題是 --hook，畫面跟著這一幕的進度 --p 動。
-   規格在 test/services-story.test.mjs。藏起來（透明）和停住（sticky）的規則都只寫在 .is-live 底下 */
+   js/story-view.js 確定可以做的時候，在 .story 加上 is-live：每一幕一個畫面高，捲到哪一幕（is-current），那一幕就自己播：
+   字照閱讀速度一句一句浮出來（is-out），畫面跟著播到第幾句動（at-1、at-2…），背景（--sky）自己慢慢轉成這一幕的顏色。
+   動畫都不跟著捲軸（使用者：一般人不會一直捲，跟著捲軸會卡在一半）。每一幕的字色是 --ink、結尾那句小問題是 --hook。
+   規格在 test/services-story.test.mjs。藏起來（透明）的規則都只寫在 .is-live 底下 */
 
 .story {
   background: var(--sky, var(--paper));
@@ -84,14 +85,19 @@
   width: min(36rem, 100%);
   text-align: center;
   color: var(--ink, var(--text));
-  opacity: var(--alpha, 1);
 }
-.act {
+/* 每一幕的名字：是標題（h2，讀螢幕軟體可以一幕一幕跳），但看起來是一行小小的宋體字（不用內頁 h2 的毛筆字和前面那條線） */
+.story .act {
+  display: block;
   margin: 0 0 20px;
   font-family: var(--serif);
+  font-weight: 400;
   font-size: 14px;
   letter-spacing: 0.3em;
   opacity: 0.8;
+}
+.story .act::before {
+  content: none;
 }
 .line {
   margin: 0 0 12px;
@@ -126,29 +132,24 @@
   opacity: 0.8;
 }
 
-/* ── 每一幕的畫面（--p：這一幕的進度；沒有 JavaScript 時都是最後的樣子） ── */
-/* 燈：第一幕是還沒點的燈（只有一點微光）；第三幕在兩條運勢線交會的地方亮起來（--glow） */
+/* ── 每一幕的畫面（沒有 JavaScript 時都是最後的樣子；動起來的規則在下面 is-live 那段） ── */
+/* 燈：第一幕是還沒點的燈（只有一點微光）；第三幕在兩條運勢線交會的地方亮起來 */
 .lamp-light {
   width: 140px;
   height: 140px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(255, 240, 200, 0.95) 0 10%, rgba(240, 200, 120, 0.55) 32%, rgba(240, 200, 120, 0) 70%);
-  opacity: var(--glow, 1);
-  transform: scale(calc(0.6 + var(--glow, 1) * 0.4));
 }
 .lamp-light.is-dim {
   background: radial-gradient(circle, rgba(220, 190, 150, 0.45) 0 6%, rgba(220, 190, 150, 0.12) 24%, rgba(220, 190, 150, 0) 50%);
-  opacity: 1;
-  transform: none;
 }
 .art-cloud {
   position: absolute;
   width: 80%;
   bottom: -10%;
   opacity: 0.3;
-  transform: translateX(calc(var(--p, 0) * -48px));
 }
-/* 第二幕：「兩件事」，兩團柔光一個一個出來 */
+/* 第二幕：「兩件事」，兩團柔光 */
 .orb {
   width: 96px;
   height: 96px;
@@ -162,16 +163,10 @@
   color: #3b2e20;
   background: radial-gradient(circle, rgba(240, 210, 150, 0.9), rgba(240, 210, 150, 0.15) 66%, rgba(240, 210, 150, 0) 72%);
 }
-.orb-one {
-  opacity: clamp(0, (var(--p, 1) - 0.2) * 4, 1);
-}
-.orb-two {
-  opacity: clamp(0, (var(--p, 1) - 0.4) * 4, 1);
-}
-/* 第三幕：運勢線慢慢畫出來（--draw），燈在交會的地方亮 */
+/* 第三幕：運勢線、燈在交會的地方 */
 .story .handover path {
   stroke-dasharray: 1;
-  stroke-dashoffset: calc(1 - var(--draw, 1));
+  stroke-dashoffset: 0;
 }
 .story .curve-old {
   stroke: var(--ink, #8b8178);
@@ -222,42 +217,38 @@
   width: 100%;
   margin: 0;
 }
-/* 第六幕：桃樹慢慢浮出來（--rise） */
+/* 第六幕：桃樹 */
 .art-peach {
   width: auto;
   height: 260px;
-  opacity: var(--rise, 1);
-  transform: translateY(calc((1 - var(--rise, 1)) * 24px));
 }
 /* 第八幕：一年的線 */
 .scene[data-scene="yearend"] .plan-line {
   width: 100%;
 }
 
-/* ── 停住、一句一句浮出來（只在 is-live） ── */
-/* 畫面高（--stage-h）由 js/story-view.js 量一次（innerHeight），停住的畫面、每一幕多高、進度都用同一個數字 */
+/* ── 捲到哪一幕，那一幕自己播（只在 is-live） ── */
+/* 背景自己慢慢轉成現在這一幕的顏色 */
+.story.is-live {
+  transition: background-color 1.6s var(--ease);
+}
+/* 每一幕至少一個畫面高、內容在中間；內容比畫面高就自己變高（不會被切掉） */
 .story.is-live .scene {
-  height: calc(var(--stage-h, 100vh) * (1 + var(--beats, 4) * 0.55));
+  display: flex;
+  min-height: 100vh;
+  min-height: 100svh;
   margin: 0;
   padding: 0;
 }
 .story.is-live .stage {
-  position: sticky;
-  top: 0;
-  height: var(--stage-h, 100vh);
+  flex: 1;
+  justify-content: center;
   gap: 16px;
-  padding: 80px 20px 20px;
-}
-/* 置中，但內容比畫面高時從上面開始排（不會被頂端的選單蓋住） */
-.story.is-live .stage > :first-child {
-  margin-top: auto;
-}
-.story.is-live .stage > :last-child {
-  margin-bottom: auto;
+  padding: 80px 20px 32px;
 }
 .story.is-live .art {
-  flex: 0 1 30vh;
-  min-height: 0;
+  height: clamp(150px, 30vh, 300px);
+  transition: opacity 1.2s var(--ease);
 }
 .story.is-live .art > svg,
 .story.is-live .art-peach {
@@ -284,6 +275,25 @@
 .story.is-live .panel {
   margin: 12px auto;
 }
+/* 不是現在這一幕：字和畫面淡掉（換幕時舊的淡出、新的淡入，字不會在不對的背景上） */
+.story.is-live .words {
+  transition: opacity 1.2s var(--ease);
+}
+/* 新的一幕：等背景轉得差不多（0.8 秒）才淡入；舊的一幕：很快淡掉（0.6 秒）。深色換淺色時字不會疊在轉到一半的背景上 */
+.story.is-live .scene.is-current .words {
+  transition-delay: 0.8s;
+}
+.story.is-live .scene.is-current .art {
+  transition-delay: 0.8s;
+}
+.story.is-live .scene:not(.is-current) .words {
+  opacity: 0;
+  transition-duration: 0.6s;
+}
+.story.is-live .scene:not(.is-current) .art {
+  opacity: 0;
+  transition-duration: 0.6s;
+}
 /* 還沒浮出來的只是透明（讀螢幕軟體還是唸得到），也點不到 */
 .story.is-live .beat {
   opacity: 0;
@@ -298,28 +308,72 @@
   transform: none;
   pointer-events: auto;
 }
-/* 已經讀過的句子淡一點，眼睛自然看最新那一句（混上背景以後對比還是至少 4.5，測試會量） */
+/* 已經讀過的句子淡一點，眼睛自然看最新那一句（混上背景以後，字和金色的字對比都還是至少 4.5，測試會量） */
 .story.is-live .line.is-out.is-past {
-  opacity: 0.8;
+  opacity: 0.9;
 }
-/* 內容比畫面高的一幕（很矮的手機、放大字）：不停住，字直接全部看得到 */
-.story.is-live .scene.is-tall {
-  height: auto;
+
+/* 每一幕的畫面跟著播到第幾句動（at-N = 已經出來 N 句） */
+/* 第一幕：雲很慢地飄 */
+.story.is-live .art-cloud {
+  animation: story-drift 24s ease-in-out infinite alternate;
 }
-.story.is-live .scene.is-tall .stage {
-  position: static;
-  height: auto;
+@keyframes story-drift {
+  to {
+    transform: translateX(-48px);
+  }
 }
-.story.is-live .scene.is-tall .beat {
+/* 第二幕：說到「兩件事」時，兩團光一個一個出來 */
+.story.is-live .orb {
+  opacity: 0;
+  transform: scale(0.85);
+  transition:
+    opacity 1.8s var(--ease),
+    transform 1.8s var(--ease);
+}
+.story.is-live .orb-two {
+  transition-delay: 0.9s;
+}
+.story.is-live .scene[data-scene="promise"].at-2 .orb {
   opacity: 1;
   transform: none;
-  pointer-events: auto;
+}
+/* 第三幕：說到運勢往下往上時，兩條線慢慢畫出來；說到「點燈」時燈亮 */
+.story.is-live .scene[data-scene="yuandan"] .handover path {
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 3s var(--ease);
+}
+.story.is-live .scene[data-scene="yuandan"].at-2 .handover path {
+  stroke-dashoffset: 0;
+}
+.story.is-live .scene[data-scene="yuandan"] .lamp-light {
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 2.4s var(--ease),
+    transform 2.4s var(--ease);
+}
+.story.is-live .scene[data-scene="yuandan"].at-3 .lamp-light {
+  opacity: 1;
+  transform: none;
+}
+/* 第六幕：桃樹慢慢浮出來 */
+.story.is-live .art-peach {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 2.4s var(--ease),
+    transform 2.4s var(--ease);
+}
+.story.is-live .scene[data-scene="bayue"].at-1 .art-peach {
+  opacity: 1;
+  transform: none;
 }
 
 /* 手機：畫面矮，圖小一點、字小一點 */
 @media (max-width: 600px) {
   .story.is-live .art {
-    flex-basis: 24vh;
+    height: clamp(120px, 24vh, 220px);
   }
   .line {
     font-size: 19px;
@@ -363,22 +417,28 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .scroll-cue {
+  .scroll-cue,
+  .story.is-live .art-cloud {
     animation: none;
   }
 }
 
 @media print {
   .story.is-live .scene {
-    height: auto;
+    min-height: 0;
   }
-  .story.is-live .stage {
-    position: static;
-    height: auto;
+  /* 列印：整篇都印出來（蓋過「不是現在這一幕就淡掉」） */
+  .story.is-live .beat,
+  .story.is-live .words,
+  .story.is-live .art,
+  .story.is-live .orb,
+  .story.is-live .lamp-light,
+  .story.is-live .art-peach {
+    opacity: 1 !important;
+    transform: none !important;
   }
-  .story.is-live .beat {
-    opacity: 1;
-    transform: none;
+  .story.is-live .handover path {
+    stroke-dashoffset: 0 !important;
   }
 }
 

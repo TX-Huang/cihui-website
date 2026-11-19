@@ -1,5 +1,6 @@
-// 服務頁「故事版」（services-story.html）的計算：每一幕的顏色、捲到哪裡出哪一句、背景什麼時候混、字什麼時候淡。
+// 服務頁「故事版」（services-story.html）的計算：每一幕的顏色、現在是哪一幕、一句一句什麼時候出來。
 // 純計算，方便測試；畫面在 js/story-view.js。規格在 test/services-story.test.mjs。
+// 2026-11-19 使用者：「正常人不會一直一直滾，這樣動畫會卡在中間」→ 動畫不跟著捲軸，捲到哪一幕，那一幕自己照閱讀速度播完。
 
 // 每一幕的顏色：bg 背景、ink 字、hook 結尾那句「小問題」的顏色。
 // 前三幕黃昏 → 半夜（深色），第四幕新春起天亮（淺色）；對比都至少 4.5（測試會量）
@@ -14,43 +15,40 @@ export const SCENES = [
   { id: "yearend", bg: "#f2eadb", ink: "#3b3020", hook: "#7a4e14" }
 ];
 
-const clamp01 = (t) => Math.min(1, Math.max(0, t));
 export const smooth = (t) => {
-  const x = clamp01(t);
+  const x = Math.min(1, Math.max(0, t));
   return x * x * (3 - 2 * x);
 };
 
-// 這一幕走到哪裡：top 是這一幕上緣在畫面裡的位置、height 是這一幕多高、vh 是畫面高。
-// 這一幕剛停住（上緣碰到畫面頂端）= 0，要放開了（下緣碰到畫面底部）= 1
-export function sceneProgress(top, height, vh) {
-  const span = height - vh;
-  if (span <= 0) return 1;
-  return clamp01(-top / span);
+// 現在是哪一幕：畫面中間（center，頁面上的位置）落在哪一幕。
+// 還在標題卡上 = -1；落在兩幕中間的空隙 = 上面那一幕；過了最後一幕 = 最後一幕
+export function activeScene(center, spans) {
+  let now = -1;
+  spans.forEach((s, i) => {
+    if (center >= s.top) now = i;
+  });
+  return now;
 }
 
-// 進度 p 時出來了幾句（一共 n 句）：剛停住就有第一句，每一句分到一樣長的一段，最後一句也留一段讓人讀完
-export function beatsShown(p, n) {
-  return Math.max(1, Math.min(n, 1 + Math.floor(clamp01(p) * n)));
+// 一句停多久才出下一句（毫秒）：照閱讀速度，字多的久一點；至少 1.5 秒、最多 3.5 秒
+export function readMs(text) {
+  const n = [...text.replace(/\s+/g, "")].length;
+  return Math.min(3500, Math.max(1500, 700 + 90 * n));
 }
 
-// 背景現在是哪兩幕混在一起：y 是捲了多少，spans 是每一幕在頁面上的 { top, height }。
-// 一幕停住的時候就是那一幕的顏色；只有交接（這一幕放開 → 下一幕停住，剛好一個畫面高）時才慢慢混過去
-export function skyAt(y, spans, vh) {
-  const last = spans.length - 1;
-  for (let i = 0; i < last; i++) {
-    const end = spans[i].top + spans[i].height - vh;
-    if (y <= end) return { a: i, b: i, w: 0 };
-    const next = spans[i + 1].top;
-    if (y < next) return { a: i, b: i + 1, w: smooth((y - end) / (next - end)) };
+// 這一幕開始播以後，每一句什麼時候出來（毫秒）：第一句馬上，後面一句接一句
+const FIRST_MS = 300;
+export function beatTimes(texts) {
+  const at = [];
+  let t = FIRST_MS;
+  for (const text of texts) {
+    at.push(t);
+    t += readMs(text);
   }
-  return { a: last, b: last, w: 0 };
+  return at;
 }
 
-// 這一幕的字看得到多少：上緣從畫面一半升到頂端時淡入；下緣從畫面底部退到一半時淡出。
-// 所以交接一半之前，舊的一幕已經淡掉；過了一半，新的一幕才出來（字不會在混到一半的背景上）
-export function textAlpha(top, height, vh) {
-  const half = vh * 0.5;
-  const fadeIn = smooth(1 - top / half);
-  const fadeOut = smooth((top + height - half) / half);
-  return Math.min(fadeIn, fadeOut);
+// 播了 ms 毫秒時，出來了幾句
+export function stepAt(ms, at) {
+  return at.filter((t) => t <= ms).length;
 }

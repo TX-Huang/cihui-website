@@ -3,34 +3,39 @@
 // 使用者同意的故事稿（8 幕，主角是「你」）：先講他的心事、每一幕結尾留一個小問題、價錢變成「鬆一口氣」的那一刻。
 //
 // 規格：
-// 1. 新的一頁 services-story.html：跟其他內頁同一條選單（「服務」標成現在這頁）、同一個頁尾；舊的 services.html 不動。
+// 1. 新的一頁 services-story.html：跟其他內頁同一條選單（「服務」指到這一頁自己）、同一個頁尾；舊的 services.html 不動。
 // 2. 最上面是標題卡（服務／從容修行的年度藍圖／往下滑聽故事），接著 8 幕，順序和每一句都照使用者同意的故事稿（下面的 SCRIPT）。
-//    每一幕上面寫「第幾幕＋名字」。除了最後一幕，每一幕最後一句是「小問題」（hook，接到下一幕）。
+//    每一幕上面只寫這一幕的名字（2026-11-19 使用者：「第幾幕」的字樣拿掉）。除了最後一幕，每一幕最後一句是「小問題」（hook，接到下一幕）。
 // 3. 事實照道場的簡報、數字只從 js/blueprint.js 來：第三幕寫小燈、大燈的價錢；第四幕是祭改小問答（勾自己的情況、算合計）；
 //    第八幕「核心只要 $1,900 起」的數字＝小燈＋祭改。還沒給的（蟠桃牌位的價錢、匯款帳號、聯絡方式）放進「待填」框。
-// 4. 往下滑時畫面停在這一幕（sticky），字一句一句浮出來：剛進這一幕就有第一句，滑完這一幕最後一句已經出來；
-//    已經出來的字不會再消失（往回滑才會收回去）。浮出來很慢很柔（至少 1 秒，優雅不躁動）。
-// 5. 每一幕有自己的顏色（前三幕是黃昏到半夜的深色，第四幕起是天亮的淺色）。背景只在兩幕交接時才慢慢混過去
-//    （交接＝前一幕放開、到下一幕停住，滑一個畫面高），一幕裡面不變色。字不會在混到一半的背景上：
-//    這一幕的字在交接一半之前就淡掉，下一幕的字過了一半才淡入。每一幕字和背景的對比至少 4.5。
-// 6. 畫面跟著每一幕的進度動：第三幕運勢線畫出來、燈亮起來；第五幕兩道光合起來（照舊頁的順序：名字先淡掉、合起來才出現「完整的能量防護」）；
-//    第六幕桃樹浮出來；第七幕蓮花開；第八幕一年的線從元旦亮到歲末。
-// 7. 沒有 JavaScript、或要求減少動畫：不停住、不藏字，整篇照順序直接看得到（像一般文章）。
-//    看網頁中途才打開「減少動畫」：也變回一般文章。
-// 8. 2026-11-19 Codex 審查：
-//    a. 還沒浮出來的字只是透明，讀螢幕軟體還是唸得到（不用 visibility: hidden 藏）；
-//       用鍵盤移到還沒浮出來的東西（例如祭改的勾選）時，畫面捲到那一幕整個出來的地方，看得到自己在哪裡；
-//       正在用鍵盤操作的那一幕，交接時不淡掉。
+// 4. 2026-11-19 使用者：「正常人不會一直一直滾，這樣動畫會卡在中間」→ 動畫不跟著捲軸走，捲到哪一幕，那一幕就自己播完：
+//    畫面中間落在哪一幕，那一幕就是「現在這一幕」。第一句馬上出來，後面照閱讀速度一句一句出來
+//    （一句至少 1.5 秒、最多 3.5 秒，字多的久一點），不用一直捲。播過的幕捲回來就是播完的樣子。浮出來很慢很柔（至少 1 秒）。
+// 5. 每一幕有自己的顏色（前三幕黃昏到半夜的深色，第四幕起天亮的淺色）。背景＝現在這一幕的顏色，換幕時自己慢慢轉過去（至少 1 秒），
+//    不會停在半深半淺。不是現在這一幕的字淡掉（換幕時舊的淡出、新的淡入），所以字不會在不對的背景上。每一幕字和背景的對比至少 4.5。
+// 6. 每一幕的畫面跟著播到第幾句自己動完（不跟捲軸）：第二幕說到「兩件事」時兩團光出來；第三幕說到運勢往下往上時運勢線畫出來、
+//    說到「點燈」時燈亮；第五幕兩道光合起來（名字先淡掉、合起來才出現「完整的能量防護」）；第六幕桃樹浮出來；第七幕蓮花開；
+//    第八幕一年的線從元旦亮到歲末。
+// 7. 沒有 JavaScript、或要求減少動畫：不藏字，整篇照順序直接看得到（像一般文章）。看網頁中途才打開「減少動畫」：也變回一般文章。
+// 8. 2026-11-19 Codex 審查（照新的做法保留下來的）：
+//    a. 還沒出來的字只是透明，讀螢幕軟體還是唸得到（不用 visibility: hidden 藏）；用鍵盤移到還沒出來的東西（例如祭改的勾選）時，
+//       那一幕直接整個出來。
 //    b. 讀過的句子變淡，但跟背景的對比還是至少 4.5（每一幕都量，算混上背景以後的顏色）。
-//    c. 選單「服務」指到這一頁自己。
-//    d. 每一幕之間沒有多出來的空白（交接剛好一個畫面高）。
-//    e. 畫面高只量一次（innerHeight），停住的畫面、每一幕多高、進度都用同一個數字（手機網址列縮放也一致）。
-//    f. 這一幕的內容比畫面高（很矮的手機、放大字）：這一幕不停住，字直接全部看得到，照一般文章往下捲。
+//    c. 每一幕至少一個畫面高、內容在中間；內容比畫面高（很矮的手機、放大字）就自己變高，不會被切掉。幕之間沒有多出來的空白。
+//       不用 sticky，所以手機網址列縮放也不會讓頁面跳。
+// 9. 2026-11-19 Codex 第二次審查：
+//    a. 這一幕的字真的進到畫面（字的上緣在畫面八成以上）才開始播，不會在還看不到的時候就播掉。
+//    b. 深色換淺色時：舊的字很快淡掉，新的字等背景轉得差不多（約 0.8 秒後）才淡入，不會疊在轉到一半的背景上。
+//    c. 用鍵盤移到某一幕裡的東西：那個東西捲到畫面中間（那一幕變成現在這一幕），整幕直接出來，看得到自己在哪裡。
+//    d. 播到一半就捲走：那一幕直接播完（捲回來是播完的樣子，不會停在一半）。
+//    e. 讀過的句子變淡以後，裡面金色的字（$1,900）對比也至少 4.5。
+//    f. 列印：每一幕的圖都是播完的樣子。
+//    g. 每一幕的名字是標題（h2），讀螢幕軟體可以一幕一幕跳。
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { LAMPS, JIEGAI_BASE, JIEGAI_ADDONS, money, coreFrom, handoverPaths } from "../js/blueprint.js";
-import { SCENES, sceneProgress, beatsShown, skyAt, textAlpha } from "../js/story.js";
+import { SCENES, activeScene, readMs, beatTimes, stepAt } from "../js/story.js";
 
 const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
 const html = read("services-story.html");
@@ -86,11 +91,9 @@ test("a title card first, then the eight scenes in the agreed order, every line 
     scenes.map((s) => s.id),
     SCRIPT.map((s) => s.id)
   );
-  const nums = ["一", "二", "三", "四", "五", "六", "七", "八"];
-  SCRIPT.forEach((want, i) => {
+  SCRIPT.forEach((want) => {
     const body = sceneOf(want.id);
-    assert.ok(strip(body.match(/<p class="act">[\s\S]*?<\/p>/)?.[0] ?? "").startsWith(`第${nums[i]}幕`), `${want.id}: act number`);
-    assert.ok(strip(body.match(/<p class="act">[\s\S]*?<\/p>/)?.[0] ?? "").includes(want.title), `${want.id}: act title`);
+    assert.equal(strip(body.match(/<h2 class="act">[\s\S]*?<\/h2>/)?.[0] ?? ""), want.title, `${want.id}: only the scene name (a heading), no 第幾幕`);
     const lines = [...body.matchAll(/<p class="beat line( hook)?">([\s\S]*?)<\/p>/g)];
     const expected = want.hook ? [...want.lines, want.hook] : want.lines;
     assert.deepEqual(
@@ -153,83 +156,81 @@ test("every scene has its own colours, dark from dusk to midnight then light fro
   for (const s of SCENES) assert.match(sceneOf(s.id), /./, `${s.id} is on the page`);
 });
 
-test("the lines come out one by one while the scene is held; already shown lines stay", () => {
-  // 進度：這一幕停住的那一刻 = 0，放開的那一刻 = 1
-  const vh = 800;
-  assert.equal(sceneProgress(300, 3000, vh), 0, "not held yet");
-  assert.equal(sceneProgress(0, 3000, vh), 0);
-  assert.equal(sceneProgress(-1100, 3000, vh), 0.5);
-  assert.equal(sceneProgress(-2200, 3000, vh), 1);
-  assert.equal(sceneProgress(-5000, 3000, vh), 1, "already let go");
-  for (const n of [1, 2, 4, 5]) {
-    assert.equal(beatsShown(0, n), 1, `n=${n}: the first line is there as soon as the scene is held`);
-    assert.equal(beatsShown(1, n), n, `n=${n}: all lines out by the end`);
-    let last = 0;
-    for (let p = 0; p <= 1.0001; p += 0.01) {
-      const k = beatsShown(Math.min(p, 1), n);
-      assert.ok(k >= last && k <= n && k >= 1, `n=${n}: never goes backwards while scrolling down (p=${p.toFixed(2)})`);
-      last = k;
-    }
-  }
-  // 每一句都有差不多一樣長的時間（最後一句出來以後，也留一段讓人讀完）
-  assert.equal(beatsShown(0.49, 4), 2);
-  assert.equal(beatsShown(0.5, 4), 3);
-  assert.equal(beatsShown(0.74, 4), 3);
-  assert.equal(beatsShown(0.75, 4), 4);
-});
-
-test("the background only blends during a handover, and text is never on a half-blended background", () => {
-  const vh = 800;
-  // 兩幕：第一幕 0～3000、第二幕 3000～5000（第一幕停住到 2200，交接是 2200～3000）
+test("the scene in the middle of the screen is the current one", () => {
+  // 兩幕：第一幕 1000～3000、第二幕 3000～4000（畫面中間的位置 → 哪一幕）
   const spans = [
-    { top: 0, height: 3000 },
-    { top: 3000, height: 2000 }
+    { top: 1000, height: 2000 },
+    { top: 3000, height: 1000 }
   ];
-  assert.deepEqual(skyAt(-500, spans, vh), { a: 0, b: 0, w: 0 }, "above the first scene");
-  assert.deepEqual(skyAt(1000, spans, vh), { a: 0, b: 0, w: 0 }, "inside a scene: no blending");
-  assert.deepEqual(skyAt(2200, spans, vh), { a: 0, b: 0, w: 0 });
-  const mid = skyAt(2600, spans, vh);
-  assert.equal(mid.a, 0);
-  assert.equal(mid.b, 1);
-  assert.ok(Math.abs(mid.w - 0.5) < 1e-9, "half way through the handover");
-  assert.ok(skyAt(2300, spans, vh).w < 0.1, "starts gently");
-  assert.deepEqual(skyAt(3000, spans, vh), { a: 1, b: 1, w: 0 }, "next scene held: fully its colour");
-  assert.deepEqual(skyAt(9000, spans, vh), { a: 1, b: 1, w: 0 }, "past the end");
-
-  // 字：停住時全亮；交接一半之前（這一幕）已經淡掉、一半之後（下一幕）才出來
-  assert.equal(textAlpha(0, 3000, vh), 1, "held: fully visible");
-  assert.equal(textAlpha(-1000, 3000, vh), 1);
-  assert.equal(textAlpha(-2600, 3000, vh), 0, "outgoing scene gone by mid-handover (its bottom at half the screen)");
-  assert.ok(textAlpha(-2300, 3000, vh) > 0.5, "fades out gently, not at once");
-  assert.equal(textAlpha(400, 2000, vh), 0, "incoming scene not there before mid-handover");
-  assert.ok(textAlpha(100, 2000, vh) > 0.5 && textAlpha(100, 2000, vh) < 1, "fades in gently");
+  assert.equal(activeScene(400, spans), -1, "still on the title card");
+  assert.equal(activeScene(1000, spans), 0);
+  assert.equal(activeScene(2999, spans), 0);
+  assert.equal(activeScene(3000, spans), 1);
+  assert.equal(activeScene(9000, spans), 1, "past the end: still the last scene");
+  assert.equal(activeScene(3500, [{ top: 1000, height: 2000 }, { top: 4000, height: 1000 }]), 0, "in a gap: the one above");
 });
 
-test("motion is slow and soft; without JavaScript or with reduced motion it reads as a normal article", () => {
-  // 藏字、停住都只在 .story.is-live 底下（JavaScript 確定可以做的時候才加）
+test("once a scene is current it plays by itself, one line at a time at reading pace", () => {
+  // 一句停多久：至少 1.5 秒、最多 3.5 秒，字多的久一點
+  assert.equal(readMs(""), 1500);
+  assert.equal(readMs("桃子熟了。"), 1500);
+  const mid = readMs("這一年你被照顧著。那些照顧過你的人呢？");
+  assert.ok(mid > 1500 && mid < 3500, `a normal line (${mid})`);
+  assert.equal(readMs("字".repeat(80)), 3500);
+  assert.ok(readMs("字".repeat(20)) > readMs("字".repeat(10)), "longer lines stay longer");
+  // 每一句什麼時候出來：第一句馬上（不到半秒），後面一句接一句
+  const texts = ["十二月三十一日，午夜。", "舊的一年，運氣慢慢往下走；新的一年，正要往上爬。", "就在兩條線交會的那一刻，母娘交代：點燈。"];
+  const at = beatTimes(texts);
+  assert.equal(at.length, 3);
+  assert.ok(at[0] <= 500, "the first line right away");
+  assert.equal(at[1] - at[0], readMs(texts[0]));
+  assert.equal(at[2] - at[1], readMs(texts[1]));
+  // 播了 ms 毫秒時出來了幾句
+  assert.equal(stepAt(0, at), 0);
+  assert.equal(stepAt(at[0], at), 1);
+  assert.equal(stepAt(at[1] - 1, at), 1);
+  assert.equal(stepAt(at[2], at), 3);
+  assert.equal(stepAt(1e9, at), 3, "never more than all of them");
+});
+
+test("motion is slow and soft and never follows the scroll bar; no JavaScript or reduced motion reads as an article", () => {
+  const secs = (block) => [...block.matchAll(/(\d+(?:\.\d+)?)(ms|s)\b/g)].map((m) => (m[2] === "ms" ? Number(m[1]) / 1000 : Number(m[1]))).filter((v) => v > 0);
+  // 藏起來（透明）只在 .is-live 底下
   const hidden = [...css.matchAll(/([^{}]+)\{[^}]*opacity:\s*0[;\s]/g)].map((m) => m[1].trim());
-  assert.ok(hidden.length > 0, "something is hidden before it comes out");
+  assert.ok(hidden.length > 0, "something waits to come out");
   for (const sel of hidden) assert.match(sel, /\.is-live/, `hidden only when live: ${sel}`);
-  const sticky = [...css.matchAll(/([^{}]+)\{[^}]*position:\s*sticky/g)].map((m) => m[1].trim());
-  assert.ok(sticky.length > 0, "the scene is held while scrolling");
-  for (const sel of sticky) assert.match(sel, /\.is-live/, `held only when live: ${sel}`);
-  // 字浮出來至少 1 秒
-  const beat = css.match(/\.is-live \.beat\s*\{[^}]*\}/)?.[0] ?? "";
-  const secs = [...beat.matchAll(/(\d+(?:\.\d+)?)(ms|s)\b/g)].map((m) => (m[2] === "ms" ? Number(m[1]) / 1000 : Number(m[1])));
-  assert.ok(secs.length && Math.min(...secs.filter((s) => s > 0)) >= 1, `beats come out slowly (${secs})`);
+  assert.doesNotMatch(css, /position:\s*sticky/, "nothing is held to the scroll bar");
+  // 一句浮出來、背景換色、整幕淡入淡出：都至少 1 秒
+  const beat = css.match(/\.story\.is-live \.beat\s*\{[^}]*\}/)?.[0] ?? "";
+  assert.ok(secs(beat).length && Math.min(...secs(beat)) >= 1, `lines come out slowly (${secs(beat)})`);
+  const sky = css.match(/\.story\.is-live\s*\{[^}]*\}/)?.[0] ?? "";
+  assert.match(sky, /transition:[^;]*background-color/, "the background turns by itself");
+  assert.ok(secs(sky).length && Math.min(...secs(sky)) >= 1, `the background turns slowly (${secs(sky)})`);
+  const words = css.match(/\.story\.is-live \.words\s*\{[^}]*\}/)?.[0] ?? "";
+  assert.ok(secs(words).length && Math.min(...secs(words)) >= 1, `scenes fade in and out slowly (${secs(words)})`);
+  assert.match(css, /\.story\.is-live \.scene:not\(\.is-current\) \.words\s*\{[^}]*opacity:\s*0/, "only the current scene's words show");
+  // 畫面跟著播到第幾句動（at-N = 已經出來 N 句）
+  for (const [scene, n, what] of [
+    ["promise", 2, ".orb"],
+    ["yuandan", 2, ".handover path"],
+    ["yuandan", 3, ".lamp-light"],
+    ["bayue", 1, ".art-peach"]
+  ])
+    assert.ok(css.includes(`.scene[data-scene="${scene}"].at-${n} ${what}`), `${scene}: ${what} moves when line ${n} is out`);
   const view = read("js/story-view.js");
+  assert.doesNotMatch(view, /sceneProgress|getPropertyValue\("--p"\)/, "nothing is driven by the scroll position");
+  assert.match(view, /beatTimes\(/, "lines follow the reading-pace timeline");
+  for (const id of ["merge", "home", "yearend"]) assert.match(view, new RegExp(`${id}: `), `${id}: its art plays by itself`);
   assert.match(view, /prefers-reduced-motion: reduce/);
   assert.match(view, /if \(reduce[^)]*\) return/, "reduced motion: stays a normal article");
+  assert.match(view, /addEventListener\("change"/, "reacts when reduced motion is switched on later");
   assert.match(view, /classList\.add\("is-live"\)/);
 });
 
-test("review fixes: screen readers, keyboard, readable past lines, no gaps, one screen height, tall scenes", () => {
+test("review fixes kept: screen readers, keyboard, readable past lines, scenes at least a screen tall", () => {
   const view = read("js/story-view.js");
-  // a. 還沒浮出來的只是透明（讀螢幕軟體唸得到）；鍵盤移進去會捲到看得到的地方；正在操作的那一幕不淡掉
   assert.doesNotMatch(css, /visibility:\s*hidden/, "nothing is hidden from screen readers");
-  assert.match(view, /addEventListener\("focusin"/, "keyboard focus brings the scene into view");
-  assert.match(view, /contains\(document\.activeElement\)/, "the scene you are working in does not fade");
-  // b. 讀過的句子：混上背景以後對比還是至少 4.5
+  assert.match(view, /addEventListener\("focusin"/, "keyboard focus shows the whole scene");
   const past = css.match(/\.story\.is-live \.line\.is-out\.is-past\s*\{[^}]*opacity:\s*([\d.]+)/);
   assert.ok(past, "past lines are dimmed by opacity");
   const a = Number(past[1]);
@@ -238,23 +239,42 @@ test("review fixes: screen readers, keyboard, readable past lines, no gaps, one 
     const l = c.map((v) => v / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
     return 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2];
   };
-  for (const s of SCENES) {
-    const ink = rgb(s.ink);
-    const bg = rgb(s.bg);
-    const seen = ink.map((v, i) => a * v + (1 - a) * bg[i]);
-    const [x, y] = [lumOf(seen), lumOf(bg)].sort((p, q) => q - p);
-    assert.ok((x + 0.05) / (y + 0.05) >= 4.5, `${s.id}: a past line is still readable (${((x + 0.05) / (y + 0.05)).toFixed(2)})`);
-  }
-  // d. 每一幕之間沒有多出來的空白
-  assert.match(css.match(/\.story\.is-live \.scene\s*\{[^}]*\}/)?.[0] ?? "", /margin:\s*0/, "no gap between live scenes");
-  // e. 畫面高只量一次：CSS 用 JavaScript 量好的 --stage-h
-  assert.match(css.match(/\.story\.is-live \.scene\s*\{[^}]*\}/)?.[0] ?? "", /var\(--stage-h/, "scene height from the measured screen height");
-  assert.match(css.match(/\.story\.is-live \.stage\s*\{[^}]*\}/)?.[0] ?? "", /height:\s*var\(--stage-h/, "held stage uses the measured screen height");
-  assert.match(view, /setProperty\("--stage-h"/);
-  // f. 內容比畫面高的幕不停住、字全部看得到
-  assert.match(css, /\.story\.is-live \.scene\.is-tall \.stage\s*\{[^}]*position:\s*static/, "a too-tall scene is not held");
-  assert.match(css, /\.story\.is-live \.scene\.is-tall \.beat\s*\{[^}]*opacity:\s*1/, "a too-tall scene shows every line");
-  assert.match(view, /classList\.toggle\("is-tall"/);
-  // 7. 中途打開「減少動畫」：變回一般文章
-  assert.match(view, /addEventListener\("change"/, "reacts when reduced motion is switched on later");
+  for (const sc of SCENES)
+    for (const [what, hex] of [
+      ["ink", sc.ink],
+      ["gold", sc.hook]
+    ]) {
+      const ink = rgb(hex);
+      const bg = rgb(sc.bg);
+      const seen = ink.map((v, i) => a * v + (1 - a) * bg[i]);
+      const [x, y] = [lumOf(seen), lumOf(bg)].sort((p, q) => q - p);
+      assert.ok((x + 0.05) / (y + 0.05) >= 4.5, `${sc.id}: a past line (${what}) is still readable (${((x + 0.05) / (y + 0.05)).toFixed(2)})`);
+    }
+  const live = css.match(/\.story\.is-live \.scene\s*\{[^}]*\}/)?.[0] ?? "";
+  assert.match(live, /min-height:\s*100svh/, "every scene at least one screen tall (grows if its content is taller)");
+  assert.match(live, /margin:\s*0/, "no gap between scenes");
+});
+
+test("second review: start when the words are in view, clean dark-to-light handover, keyboard, finish on leaving, print", () => {
+  const view = read("js/story-view.js");
+  // a. 字進到畫面才開始播
+  assert.match(view, /words\.getBoundingClientRect\(\)\.top < innerHeight \* 0\.8/, "playback waits until the words are on screen");
+  // b. 新的字等背景轉得差不多才淡入；舊的字很快淡掉
+  const secs = (block) => [...block.matchAll(/(\d+(?:\.\d+)?)(ms|s)\b/g)].map((m) => (m[2] === "ms" ? Number(m[1]) / 1000 : Number(m[1])));
+  const incoming = css.match(/\.story\.is-live \.scene\.is-current \.words\s*\{[^}]*\}/)?.[0] ?? "";
+  assert.match(incoming, /transition-delay/, "new words wait for the background");
+  assert.ok(Math.max(...secs(incoming)) >= 0.6, `waits long enough (${secs(incoming)})`);
+  const outgoing = css.match(/\.story\.is-live \.scene:not\(\.is-current\) \.words\s*\{[^}]*\}/)?.[0] ?? "";
+  assert.ok(secs(outgoing).length && Math.max(...secs(outgoing)) <= 0.8, `old words leave quickly (${secs(outgoing)})`);
+  // c. 鍵盤：捲到畫面中間
+  assert.match(view, /scrollIntoView\(\{ block: "center"/, "focused control comes to the middle of the screen");
+  // d. 捲走就播完
+  assert.match(view, /finishScene\(/, "a scene left half-way is finished");
+  // f. 列印：圖都是播完的樣子
+  const print = css.slice(css.indexOf("@media print"));
+  for (const sel of [".orb", ".lamp-light", ".art-peach", ".handover path"]) assert.ok(print.includes(sel), `print shows ${sel} finished`);
+  assert.match(print, /stroke-dashoffset:\s*0 !important/);
+  // 一打開網頁還在標題卡上：沒有「上一幕」可以播完（不會出錯）；萬一出錯，拿掉 is-live，字不會全部藏著出不來
+  assert.match(view, /let current = -1;/, "starts on the title card, not on a scene");
+  assert.match(view, /classList\.remove\("is-live"\)/, "an error never leaves the words hidden");
 });
