@@ -24,8 +24,14 @@
 //    c. 每一幕至少一個畫面高、內容在中間；內容比畫面高（很矮的手機、放大字）就自己變高，不會被切掉。幕之間沒有多出來的空白。
 //       不用 sticky，所以手機網址列縮放也不會讓頁面跳。
 // 9. 2026-11-19 Codex 第二次審查：
-//    a. 這一幕的字真的進到畫面（字的上緣在畫面八成以上）才開始播，不會在還看不到的時候就播掉。
-//    b. 深色換淺色時：舊的字很快淡掉，新的字等背景轉得差不多（約 0.8 秒後）才淡入，不會疊在轉到一半的背景上。
+//    a. 這一幕的字真的進到畫面（字的上緣在畫面九成以上）才開始播，不會在還看不到的時候就播掉。
+//    b. 深色換淺色時：舊的字很快淡掉，背景一開始就轉得快（先快後慢），新的字稍等一下（0.3～0.6 秒）才淡入，
+//       不會疊在轉到一半的背景上。
+// 10. 2026-11-19 使用者：「剛滑下去的時候動畫出現比較慢，我一開始以為還沒滑到位」、「滑下去自動滑到下一幕的定點？」
+//    a. 滑一下就自動停到下一幕（一幕一個畫面，滑一次換一幕，不會停在兩幕中間）；標題卡、每一幕都是停點，最下面的頁尾也到得了。
+//       只在故事播放模式（is-live）才這樣；沒有 JavaScript、要求減少動畫就照一般網頁捲。
+//    b. 停好以後第一句馬上跟著整幕淡入（不再多等）。
+//    c. 「師姐」改成「樞理」。
 //    c. 用鍵盤移到某一幕裡的東西：那個東西捲到畫面中間（那一幕變成現在這一幕），整幕直接出來，看得到自己在哪裡。
 //    d. 播到一半就捲走：那一幕直接播完（捲回來是播完的樣子，不會停在一半）。
 //    e. 讀過的句子變淡以後，裡面金色的字（$1,900）對比也至少 4.5。
@@ -53,7 +59,7 @@ const SCRIPT = [
     hook: "燈亮了。可是今年，你還想求什麼？"
   },
   { id: "xinchun", title: "新春・許願", lines: ["過年了，每個人心裡都有一個願望。"], hook: "一盞燈、一次祭改。兩道光合在一起，會怎樣？" },
-  { id: "merge", title: "合在一起", lines: ["兩道光合起來，就是你一整年的護持。", "從此，師姐和道場可以一直看顧著你。", "少了一道，光就不完整。"], hook: "日子一天天過去。到了八月……" },
+  { id: "merge", title: "合在一起", lines: ["兩道光合起來，就是你一整年的護持。", "從此，樞理和道場可以一直看顧著你。", "少了一道，光就不完整。"], hook: "日子一天天過去。到了八月……" },
   {
     id: "bayue",
     title: "八月・蟠桃",
@@ -182,12 +188,12 @@ test("once a scene is current it plays by itself, one line at a time at reading 
   const texts = ["十二月三十一日，午夜。", "舊的一年，運氣慢慢往下走；新的一年，正要往上爬。", "就在兩條線交會的那一刻，母娘交代：點燈。"];
   const at = beatTimes(texts);
   assert.equal(at.length, 3);
-  assert.ok(at[0] <= 500, "the first line right away");
+  assert.equal(at[0], 0, "the first line comes in with the scene itself");
   assert.equal(at[1] - at[0], readMs(texts[0]));
   assert.equal(at[2] - at[1], readMs(texts[1]));
   // 播了 ms 毫秒時出來了幾句
-  assert.equal(stepAt(0, at), 0);
-  assert.equal(stepAt(at[0], at), 1);
+  assert.equal(stepAt(-1, at), 0, "before it starts");
+  assert.equal(stepAt(0, at), 1, "the first line as soon as it starts");
   assert.equal(stepAt(at[1] - 1, at), 1);
   assert.equal(stepAt(at[2], at), 3);
   assert.equal(stepAt(1e9, at), 3, "never more than all of them");
@@ -258,12 +264,13 @@ test("review fixes kept: screen readers, keyboard, readable past lines, scenes a
 test("second review: start when the words are in view, clean dark-to-light handover, keyboard, finish on leaving, print", () => {
   const view = read("js/story-view.js");
   // a. 字進到畫面才開始播
-  assert.match(view, /words\.getBoundingClientRect\(\)\.top < innerHeight \* 0\.8/, "playback waits until the words are on screen");
+  assert.match(view, /words\.getBoundingClientRect\(\)\.top < innerHeight \* 0\.9/, "playback waits until the words are on screen");
   // b. 新的字等背景轉得差不多才淡入；舊的字很快淡掉
   const secs = (block) => [...block.matchAll(/(\d+(?:\.\d+)?)(ms|s)\b/g)].map((m) => (m[2] === "ms" ? Number(m[1]) / 1000 : Number(m[1])));
   const incoming = css.match(/\.story\.is-live \.scene\.is-current \.words\s*\{[^}]*\}/)?.[0] ?? "";
   assert.match(incoming, /transition-delay/, "new words wait for the background");
-  assert.ok(Math.max(...secs(incoming)) >= 0.6, `waits long enough (${secs(incoming)})`);
+  assert.ok(Math.max(...secs(incoming)) >= 0.3 && Math.max(...secs(incoming)) <= 0.6, `waits a moment, not long (${secs(incoming)})`);
+  assert.match(css.match(/\.story\.is-live\s*\{[^}]*\}/)?.[0] ?? "", /background-color [\d.]+s var\(--ease-out\)/, "the background turns fast at first");
   const outgoing = css.match(/\.story\.is-live \.scene:not\(\.is-current\) \.words\s*\{[^}]*\}/)?.[0] ?? "";
   assert.ok(secs(outgoing).length && Math.max(...secs(outgoing)) <= 0.8, `old words leave quickly (${secs(outgoing)})`);
   // c. 鍵盤：捲到畫面中間
@@ -277,4 +284,14 @@ test("second review: start when the words are in view, clean dark-to-light hando
   // 一打開網頁還在標題卡上：沒有「上一幕」可以播完（不會出錯）；萬一出錯，拿掉 is-live，字不會全部藏著出不來
   assert.match(view, /let current = -1;/, "starts on the title card, not on a scene");
   assert.match(view, /classList\.remove\("is-live"\)/, "an error never leaves the words hidden");
+});
+
+test("one swipe, one scene: the page settles on the next scene by itself", () => {
+  const view = read("js/story-view.js");
+  assert.match(view, /document\.documentElement\.classList\.add\("story-snap"\)/, "snapping only in story mode");
+  assert.match(css, /html\.story-snap\s*\{[^}]*scroll-snap-type:\s*y mandatory/, "always settles on a scene");
+  const stops = css.match(/\.story-snap \.story-card,\s*\.story-snap \.scene\s*\{[^}]*\}/)?.[0] ?? "";
+  assert.match(stops, /scroll-snap-align:\s*start/, "title card and every scene are stops");
+  assert.match(stops, /scroll-snap-stop:\s*always/, "one swipe moves one scene");
+  assert.match(css, /\.story-snap footer\s*\{[^}]*scroll-snap-align:\s*end/, "the footer can still be reached");
 });

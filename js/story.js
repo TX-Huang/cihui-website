@@ -36,8 +36,8 @@ export function readMs(text) {
   return Math.min(3500, Math.max(1500, 700 + 90 * n));
 }
 
-// 這一幕開始播以後，每一句什麼時候出來（毫秒）：第一句馬上，後面一句接一句
-const FIRST_MS = 300;
+// 這一幕開始播以後，每一句什麼時候出來（毫秒）：第一句跟著整幕一起淡入（不多等），後面一句接一句
+const FIRST_MS = 0;
 export function beatTimes(texts) {
   const at = [];
   let t = FIRST_MS;

@@ -135,7 +135,7 @@ function setupStory() {
     });
   };
   // 畫面中間落在哪一幕，那一幕就是現在這一幕：背景轉成它的顏色；
-  // 它的字真的進到畫面（字的上緣在畫面八成以上）才開始播。離開的那一幕如果還沒播完，直接播完
+  // 它的字真的進到畫面（字的上緣在畫面九成以上）才開始播。離開的那一幕如果還沒播完，直接播完
   const update = () => {
     const i = activeScene(scrollY + innerHeight / 2, spans);
     if (i !== current) {
@@ -145,7 +145,7 @@ function setupStory() {
       story.style.setProperty("--sky", SCENES[Math.max(i, 0)].bg);
     }
     const s = scenes[current];
-    if (s && !s.started && s.words.getBoundingClientRect().top < innerHeight * 0.8) startScene(s);
+    if (s && !s.started && s.words.getBoundingClientRect().top < innerHeight * 0.9) startScene(s);
   };
   let queued = false;
   const ask = () => {
@@ -173,15 +173,18 @@ function setupStory() {
     measure();
     ask();
   });
-  // 一切準備好才開始藏字；萬一第一次量、畫出錯，拿掉 is-live，字不會全部藏著出不來
+  // 一切準備好才開始藏字；萬一第一次量、畫出錯，拿掉 is-live，字不會全部藏著出不來。
+  // story-snap：滑一下就自動停到下一幕（一幕一個畫面）
   yearLine?.classList.add("is-live");
   story.classList.add("is-live");
+  document.documentElement.classList.add("story-snap");
   try {
     measure();
     update();
   } catch (err) {
     story.classList.remove("is-live");
     yearLine?.classList.remove("is-live");
+    document.documentElement.classList.remove("story-snap");
     throw err;
   }
 }

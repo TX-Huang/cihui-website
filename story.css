@@ -6,7 +6,22 @@
    規格在 test/services-story.test.mjs。藏起來（透明）的規則都只寫在 .is-live 底下 */
 
 .story {
+  --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1); /* 先快後慢：背景一開始就轉得快，新的字不會等太久 */
   background: var(--sky, var(--paper));
+}
+
+/* 滑一下就自動停到下一幕（使用者：「滑下去自動滑到下一幕的定點」）：標題卡、每一幕都是停點，一次只換一幕；
+   頁尾也是停點（不然到不了）。只在故事播放模式（js/story-view.js 加 story-snap） */
+html.story-snap {
+  scroll-snap-type: y mandatory;
+}
+.story-snap .story-card,
+.story-snap .scene {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+.story-snap footer {
+  scroll-snap-align: end;
 }
 
 /* ── 標題卡 ── */
@@ -230,7 +245,7 @@
 /* ── 捲到哪一幕，那一幕自己播（只在 is-live） ── */
 /* 背景自己慢慢轉成現在這一幕的顏色 */
 .story.is-live {
-  transition: background-color 1.6s var(--ease);
+  transition: background-color 1.2s var(--ease-out);
 }
 /* 每一幕至少一個畫面高、內容在中間；內容比畫面高就自己變高（不會被切掉） */
 .story.is-live .scene {
@@ -279,12 +294,13 @@
 .story.is-live .words {
   transition: opacity 1.2s var(--ease);
 }
-/* 新的一幕：等背景轉得差不多（0.8 秒）才淡入；舊的一幕：很快淡掉（0.6 秒）。深色換淺色時字不會疊在轉到一半的背景上 */
+/* 新的一幕：背景先快後慢地轉，0.4 秒時已經轉了一大半，新的字這時才淡入；舊的一幕：很快淡掉（0.6 秒）。
+   深色換淺色時字不會疊在轉到一半的背景上，也不會讓人以為還沒滑到位 */
 .story.is-live .scene.is-current .words {
-  transition-delay: 0.8s;
+  transition-delay: 0.4s;
 }
 .story.is-live .scene.is-current .art {
-  transition-delay: 0.8s;
+  transition-delay: 0.4s;
 }
 .story.is-live .scene:not(.is-current) .words {
   opacity: 0;
