@@ -1,0 +1,388 @@
+/* 服務頁「故事版」（services-story.html）。
+   沒有 JavaScript、或要求減少動畫：就是一篇照順序讀的文章（宣紙底、深色字）。
+   js/story-view.js 確定可以做的時候，在 .story 加上 is-live：每一幕停在畫面上（sticky），字一句一句浮出來，
+   背景（--sky）跟著幕換顏色，每一幕的字色是 --ink、結尾那句小問題是 --hook，畫面跟著這一幕的進度 --p 動。
+   規格在 test/services-story.test.mjs。藏起來（透明）和停住（sticky）的規則都只寫在 .is-live 底下 */
+
+.story {
+  background: var(--sky, var(--paper));
+}
+
+/* ── 標題卡 ── */
+.story-card {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 96px 20px 48px;
+  text-align: center;
+  color: var(--card-ink, var(--text));
+}
+.story-card .eyebrow {
+  color: var(--card-hook, var(--gold-text));
+  letter-spacing: 0.3em;
+}
+.story-card h1 {
+  margin: 8px 0 16px;
+  font-family: var(--brush);
+  font-weight: 400;
+  font-size: clamp(56px, 9vw, 96px);
+  letter-spacing: 0.2em;
+}
+.story-card .lead {
+  color: inherit;
+  opacity: 0.85;
+  font-size: 17px;
+}
+/* 往下滑的提示：一條細線慢慢往下流（很慢） */
+.scroll-cue {
+  display: block;
+  width: 1px;
+  height: 56px;
+  margin-top: 40px;
+  background: linear-gradient(to bottom, transparent, currentColor);
+  opacity: 0.5;
+  animation: story-cue 3.2s var(--ease) infinite;
+}
+@keyframes story-cue {
+  0% {
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  50% {
+    transform: scaleY(1);
+    transform-origin: top;
+  }
+  51% {
+    transform-origin: bottom;
+  }
+  100% {
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+}
+
+/* ── 每一幕 ── */
+.scene {
+  padding: 48px 20px;
+}
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.art {
+  position: relative;
+  width: min(480px, 88vw);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.words {
+  width: min(36rem, 100%);
+  text-align: center;
+  color: var(--ink, var(--text));
+  opacity: var(--alpha, 1);
+}
+.act {
+  margin: 0 0 20px;
+  font-family: var(--serif);
+  font-size: 14px;
+  letter-spacing: 0.3em;
+  opacity: 0.8;
+}
+.line {
+  margin: 0 0 12px;
+  font-size: clamp(20px, 2.4vw, 26px);
+  line-height: 1.7;
+  letter-spacing: 0.04em;
+}
+.line strong {
+  font-family: var(--serif);
+  font-weight: 600;
+  color: var(--hook, var(--gold-text));
+}
+.hook {
+  margin-top: 28px;
+  font-family: var(--serif);
+  color: var(--hook, var(--gold-text));
+}
+.panel {
+  margin: 20px auto;
+  text-align: left;
+}
+.story .price-list li {
+  color: var(--ink, var(--text));
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.story .price {
+  color: var(--hook, var(--gold-text));
+}
+.story .unit {
+  color: inherit;
+  opacity: 0.8;
+}
+
+/* ── 每一幕的畫面（--p：這一幕的進度；沒有 JavaScript 時都是最後的樣子） ── */
+/* 燈：第一幕是還沒點的燈（只有一點微光）；第三幕在兩條運勢線交會的地方亮起來（--glow） */
+.lamp-light {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 240, 200, 0.95) 0 10%, rgba(240, 200, 120, 0.55) 32%, rgba(240, 200, 120, 0) 70%);
+  opacity: var(--glow, 1);
+  transform: scale(calc(0.6 + var(--glow, 1) * 0.4));
+}
+.lamp-light.is-dim {
+  background: radial-gradient(circle, rgba(220, 190, 150, 0.45) 0 6%, rgba(220, 190, 150, 0.12) 24%, rgba(220, 190, 150, 0) 50%);
+  opacity: 1;
+  transform: none;
+}
+.art-cloud {
+  position: absolute;
+  width: 80%;
+  bottom: -10%;
+  opacity: 0.3;
+  transform: translateX(calc(var(--p, 0) * -48px));
+}
+/* 第二幕：「兩件事」，兩團柔光一個一個出來 */
+.orb {
+  width: 96px;
+  height: 96px;
+  margin: 0 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif);
+  font-size: 22px;
+  color: #3b2e20;
+  background: radial-gradient(circle, rgba(240, 210, 150, 0.9), rgba(240, 210, 150, 0.15) 66%, rgba(240, 210, 150, 0) 72%);
+}
+.orb-one {
+  opacity: clamp(0, (var(--p, 1) - 0.2) * 4, 1);
+}
+.orb-two {
+  opacity: clamp(0, (var(--p, 1) - 0.4) * 4, 1);
+}
+/* 第三幕：運勢線慢慢畫出來（--draw），燈在交會的地方亮 */
+.story .handover path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: calc(1 - var(--draw, 1));
+}
+.story .curve-old {
+  stroke: var(--ink, #8b8178);
+  opacity: 0.45;
+}
+.story .handover text {
+  fill: var(--ink, var(--text-soft));
+  opacity: 0.75;
+}
+.scene[data-scene="yuandan"] .lamp-light {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  translate: -50% -50%;
+}
+/* 第四幕：祭改小問答要整個放得進一個畫面（寬的畫面排兩欄） */
+.scene[data-scene="xinchun"] .words {
+  width: min(48rem, 100%);
+}
+.story .quiz label,
+.story .quiz-base {
+  margin-bottom: 6px;
+  padding: 8px 14px;
+}
+.story .quiz-base {
+  margin-bottom: 10px;
+}
+.story .quiz-total {
+  margin-top: 8px;
+}
+@media (min-width: 720px) {
+  .story .quiz fieldset {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 8px;
+  }
+  .story .quiz legend {
+    grid-column: 1 / -1;
+  }
+}
+/* 第五幕：兩道光合起來（--apart、--label、--word 跟舊頁一樣；沒有 JavaScript 就是合起來的樣子） */
+.scene[data-scene="merge"] {
+  --apart: 0;
+  --label: 0;
+  --word: 1;
+}
+.scene[data-scene="merge"] .merge-stage {
+  width: 100%;
+  margin: 0;
+}
+/* 第六幕：桃樹慢慢浮出來（--rise） */
+.art-peach {
+  width: auto;
+  height: 260px;
+  opacity: var(--rise, 1);
+  transform: translateY(calc((1 - var(--rise, 1)) * 24px));
+}
+/* 第八幕：一年的線 */
+.scene[data-scene="yearend"] .plan-line {
+  width: 100%;
+}
+
+/* ── 停住、一句一句浮出來（只在 is-live） ── */
+/* 畫面高（--stage-h）由 js/story-view.js 量一次（innerHeight），停住的畫面、每一幕多高、進度都用同一個數字 */
+.story.is-live .scene {
+  height: calc(var(--stage-h, 100vh) * (1 + var(--beats, 4) * 0.55));
+  margin: 0;
+  padding: 0;
+}
+.story.is-live .stage {
+  position: sticky;
+  top: 0;
+  height: var(--stage-h, 100vh);
+  gap: 16px;
+  padding: 80px 20px 20px;
+}
+/* 置中，但內容比畫面高時從上面開始排（不會被頂端的選單蓋住） */
+.story.is-live .stage > :first-child {
+  margin-top: auto;
+}
+.story.is-live .stage > :last-child {
+  margin-bottom: auto;
+}
+.story.is-live .art {
+  flex: 0 1 30vh;
+  min-height: 0;
+}
+.story.is-live .art > svg,
+.story.is-live .art-peach {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+}
+.story.is-live .art .lotus {
+  height: 100%;
+  width: auto;
+  aspect-ratio: 5 / 4;
+  margin: 0;
+}
+.story.is-live .line {
+  font-size: clamp(18px, min(2.4vw, 3.4vh), 26px);
+  margin-bottom: 8px;
+}
+.story.is-live .hook {
+  margin-top: 16px;
+}
+.story.is-live .act {
+  margin-bottom: 12px;
+}
+.story.is-live .panel {
+  margin: 12px auto;
+}
+/* 還沒浮出來的只是透明（讀螢幕軟體還是唸得到），也點不到 */
+.story.is-live .beat {
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+  transition:
+    opacity 1.6s var(--ease),
+    transform 1.6s var(--ease);
+}
+.story.is-live .beat.is-out {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+/* 已經讀過的句子淡一點，眼睛自然看最新那一句（混上背景以後對比還是至少 4.5，測試會量） */
+.story.is-live .line.is-out.is-past {
+  opacity: 0.8;
+}
+/* 內容比畫面高的一幕（很矮的手機、放大字）：不停住，字直接全部看得到 */
+.story.is-live .scene.is-tall {
+  height: auto;
+}
+.story.is-live .scene.is-tall .stage {
+  position: static;
+  height: auto;
+}
+.story.is-live .scene.is-tall .beat {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+/* 手機：畫面矮，圖小一點、字小一點 */
+@media (max-width: 600px) {
+  .story.is-live .art {
+    flex-basis: 24vh;
+  }
+  .line {
+    font-size: 19px;
+  }
+  .orb {
+    width: 72px;
+    height: 72px;
+  }
+  /* 祭改小問答在手機上要整個放得進一個畫面：每一行「勾選｜項目名稱｜價錢」，情況寫在名稱下面一行小字 */
+  .story .quiz label {
+    grid-template-columns: 20px 1fr auto;
+    grid-template-areas: "box name price" "box who who";
+    gap: 0 10px;
+    padding: 6px 12px;
+    line-height: 1.5;
+  }
+  .story .quiz label input {
+    grid-area: box;
+  }
+  .story .quiz label .quiz-item {
+    grid-area: name;
+    grid-column: auto;
+  }
+  .story .quiz label .price {
+    grid-area: price;
+    font-size: 17px;
+  }
+  .story .quiz label .quiz-who {
+    grid-area: who;
+    grid-column: auto;
+    font-size: 13px;
+  }
+  .story .quiz-base {
+    gap: 0 10px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .story .quiz legend {
+    font-size: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-cue {
+    animation: none;
+  }
+}
+
+@media print {
+  .story.is-live .scene {
+    height: auto;
+  }
+  .story.is-live .stage {
+    position: static;
+    height: auto;
+  }
+  .story.is-live .beat {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 祭改合計要 JavaScript 才會算：沒有 JavaScript 就不顯示 */
+.story:not(.has-js) .js-only {
+  display: none;
+}
