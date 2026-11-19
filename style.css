@@ -701,6 +701,39 @@ body.over-ring * {
   background: rgba(255, 255, 255, 0.24);
 }
 
+/* ── 神話開場影片（網址加 ?opening=video，js/gate-opening-view.js）：蓋在最上面，鋪滿畫面；
+   影片還沒載好時墊著第一格。播完慢慢淡掉，露出底下真的首頁（最後一格就是首頁的門） ── */
+.gate-opening {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  transition: opacity 1.1s ease;
+}
+[data-opening="video"] .gate-opening {
+  display: block;
+  background: #ece8e3 url("assets/opening/gate-opening-first.webp") center / cover no-repeat;
+}
+[data-opening="leaving"] .gate-opening {
+  display: block;
+}
+.gate-opening.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+.gate-opening-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* 播的時候、淡掉的時候網頁都不能捲動（捲動是換神明；淡掉時捲了，門會跟影片最後一格錯開） */
+[data-opening="leaving"],
+[data-opening="leaving"] body,
+[data-opening="video"],
+[data-opening="video"] body {
+  overflow: hidden;
+}
+
 /* 蟠桃樹（瑤池金母頁）：在大門和飄落的花瓣前面（花瓣蓋到 QR 會掃不到），選單和說明文字後面 */
 .peach {
   position: fixed;

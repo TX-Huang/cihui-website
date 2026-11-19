@@ -21,9 +21,10 @@ function layer(tag, z, blend, parent = document.body) {
 }
 
 export class GoldLightView {
-  constructor(kit) {
+  // firstWait：第一次飛過前等幾格（播過開場影片時比較久，見 js/goldlight.js）
+  constructor(kit, { firstWait } = {}) {
     this.kit = kit; // { fly, flyImg, rays?, glow? }
-    this.s = createLight();
+    this.s = createLight({ firstWait });
     this.t = 0; // 拍翅動畫走到哪（格數）
     this.last = 0; // 上一次畫的時間
     this.debt = 0; // 還沒走的時間（格）

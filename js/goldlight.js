@@ -7,6 +7,8 @@ export const FLIGHT = 600; // 飛過一次 10 秒
 export const MAX_EMBERS = 120;
 const RATE = 1 / 60; // 光每格最多變這麼多（從 0 到滿要 1 秒以上）
 const FIRST = 120; // 進來 2 秒後第一次飛過
+// 播過首頁的神話開場影片（index.html?opening=video）：影片的鳳凰剛飛走，等 20 秒才第一次飛過（使用者：「晚一點才飛」）
+export const AFTER_VIDEO_WAIT = 20 * 60;
 const GAP = [20, 35]; // 之後每隔 20～35 秒飛一次
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -30,8 +32,8 @@ export function flightPose(p, W, H) {
   };
 }
 
-export function createLight() {
-  return { warm: 0, show: 0, flying: false, p: 0, wait: FIRST };
+export function createLight({ firstWait = FIRST } = {}) {
+  return { warm: 0, show: 0, flying: false, p: 0, wait: firstWait };
 }
 
 // 鳳凰飛過時光的強弱：飛進來慢慢亮、中間最亮、快飛出去時退掉

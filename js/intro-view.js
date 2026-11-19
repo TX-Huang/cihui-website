@@ -25,7 +25,8 @@ export class IntroView {
   static create({ reduceMotion }) {
     const root = document.getElementById("intro");
     if (!root) return null;
-    const play = shouldPlayIntro({ seen: readSeen(), reduceMotion, hash: location.hash });
+    // <head> 已經決定不播（例如網址有 ?opening=video，改播神話開場影片）：也不播
+    const play = !document.documentElement.classList.contains("no-intro") && shouldPlayIntro({ seen: readSeen(), reduceMotion, hash: location.hash });
     if (!play) {
       root.remove();
       document.documentElement.classList.remove("intro-on");

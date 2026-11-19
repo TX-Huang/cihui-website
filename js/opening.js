@@ -17,11 +17,11 @@ const smooth = (t) => {
 };
 
 // 用哪一支影片：影片鋪滿畫面時實際要多寬（裝置像素）。720p 放大不超過 1.25 倍就用 720p，不夠才用 1080p。
-// 手機（短邊 ≤ 600）或開了省流量：一律 720p（省流量比清楚重要）
-export function pickVideo({ w, h, dpr = 1, saveData = false }) {
-  if (saveData || Math.min(w, h) <= 600) return VIDEOS.small;
+// 手機（短邊 ≤ 600）或開了省流量：一律 720p（省流量比清楚重要）。videos：首頁的開場（js/gate-opening.js）也用這個挑
+export function pickVideo({ w, h, dpr = 1, saveData = false, videos = VIDEOS }) {
+  if (saveData || Math.min(w, h) <= 600) return videos.small;
   const need = Math.max(w, (h * 16) / 9) * dpr;
-  return need > 1280 * 1.25 ? VIDEOS.big : VIDEOS.small;
+  return need > 1280 * 1.25 ? videos.big : videos.small;
 }
 
 // play：播影片；end：這次造訪看過了，直接最後一格、光簾降下；still：要求減少動畫，最後一格、光簾直接掛好。

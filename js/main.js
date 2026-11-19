@@ -8,6 +8,7 @@ import { strandRows, glyphAlpha, paintLightGlyph } from "./light-curtain.js";
 import { Petals } from "./petals.js";
 import { KoiPond, loadKoiKits } from "./koi.js";
 import { IntroView } from "./intro-view.js";
+import { GateOpeningView } from "./gate-opening-view.js";
 import { BirdView, loadBirdKit } from "./bird-view.js";
 import { WeaponsView, loadWeaponsKit } from "./weapons-view.js";
 import { FuchenView, loadFuchenKit } from "./fuchen-view.js";
@@ -15,6 +16,7 @@ import { TudiView, loadTudiKit } from "./tudi-view.js";
 import { LotusView, loadLotusKit } from "./lotus-view.js";
 import { PeachView, loadPeachImage } from "./peach-view.js";
 import { GoldLightView, loadGoldLightKit } from "./goldlight-view.js";
+import { AFTER_VIDEO_WAIT } from "./goldlight.js";
 import { LakeView, loadLakeImage } from "./lake-view.js";
 import { addGateMist } from "./gate-mist-view.js";
 
@@ -668,8 +670,11 @@ function buildPage() {
 }
 
 async function start() {
-  // 開場（第一次進來才播）：在雲裡的時候網頁才開始，雲散開時珠簾剛好落下
-  const intro = IntroView.create({ reduceMotion });
+  // 開場（第一次進來才播）：在雲裡的時候網頁才開始，雲散開時珠簾剛好落下。
+  // 網址有 ?opening=video：改播神話開場影片，影片淡掉、首頁露出來時珠簾才落下（js/gate-opening-view.js）
+  const videoOpening = document.documentElement.dataset.opening === "video";
+  const intro = videoOpening ? GateOpeningView.create() : IntroView.create({ reduceMotion });
+  document.getElementById(videoOpening ? "intro" : "gateOpening")?.remove(); // 用不到的那個開場拿掉
   // 蟠桃樹的圖現在就開始載（開場動畫還在播），開場一結束就能出現
   const peachLoading = loadPeachImage();
   window.__debug.intro = intro; // 除錯：__debug.intro.render(毫秒) 可以看任一格
@@ -695,6 +700,7 @@ async function start() {
     /* 用系統字也可以 */
   }
   glyphs.clear();
+  intro?.pageReady?.(); // 神話開場影片：字型好了，可以切到首頁了（原本的開場沒有這個）
   if (intro) await intro.revealed;
 
   currentIndex = first;
@@ -709,7 +715,8 @@ async function start() {
   window.__debug.peach = peach;
   // 丹鳳和金光（減少動畫時不出現）
   const goldKit = reduceMotion ? null : await loadGoldLightKit();
-  if (goldKit) goldlight = new GoldLightView(goldKit);
+  // 播過神話開場影片：影片的鳳凰剛飛走，首頁的丹鳳晚一點（20 秒）才第一次飛過
+  if (goldKit) goldlight = new GoldLightView(goldKit, { firstWait: videoOpening ? AFTER_VIDEO_WAIT : undefined });
   window.__debug.goldlight = goldlight;
 
   const kits = await loadKoiKits(["red", "blue", "platinum"]);

@@ -30,6 +30,33 @@
         var look = new URLSearchParams(location.search).get("look");
         if (look === "oil" || look === "oil-red") document.documentElement.dataset.look = look;
       } catch (e) {}
+      // 神話開場影片（網址加 ?opening=video；跟 js/gate-opening.js 的 gateOpeningMode 一樣，測試確認）：
+      // 原本的開場不播；這次造訪還沒看過、沒有要求減少動畫、沒有直接連到其他神明，就播影片
+      try {
+        if (new URLSearchParams(location.search).get("opening") === "video") {
+          var root = document.documentElement;
+          root.classList.add("no-intro");
+          var seen = false;
+          try {
+            seen = sessionStorage.getItem("cihui-gate-opening-seen") === "1";
+          } catch (e) {}
+          var hash = location.hash;
+          if (!seen && !matchMedia("(prefers-reduced-motion: reduce)").matches && (hash === "" || hash === "#" || hash === "#jinmu")) {
+            root.dataset.opening = "video";
+            // 網路慢：影片的第一格先下載
+            var link = document.createElement("link");
+            link.rel = "preload";
+            link.as = "image";
+            link.href = "assets/opening/gate-opening-first.webp";
+            link.fetchPriority = "high";
+            document.head.appendChild(link);
+            // 程式 8 秒內都沒開始（很舊的瀏覽器、檔案載不到）：不要卡在影片畫面，直接是首頁
+            setTimeout(function () {
+              if (!root.dataset.gateOpeningReady) delete root.dataset.opening;
+            }, 8000);
+          }
+        }
+      } catch (e) {}
     </script>
   </head>
   <body>
@@ -48,6 +75,11 @@
       </script>
       <div class="intro-veil"></div>
       <button type="button" class="intro-skip">略過</button>
+    </div>
+    <!-- 神話開場影片（網址加 ?opening=video）：稻田 → 湖邊的道場門 → 鳳凰飛走 → 淡成真的首頁（js/gate-opening-view.js） -->
+    <div class="gate-opening" id="gateOpening">
+      <video class="gate-opening-video" muted playsinline preload="auto" aria-hidden="true"></video>
+      <button type="button" class="intro-skip gate-opening-skip" aria-label="略過開場影片" aria-keyshortcuts="Escape">略過</button>
     </div>
 
     <!-- 背景：瑤池與崑崙山（AI 畫的），加上飄動的霧 -->
