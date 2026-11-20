@@ -41,6 +41,8 @@
 //       這段時間網頁用滾輪、手指、鍵盤都捲不動。
 //     - 對準時換了螢幕大小（轉手機）：重新對準，用剩下的時間。
 //     - 量不到首頁的門：不算對準過，淡掉時再試一次。
+// 13. 2026-11-20 使用者：「開場之後接續的丹鳳跟影片不同.. 先拿掉」。網址有 ?opening=video 的首頁（不論這次有沒有播影片）
+//     沒有首頁自己的丹鳳（也不下載）。原本的首頁（沒有 ?opening=video）照舊有丹鳳。這取代第 10 點的「晚 20 秒才飛」。
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, statSync, existsSync } from "node:fs";
@@ -218,8 +220,13 @@ test("10. after the video, the page's own phoenix waits 20 s before its first fl
   };
   assert.equal(firstFlight(), 2, "no video: as before, 2 s");
   assert.equal(firstFlight({ firstWait: AFTER_VIDEO_WAIT }), 20, "after the video: 20 s");
-  assert.ok(main.includes("new GoldLightView(goldKit, { firstWait: videoOpening ? AFTER_VIDEO_WAIT : undefined })"), "main.js asks for the late first flight only after the video");
-  assert.match(read("js/goldlight-view.js"), /constructor\(kit, \{ firstWait \} = \{\}\)[\s\S]{0,200}createLight\(\{ firstWait \}\)/, "the view passes it on");
+  assert.match(read("js/goldlight-view.js"), /constructor\(kit, \{ firstWait \} = \{\}\)[\s\S]{0,200}createLight\(\{ firstWait \}\)/, "the view can still wait longer (kept for later)");
+});
+
+test("13. the new opening's homepage has no 丹鳳 of its own (it looks different from the video's phoenix)", () => {
+  assert.match(main, /const videoHome = new URLSearchParams\(location\.search\)\.get\("opening"\) === "video";/, "the ?opening=video homepage, played or not");
+  assert.ok(main.includes('const goldKit = reduceMotion || videoHome ? null : await loadGoldLightKit();'), "no 丹鳳 there (not even downloaded)");
+  assert.ok(main.includes("if (goldKit) goldlight = new GoldLightView(goldKit);"), "the old homepage: as before");
 });
 
 test("11. the camera lines the video's gate up with the page's gate before the fade (any screen)", async () => {

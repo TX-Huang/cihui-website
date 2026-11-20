@@ -16,7 +16,6 @@ import { TudiView, loadTudiKit } from "./tudi-view.js";
 import { LotusView, loadLotusKit } from "./lotus-view.js";
 import { PeachView, loadPeachImage } from "./peach-view.js";
 import { GoldLightView, loadGoldLightKit } from "./goldlight-view.js";
-import { AFTER_VIDEO_WAIT } from "./goldlight.js";
 import { LakeView, loadLakeImage } from "./lake-view.js";
 import { addGateMist } from "./gate-mist-view.js";
 
@@ -713,10 +712,11 @@ async function start() {
   const peachImg = await peachLoading;
   if (peachImg) peach = new PeachView($("peach"), peachImg, { box: $("peachUi"), hint: $("peachHint"), link: $("peachLink") }, { still: reduceMotion });
   window.__debug.peach = peach;
-  // 丹鳳和金光（減少動畫時不出現）
-  const goldKit = reduceMotion ? null : await loadGoldLightKit();
-  // 播過神話開場影片：影片的鳳凰剛飛走，首頁的丹鳳晚一點（20 秒）才第一次飛過
-  if (goldKit) goldlight = new GoldLightView(goldKit, { firstWait: videoOpening ? AFTER_VIDEO_WAIT : undefined });
+  // 丹鳳和金光（減少動畫時不出現）。神話開場影片的首頁（?opening=video）先不放：
+  // 首頁的丹鳳跟影片的鳳凰長得不一樣（使用者 2026-11-20「先拿掉」；goldlight.js 的 firstWait 留著，之後要放回來可以晚一點才飛）
+  const videoHome = new URLSearchParams(location.search).get("opening") === "video";
+  const goldKit = reduceMotion || videoHome ? null : await loadGoldLightKit();
+  if (goldKit) goldlight = new GoldLightView(goldKit);
   window.__debug.goldlight = goldlight;
 
   const kits = await loadKoiKits(["red", "blue", "platinum"]);
