@@ -25,6 +25,22 @@
 //    - 淡掉的那 1 秒網頁也還不能捲動（不然門會跟影片最後一格錯開）。
 // 10. 2026-11-19 使用者：「晚一點才飛」。播過開場影片，首頁自己的丹鳳（js/goldlight.js）第一次飛過要等 20 秒
 //     （平常是 2 秒），不會影片的鳳凰一飛走，馬上又來一隻。沒播影片時照舊 2 秒。
+// 11. 2026-11-20 使用者：「影片播完跟實際的銜接有問題，道場本身會有大小差別」→ 選 A「鏡頭對準」。
+//     影片一定鋪滿畫面，首頁的門卻照螢幕高度決定大小，只有剛好 16:9 才一樣大（一般瀏覽器視窗差 15%、手機差 1.5 倍）。
+//     - 鳳凰快飛走時（GLIDE_AT_S，11.5 秒）影片開始慢慢縮放、移動（像鏡頭輕輕調整，前後慢、中間快），
+//       到開始淡掉（REVEAL_AT_S）時，影片裡的門跟首頁的門一樣大、在同一個位置（誤差 1 px 以內），任何螢幕大小都一樣。
+//     - 影片最後一格的門：就是首頁在 1920×1080 的樣子（截圖時有 15 px 的捲軸，所以門的中心在 x 952.5）。
+//     - 影片縮小時，四邊柔和地淡進後面真的首頁（看不到方方的影片邊、也看不到底色）。
+//     - 首頁的門照實際量（#gateWrap 的位置），不是自己再算一次。
+//     - 正常播完才對準；略過、不能播、出錯、按上一頁回來：照原本。影片從沒到 11.5 秒直接跳到淡掉（例如分頁在背景）：淡掉時一起對準。
+// 12. 2026-11-20 Codex 審查（鏡頭對準）：
+//     - 影片元素是整格 16:9 的畫（比螢幕大的部分被切掉），不是螢幕大小：縮小時先露出原本被切掉的影片，
+//       不會在手機上露出首頁自己的門（兩個門）。
+//     - 影片的邊柔和地慢慢淡進去（跟縮放一起，不是 11.5 秒突然變透明）。
+//     - 捲軸：開始對準時就讓捲軸出來（版面變成最後的樣子）再量門；之後到影片拿掉都不會再動（以前影片拿掉時門會往左跳 7.5 px）。
+//       這段時間網頁用滾輪、手指、鍵盤都捲不動。
+//     - 對準時換了螢幕大小（轉手機）：重新對準，用剩下的時間。
+//     - 量不到首頁的門：不算對準過，淡掉時再試一次。
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, statSync, existsSync } from "node:fs";
@@ -141,7 +157,8 @@ test("4. timing: the phoenix is gone before the fade; the fade starts on the hom
 test("4-6. what happens when: a tiny state machine", async () => {
   const { gateOpeningStep, REVEAL_AT_S } = await load();
   const go = (s, ev, t) => gateOpeningStep(s, ev, t);
-  for (const t of [0, 5, 11.96, REVEAL_AT_S - 0.01]) assert.deepEqual(go("playing", "time", t), { state: "playing", acts: [] }, `${t} s`);
+  const { GLIDE_AT_S } = await load();
+  for (const t of [0, 5, GLIDE_AT_S - 0.01]) assert.deepEqual(go("playing", "time", t), { state: "playing", acts: [] }, `${t} s`);
   assert.deepEqual(go("playing", "time", REVEAL_AT_S), { state: "done", acts: ["fade", "remember"] });
   assert.deepEqual(go("playing", "ended"), { state: "done", acts: ["fade", "remember"] });
   assert.deepEqual(go("playing", "skip"), { state: "done", acts: ["fastFade", "remember"] });
@@ -181,7 +198,11 @@ test("9. review fixes: stalls, inert page, wait for a ready page, no scrolling w
   assert.match(view, /inert = false/, "and comes back when the video fades");
   assert.match(view, /pageReady/, "a cut waits for the page");
   assert.match(main, /intro\?\.pageReady\?\.\(\)/, "main.js says when the title and fonts are ready");
-  assert.match(css, /\[data-opening="leaving"\],\s*\[data-opening="leaving"\] body,\s*\[data-opening="video"\],\s*\[data-opening="video"\] body\s*\{[^}]*overflow:\s*hidden/, "still no scrolling while fading");
+  // 12. 淡掉時捲軸已經出來（版面是最後的樣子），用滾輪、手指、鍵盤捲動都被擋下來
+  assert.doesNotMatch(css, /\[data-opening="leaving"\][^{]*\{[^}]*overflow:\s*hidden/, "no overflow lock while fading: the scrollbar is already there");
+  assert.match(view, /for \(const ev of \["wheel", "touchmove"\]\) addEventListener\(ev, this\.lock, \{ passive: false \}\)/, "still no scrolling while fading");
+  assert.match(view, /lock = \(e\) =>[\s\S]{0,200}preventDefault\(\)/);
+  assert.match(view, /removeEventListener\(ev, this\.lock/, "scrolling comes back when the video is gone");
 });
 
 test("10. after the video, the page's own phoenix waits 20 s before its first flight", async () => {
@@ -199,4 +220,71 @@ test("10. after the video, the page's own phoenix waits 20 s before its first fl
   assert.equal(firstFlight({ firstWait: AFTER_VIDEO_WAIT }), 20, "after the video: 20 s");
   assert.ok(main.includes("new GoldLightView(goldKit, { firstWait: videoOpening ? AFTER_VIDEO_WAIT : undefined })"), "main.js asks for the late first flight only after the video");
   assert.match(read("js/goldlight-view.js"), /constructor\(kit, \{ firstWait \} = \{\}\)[\s\S]{0,200}createLight\(\{ firstWait \}\)/, "the view passes it on");
+});
+
+test("11. the camera lines the video's gate up with the page's gate before the fade (any screen)", async () => {
+  const { GLIDE_AT_S, PHOENIX_GONE_S, REVEAL_AT_S, PLATE_GATE, plateGateOnScreen, alignTransform, gateOpeningStep } = await load();
+  const { GATE } = await import("../js/gate.js");
+  const { fitGate } = await import("../js/layout.js");
+  // 時間：鳳凰快飛走才開始；慢慢的（至少 1.2 秒），淡掉前對好
+  assert.ok(GLIDE_AT_S < PHOENIX_GONE_S && GLIDE_AT_S > PHOENIX_GONE_S - 0.6, "starts as her tail leaves");
+  assert.ok(REVEAL_AT_S - GLIDE_AT_S >= 1.2, "slow, not a snap");
+  // 影片最後一格的門 = 首頁在 1920×1080（有 15 px 捲軸）的門
+  assert.deepEqual(PLATE_GATE, { cx: 952.5, bottom: 1080 * 1.01, h: GATE.h * fitGate(1905, 1080, GATE) });
+  assert.deepEqual(plateGateOnScreen(1920, 1080), PLATE_GATE, "a 16:9 1920 screen shows the plate 1:1");
+  // 各種螢幕：對準以後，影片裡的門跟首頁的門一樣大、一樣位置
+  for (const [vw, vh] of [[1920, 1080], [1920, 945], [1536, 730], [1440, 780], [1280, 720], [2560, 1080], [1024, 1366], [390, 844], [844, 390]]) {
+    const s = fitGate(vw, vh, GATE);
+    const page = { cx: vw / 2, bottom: vh * 1.01, h: GATE.h * s };
+    const from = plateGateOnScreen(vw, vh);
+    const { k, x, y } = alignTransform(from, page);
+    const label = `${vw}x${vh}`;
+    assert.ok(Math.abs(k * from.h - page.h) < 1, `${label}: same size`);
+    assert.ok(Math.abs(k * from.cx + x - page.cx) < 1, `${label}: same left-right`);
+    assert.ok(Math.abs(k * from.bottom + y - page.bottom) < 1, `${label}: same height on screen`);
+  }
+  // 狀態：到 GLIDE_AT_S 開始對準（只一次）；之後照常淡掉；略過照原本
+  assert.deepEqual(gateOpeningStep("playing", "time", GLIDE_AT_S), { state: "gliding", acts: ["glide"] });
+  assert.deepEqual(gateOpeningStep("gliding", "time", GLIDE_AT_S + 0.5), { state: "gliding", acts: [] }, "once");
+  assert.deepEqual(gateOpeningStep("gliding", "time", REVEAL_AT_S), { state: "done", acts: ["fade", "remember"] });
+  assert.deepEqual(gateOpeningStep("gliding", "ended"), { state: "done", acts: ["fade", "remember"] });
+  assert.deepEqual(gateOpeningStep("gliding", "skip"), { state: "done", acts: ["fastFade", "remember"] });
+  assert.deepEqual(gateOpeningStep("gliding", "error"), { state: "done", acts: ["cut"] });
+  // 畫面：量首頁真的門、縮放影片、淡掉時沒對過就一起對；縮小時四邊柔和、底色拿掉（露出真的首頁）
+  assert.match(view, /act === "glide"/, "the view does the glide");
+  assert.match(view, /getElementById\("gateWrap"\)[\s\S]{0,80}getBoundingClientRect\(\)/, "measures the page's real gate");
+  assert.match(view, /alignTransform\(/);
+  assert.match(view, /async hide\(ms\)[\s\S]{0,400}ms === FADE_MS[\s\S]{0,60}this\.glide\(/, "a normal fade lines up too if it never did");
+  assert.match(css, /\.gate-opening\.is-gliding\s*\{[^}]*background:\s*transparent/, "no backdrop colour: the real page shows around a smaller video");
+  assert.match(css, /\.gate-opening\.is-gliding \.gate-opening-video\s*\{[^}]*mask-image:/, "soft edges");
+  assert.match(css, /\[data-opening="gliding"\] \.gate-opening/, "still shown while gliding");
+});
+
+test("12. review fixes: whole-frame video, gradual soft edge, scrollbar first, resize, retry", async () => {
+  const { videoFrame, plateGateOnScreen, PLATE_GATE } = await load();
+  for (const [W, H] of [[1920, 1080], [1536, 730], [390, 844], [1024, 1366], [2560, 1080]]) {
+    const f = videoFrame(W, H);
+    const label = `${W}x${H}`;
+    assert.ok(f.left <= 0 && f.top <= 0 && f.left + f.width >= W - 0.01 && f.top + f.height >= H - 0.01, `${label}: covers the screen`);
+    assert.ok(Math.abs(f.left * 2 + f.width - W) < 0.01 && Math.abs(f.top * 2 + f.height - H) < 0.01, `${label}: centred`);
+    assert.ok(Math.abs(f.width / f.height - 16 / 9) < 0.001, `${label}: the whole 16:9 frame`);
+    const g = plateGateOnScreen(W, H);
+    assert.ok(Math.abs(f.left + PLATE_GATE.cx * f.c - g.cx) < 0.01 && Math.abs(f.top + PLATE_GATE.bottom * f.c - g.bottom) < 0.01, `${label}: same maths as the gate`);
+  }
+  assert.match(view, /videoFrame\(/, "the view lays the video out as the whole frame");
+  assert.match(view, /transformOrigin = `\$\{-[^}]*\}px \$\{-[^}]*\}px`/, "scaled about the screen's top-left");
+  assert.match(css, /\.gate-opening\s*\{[^}]*overflow:\s*hidden/, "the frame is clipped to the screen");
+  // 邊慢慢柔和
+  assert.match(css, /@property --gate-edge\s*\{[^}]*syntax:\s*"<percentage>"/);
+  assert.match(css, /\.gate-opening-video\s*\{[^}]*transition:[^;]*transform[^;]*--gate-edge/, "the soft edge eases in with the move");
+  assert.match(css, /\.gate-opening\.is-gliding \.gate-opening-video\s*\{[^}]*--gate-edge:\s*\d+%/);
+  // 捲軸先出來再量
+  assert.match(view, /root\.dataset\.opening = "gliding";[\s\S]{0,200}this\.aim\(/, "the scrollbar comes first, then measure");
+  assert.match(css, /\[data-opening="video"\],\s*\[data-opening="video"\] body\s*\{[^}]*overflow:\s*hidden/);
+  // 換螢幕大小：重新對準
+  assert.match(view, /addEventListener\("resize", this\.onResize\)/);
+  assert.match(view, /onResize = \(\) => \{[\s\S]{0,200}this\.fitVideo\(\)[\s\S]{0,200}this\.aim\(/, "re-aim with the time left");
+  // 量不到：不算對準過
+  assert.match(view, /if \(!gate\?\.height\) return false;/);
+  assert.match(view, /if \(this\.aim\([^)]*\)\) this\.glided = true;/, "only counts once it really lined up");
 });

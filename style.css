@@ -714,6 +714,7 @@ body.over-ring * {
   display: block;
   background: #ece8e3 url("assets/opening/gate-opening-first.webp") center / cover no-repeat;
 }
+[data-opening="gliding"] .gate-opening,
 [data-opening="leaving"] .gate-opening {
   display: block;
 }
@@ -721,14 +722,41 @@ body.over-ring * {
   opacity: 0;
   pointer-events: none;
 }
+/* 影片元素是整格 16:9 的畫（大小、位置由 js/gate-opening-view.js 的 fitVideo 設定），比螢幕大的部分切掉 */
+.gate-opening {
+  overflow: hidden;
+}
+@property --gate-edge {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
 .gate-opening-video {
+  display: block;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* 鏡頭對準首頁的門（js/gate-opening-view.js 的 glide）：前後慢、中間快；四邊的柔和（--gate-edge）跟著一起慢慢來 */
+  transform-origin: 0 0;
+  transition: transform 1.4s cubic-bezier(0.45, 0, 0.25, 1), --gate-edge 1.4s cubic-bezier(0.45, 0, 0.25, 1);
 }
-/* 播的時候、淡掉的時候網頁都不能捲動（捲動是換神明；淡掉時捲了，門會跟影片最後一格錯開） */
-[data-opening="leaving"],
-[data-opening="leaving"] body,
+/* 對準時：拿掉底色（影片縮小時露出後面真的首頁），影片四邊慢慢變柔和，看不到方方的影片邊 */
+.gate-opening.is-gliding {
+  background: transparent;
+}
+.gate-opening.is-gliding .gate-opening-video {
+  --gate-edge: 7%;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--gate-edge), #000 calc(100% - var(--gate-edge)), transparent),
+    linear-gradient(to bottom, transparent, #000 var(--gate-edge), #000 calc(100% - var(--gate-edge)), transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent, #000 var(--gate-edge), #000 calc(100% - var(--gate-edge)), transparent),
+    linear-gradient(to bottom, transparent, #000 var(--gate-edge), #000 calc(100% - var(--gate-edge)), transparent);
+  mask-composite: intersect;
+}
+/* 播的時候網頁不能捲動（捲動是換神明）。對準、淡掉的時候捲軸要出來（版面變成最後的樣子，門才不會在影片拿掉時跳一下），
+   改用 js/gate-opening-view.js 的 this.lock 擋住捲動 */
 [data-opening="video"],
 [data-opening="video"] body {
   overflow: hidden;

@@ -9,11 +9,35 @@ export const GATE_SEEN_KEY = "cihui-gate-opening-seen";
 // 影片 14.08 秒；鳳凰 11.96 秒完全飛走，之後鏡頭停穩，最後一格就是首頁的門
 export const VIDEO_S = 14.08;
 export const PHOENIX_GONE_S = 11.96;
+export const GLIDE_AT_S = 11.5; // 鳳凰的尾巴快飛出畫面：鏡頭開始慢慢對準首頁的門（到 REVEAL_AT_S 對好）
 export const REVEAL_AT_S = 12.95; // 這時已經是首頁的樣子：影片開始淡掉（影片結束前淡完），光簾開始降下
 export const FADE_MS = 1100;
 export const SKIP_FADE_MS = 600;
 export const STALL_MS = 6000; // 影片卡住（不出錯也不往前播）這麼久：當成載入失敗
 export const PAGE_WAIT_MS = 2600; // 直接切到首頁時，最多等首頁準備好（字型、標題）這麼久
+
+// 影片最後一格的門（影片的像素，1920×1080）：就是首頁在 1920×1080 的樣子。截圖時有 15 px 的捲軸，
+// 所以網頁寬 1905、門的中心在 952.5；門的大小 = 門圖高 1067 × fitGate(1905, 1080) = 1056；門底在 101% 的高度（.gate-wrap 的 bottom: -1vh）
+export const PLATE_GATE = { cx: 952.5, bottom: 1080 * 1.01, h: 1056 };
+
+// 影片元素擺成整格 16:9 的畫、置中、剛好蓋滿螢幕（多的部分在螢幕外，被切掉；跟 object-fit: cover 看起來一樣）。
+// 鏡頭對準時影片縮小，先露出原本被切掉的影片，不會露出後面首頁自己的門
+export function videoFrame(vw, vh) {
+  const c = Math.max(vw / 1920, vh / 1080);
+  return { left: (vw - 1920 * c) / 2, top: (vh - 1080 * c) / 2, width: 1920 * c, height: 1080 * c, c };
+}
+
+// 影片鋪滿畫面（object-fit: cover，置中）時，影片裡的門在螢幕上的哪裡
+export function plateGateOnScreen(vw, vh) {
+  const c = Math.max(vw / 1920, vh / 1080);
+  return { cx: vw / 2 + (PLATE_GATE.cx - 960) * c, bottom: vh / 2 + (PLATE_GATE.bottom - 540) * c, h: PLATE_GATE.h * c };
+}
+
+// 把 from 的門移到 to 的門：放大 k 倍再移 (x, y)（transform-origin 在左上角）
+export function alignTransform(from, to) {
+  const k = to.h / from.h;
+  return { k, x: to.cx - k * from.cx, y: to.bottom - k * from.bottom };
+}
 
 // "video"：播影片；"page"：不播（看過了、要求減少動畫、直接連到其他神明），直接是首頁；
 // null：網址沒有 ?opening=video，照原本的開場（js/intro.js）。
@@ -24,13 +48,17 @@ export function gateOpeningMode({ param, seen, reduceMotion, hash }) {
   return hash === "" || hash === "#" || hash === "#jinmu" ? "video" : "page";
 }
 
-// 狀態：playing → done。事件：time（播到第幾秒）、ended、skip（略過、Esc、滾輪、滑一下）、
+// 狀態：playing →（GLIDE_AT_S）gliding → done。事件：time（播到第幾秒）、ended、skip（略過、Esc、滾輪、滑一下）、
 // refused（不能自動播放）、error（載入失敗）、restored（按上一頁回來，整頁被留著）。
-// acts：fade 慢慢淡掉、fastFade 快一點淡掉、cut 直接拿掉（三種都會讓光簾開始降下）、remember 記得這次看過了
+// acts：glide 鏡頭慢慢對準首頁的門、fade 慢慢淡掉、fastFade 快一點淡掉、cut 直接拿掉（三種都會讓光簾開始降下）、remember 記得這次看過了
 export function gateOpeningStep(state, ev, t = 0) {
   const done = (acts) => ({ state: "done", acts });
   if (state === "done") return done([]);
-  if (ev === "time") return t >= REVEAL_AT_S ? done(["fade", "remember"]) : { state, acts: [] };
+  if (ev === "time") {
+    if (t >= REVEAL_AT_S) return done(["fade", "remember"]);
+    if (t >= GLIDE_AT_S && state === "playing") return { state: "gliding", acts: ["glide"] };
+    return { state, acts: [] };
+  }
   if (ev === "ended") return done(["fade", "remember"]);
   if (ev === "skip") return done(["fastFade", "remember"]);
   if (ev === "error") return done(["cut"]); // 下次再試

@@ -3,9 +3,10 @@
 // 用法跟原本的開場（js/intro-view.js）一樣：create() → start()；revealed 是「影片開始淡掉、首頁露出來」，
 // js/main.js 等到這時才讓光簾從門楣垂下來。main.js 字型、標題準備好時呼叫 pageReady()。
 import { pickVideo } from "./opening.js";
-import { GATE_VIDEOS, GATE_SEEN_KEY, FADE_MS, SKIP_FADE_MS, STALL_MS, PAGE_WAIT_MS, gateOpeningStep } from "./gate-opening.js";
+import { GATE_VIDEOS, GATE_SEEN_KEY, FADE_MS, SKIP_FADE_MS, STALL_MS, PAGE_WAIT_MS, REVEAL_AT_S, gateOpeningStep, plateGateOnScreen, alignTransform, videoFrame } from "./gate-opening.js";
 
 const root = document.documentElement;
+const SCROLL_KEYS = new Set([" ", "ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End"]);
 
 function remember() {
   try {
@@ -44,6 +45,20 @@ export class GateOpeningView {
   start() {
     const { video } = this;
     video.src = pickVideo({ w: innerWidth, h: innerHeight, dpr: devicePixelRatio || 1, saveData: navigator.connection?.saveData === true, videos: GATE_VIDEOS });
+    this.fitVideo();
+    // 換螢幕大小（轉手機）：影片重新擺；正在對準的話，用剩下的時間重新對準
+    this.onResize = () => {
+      this.fitVideo();
+      if (this.glided) this.aim((REVEAL_AT_S - video.currentTime) * 1000);
+    };
+    addEventListener("resize", this.onResize);
+    // 影片還在的時候網頁捲不動（對準、淡掉時捲軸已經出來了，所以用擋的）
+    this.lock = (e) => {
+      if (e.type === "keydown" && (!SCROLL_KEYS.has(e.key) || e.target instanceof HTMLButtonElement)) return; // 空白鍵按「略過」照常
+      e.preventDefault();
+    };
+    for (const ev of ["wheel", "touchmove"]) addEventListener(ev, this.lock, { passive: false });
+    addEventListener("keydown", this.lock);
     const skip = () => this.send("skip");
     this.skipBtn?.addEventListener("click", skip);
     addEventListener("keydown", (e) => {
@@ -80,10 +95,42 @@ export class GateOpeningView {
     this.state = out.state;
     for (const act of out.acts) {
       if (act === "remember") remember();
+      else if (act === "glide") this.glide((REVEAL_AT_S - t) * 1000);
       else if (act === "fade") this.hide(FADE_MS);
       else if (act === "fastFade") this.hide(SKIP_FADE_MS);
       else if (act === "cut") this.hide(0);
     }
+  }
+
+  // 影片元素擺成整格 16:9 的畫（蓋滿螢幕、多的切掉）；縮放以螢幕左上角為準
+  fitVideo() {
+    const { box, video } = this;
+    this.fitW = box.clientWidth;
+    this.fitH = box.clientHeight;
+    const f = videoFrame(this.fitW, this.fitH);
+    Object.assign(video.style, { left: `${f.left}px`, top: `${f.top}px`, width: `${f.width}px`, height: `${f.height}px` });
+    video.style.transformOrigin = `${-f.left}px ${-f.top}px`;
+  }
+
+  // 鏡頭慢慢對準：影片縮放、移動，讓影片裡的門疊在首頁真的門上。
+  // 先讓捲軸出來（版面變成最後的樣子）再量，之後影片拿掉時門不會再動
+  glide(ms) {
+    if (this.glided) return;
+    root.dataset.opening = "gliding";
+    if (this.aim(ms)) this.glided = true;
+  }
+
+  // 量首頁的門，把影片移過去（ms 內慢慢移；四邊同時慢慢變柔和，見 style.css 的 .is-gliding）。量不到：false
+  aim(ms) {
+    const gate = document.getElementById("gateWrap")?.getBoundingClientRect();
+    if (!gate?.height) return false;
+    const { box, video } = this;
+    const from = plateGateOnScreen(this.fitW, this.fitH);
+    const { k, x, y } = alignTransform(from, { cx: gate.left + gate.width / 2, bottom: gate.bottom, h: gate.height });
+    video.style.transitionDuration = `${Math.max(0, ms)}ms`;
+    box.classList.add("is-gliding");
+    video.style.transform = `translate(${x}px, ${y}px) scale(${k})`;
+    return true;
   }
 
   // 影片淡掉（露出底下一模一樣的首頁），光簾開始降下；淡完整個拿掉、停止下載。
@@ -92,14 +139,18 @@ export class GateOpeningView {
     clearInterval(this.stallTimer);
     this.video.pause();
     await this.ready;
+    if (ms === FADE_MS && !this.glided) this.glide(ms); // 沒經過鏡頭對準就到了淡掉（例如分頁在背景）：一起對
     const { box, video } = this;
     box.style.transitionDuration = `${ms}ms`;
     box.classList.add("is-leaving");
-    root.dataset.opening = "leaving"; // 影片還在，淡掉中（還不能捲動）
+    root.dataset.opening = "leaving"; // 影片還在，淡掉中（還不能捲動：this.lock）
     for (const el of this.covered) el.inert = false;
     if (box.contains(document.activeElement)) document.querySelector(".pill .brand")?.focus(); // 鍵盤的位置移到選單
     this.resolveReveal();
     setTimeout(() => {
+      removeEventListener("resize", this.onResize);
+      for (const ev of ["wheel", "touchmove"]) removeEventListener(ev, this.lock, { passive: false });
+      removeEventListener("keydown", this.lock);
       video.removeAttribute("src");
       video.load();
       box.remove();
