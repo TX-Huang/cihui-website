@@ -9,11 +9,13 @@
 // 2. 專屬連結 = lamp.html#… ：名字和建議的燈放在 # 後面（不會送到伺服器、不會進網站紀錄），中文也沒問題。
 //    連結記的是燈的「大小＋名目的名字」（不是第幾格）：樞理以後改名、換順序，舊連結也不會指錯燈；
 //    連結裡的燈現在的名目已經沒有了：丟掉。名字沒有或整個壞掉，就當作沒有連結。
-// 3. 點專屬連結進來：名字已經填好（還可以改），下面寫著樞理建議的燈。按「確認」→ 跳出視窗：
-//    「要照樞理的建議點這幾盞燈嗎？」列出燈。
-//    - 按「是」：直接登記（這個人除了按兩下，什麼都不用打）。
-//    - 按「否」：視窗關掉，出現選燈的地方（大燈、小燈各自的名目），先幫他勾好樞理建議的，讓他改；至少要勾一盞才能送出。
-// 4. 沒有專屬連結的人：自己打名字，直接選燈（沒有建議，所以不跳視窗）。
+// 3. 點專屬連結進來：名字已經填好（還可以改），下面寫著樞理建議的燈，接著就問「要照樞理的建議點這幾盞燈嗎？」
+//    （2026-11-24 使用者：「一開始就要讓他選照樞理建議，還是要自己選，自己選那邊才讓她檢查一次」→ 不用先按「確認」、不跳視窗）
+//    - 按「是，照建議登記」：直接登記（往年信眾除了這一下，什麼都不用打）。新信眾的資料沒填好：說哪裡沒填，不送。
+//    - 按「否，我自己選」：出現選燈的地方（大燈、小燈各自的名目），先幫他勾好樞理建議的，讓他改；
+//      按「下一步：檢查一次」→ 列出姓名、（新信眾的）農曆生日和地址、要點的燈 →「送出登記」才送；「回去修改」回到原本的畫面。
+//      至少要勾一盞、資料要填好，才能到檢查那一步。
+// 4. 沒有專屬連結的人（或連結裡的燈都已經沒有了）：沒有建議，一打開就是選燈的地方，一樣「下一步：檢查一次」再送出。
 // 5. 登記送到 Google 試算表（一列一筆）：時間、姓名、新信眾、農曆生日、地址、照樞理建議（是／否）、登記的燈、樞理建議的燈、編號。
 //    - 送出中按鈕不能再按；送好了說「已登記」；沒送出去說沒成功，可以再按一次（同一個編號，試算表不會多一筆）。
 //    - 名字只留前 40 個字；試算表那邊把 = + - @ 開頭的字前面加 '（別人不能塞公式進試算表）。
@@ -25,8 +27,8 @@
 //    - 樞理改了名字或勾選：舊的連結馬上收起來，要重按「產生連結」；連結旁邊寫著這個連結是給誰、哪幾盞燈。
 //    - 連結裡有名字但沒有認得的燈：只幫他填名字，不說「樞理建議」；# 後面太長（超過 2000 字）當作壞掉。
 //    - 同一頁換了 # （貼了另一個人的連結）：整頁重新讀。
-//    - 視窗打開時，鍵盤停在標題上（不是停在「是」，連按 Enter 不會不小心登記）；按 Esc 關掉：說「還沒登記」；
-//      登記好：鍵盤移到「已登記」。
+//    - 登記好：鍵盤移到「已登記」。（原本的跳出視窗已經拿掉，見第 3 點）
+//    - 在名字欄按 Enter 不會送出（避免不小心登記）。
 // 9. 2026-11-24 使用者：「往年信眾就可以只給名字，新信眾就要填農曆生日和地址」。
 //    - 樞理做連結時勾「新信眾」：連結帶著這個記號。沒有專屬連結的人當作新信眾。
 //    - 新信眾：名字下面多出「農曆生日」（民國年、月、日，可以勾閏月）和「地址」，都要填才能往下（說哪裡沒填）。
@@ -229,7 +231,7 @@ test("11. reading and saving through the sheet, or the 試用模式 before it is
   assert.deepEqual(calls.at(-1), { url: "https://script.test/exec", method: "POST", body: { action: "register", id: "r1" } });
 });
 
-test("3-4. the page: name filled from the link, a yes/no window, the lamp chooser", () => {
+test("3-4. the page: name filled from the link, choose 照建議 or 自己選 right away, review only when choosing yourself", () => {
   assert.ok(page, "lamp.html exists");
   assert.match(page, /<html lang="zh-Hant">/);
   assert.match(page, /name="viewport"/);
@@ -241,20 +243,31 @@ test("3-4. the page: name filled from the link, a yes/no window, the lamp choose
   assert.match(nav, /<a class="brand" href="index.html">慈惠道場<\/a>/, "7. same menu");
   assert.doesNotMatch(nav, /aria-current/, "7. this page is not in the menu");
   assert.match(page, /崇羲篆體[\s\S]*CC BY-ND 3\.0 TW/, "7. same footer credit");
-  assert.match(page, /<input[^>]*id="lampName"[^>]*autocomplete="name"/, "a name box");
-  assert.match(page, /<dialog[^>]*id="lampAsk"/, "the yes/no window");
-  assert.match(page, /要照樞理的建議點這幾盞燈嗎？/);
-  assert.match(page, /id="lampYes"[^>]*>是/);
-  assert.match(page, /id="lampNo"[^>]*>否/);
-  assert.match(page, /id="lampChooser"[^>]*hidden/, "the chooser waits");
   assert.match(page, /<script type="module" src="js\/lamp-view.js"><\/script>/);
   assert.doesNotMatch(page, /師姐/, "the page says 樞理");
+  assert.match(page, /<input[^>]*id="lampName"[^>]*autocomplete="name"/, "a name box");
+  // 一開始就選：照建議、自己選（沒有「確認」按鈕、沒有跳出視窗）
+  assert.doesNotMatch(page, /<dialog/, "no pop-up window any more");
+  assert.doesNotMatch(page, /id="lampConfirm"/, "no 確認 button first");
+  const choice = page.match(/<div class="lamp-suggest" id="lampSuggest" hidden>[\s\S]*?<\/div>\s*<\/div>/)?.[0] ?? "";
+  assert.match(choice, /要照樞理的建議點這幾盞燈嗎？/, "the question sits with the suggestion");
+  assert.match(choice, /id="lampYes"[^>]*>是，照建議登記/);
+  assert.match(choice, /id="lampNo"[^>]*>否，我自己選/);
+  // 自己選：選燈 → 檢查一次 → 送出
+  assert.match(page, /<section id="lampChooser" hidden>[\s\S]*id="lampNext"[^>]*>下一步：檢查一次/);
+  assert.match(page, /<section id="lampReview" hidden>[\s\S]*<h2 id="lampReviewTitle" tabindex="-1">請檢查一次<\/h2>[\s\S]*id="lampSend"[^>]*>送出登記[\s\S]*id="lampBack"[^>]*>回去修改/);
+  // 程式
   assert.match(view, /decodeLink\(location\.hash\)/, "reads the link");
-  assert.match(view, /\.showModal\(\)/, "opens the window");
-  assert.match(view, /lampYes[\s\S]{0,200}submit\(/, "yes: register right away");
-  assert.match(view, /lampNo[\s\S]{0,300}showChooser\(/, "no: choose lamps");
+  assert.match(view, /\$\("lampYes"\)\.addEventListener\("click", \(\) => \{[\s\S]{0,200}missingField\(\)[\s\S]{0,200}submit\(suggested\)/, "yes: check the details, then register right away");
+  assert.match(view, /\$\("lampNo"\)\.addEventListener\("click", showChooser\)/, "no: choose lamps");
+  assert.match(view, /\$\("lampNext"\)\.addEventListener\("click", showReview\)/, "next: review");
+  assert.match(view, /function showReview\(\)[\s\S]{0,600}buildEntry\(/, "the review shows exactly what will be sent");
+  assert.match(view, /\$\("lampSend"\)\.addEventListener\("click", \(\) => submit\(pickedLamps/, "送出登記 sends the picked lamps");
+  assert.match(view, /\$\("lampBack"\)\.addEventListener\("click", backToEdit\)/);
+  assert.match(view, /if \(!suggested\.length\) showChooser\(\)/, "4. no suggestion: the chooser is there from the start");
   assert.match(view, /renderLampTicks\(box, catalog, suggested\)/, "the suggestion is ticked to start with");
   assert.match(read("js/lamp-parts.js"), /tick\.checked = checked\.includes\(tick\.value\)/);
+  assert.doesNotMatch(view, /key === "Enter"/, "Enter in the name box does not register");
   // 9-10. 新信眾的欄位
   assert.match(page, /<div class="lamp-newcomer" id="lampNewcomer" hidden>/, "the extra fields wait");
   for (const id of ["lampYear", "lampMonth", "lampDay", "lampHour"]) assert.match(page, new RegExp(`<select[^>]*id="${id}"`), id);
@@ -279,9 +292,8 @@ test("5/8. sending: one press, frozen retry, clear result; the page's review fix
   assert.match(view, /randomUUID/, "one id per registration, kept for a retry");
   assert.match(view, /function lockForm\(\)[\s\S]{0,300}nameInput\.disabled = true/, "name and ticks are locked once sent");
   assert.match(view, /addEventListener\("hashchange", \(\) => location\.reload\(\)\)/);
-  assert.match(page, /<h2 id="lampAskTitle" tabindex="-1" autofocus>/, "the window opens on its title, not on 是");
-  assert.match(view, /ask\.addEventListener\("cancel"[\s\S]{0,200}還沒登記/, "Esc says nothing was registered");
   assert.match(view, /\$\("lampDoneTitle"\)\.focus\(\)/, "after registering, focus moves to the result");
+  assert.match(view, /\$\("lampReviewTitle"\)\.focus\(\)/, "the review gets the focus");
   assert.match(view, /suggested\.length \? "樞理已經幫您填好名字/, "only says 樞理 suggested when there is a suggestion");
 });
 

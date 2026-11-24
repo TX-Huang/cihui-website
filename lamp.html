@@ -62,24 +62,39 @@
             <label class="lamp-label" for="lampAddress">地址</label>
             <input class="lamp-input" id="lampAddress" type="text" autocomplete="street-address" maxlength="120" />
           </div>
+          <p class="lamp-msg" id="lampNameMsg" role="alert"></p>
+          <!-- 樞理的建議，一開始就問：照建議（直接登記）還是自己選 -->
           <div class="lamp-suggest" id="lampSuggest" hidden>
             <p class="lamp-suggest-title">樞理建議您點</p>
             <ul class="lamp-list" id="lampSuggestList"></ul>
+            <p class="lamp-question">要照樞理的建議點這幾盞燈嗎？</p>
+            <div class="lamp-ask-bar">
+              <button class="lamp-btn" id="lampYes" type="button">是，照建議登記</button>
+              <button class="lamp-btn lamp-btn-quiet" id="lampNo" type="button">否，我自己選</button>
+            </div>
           </div>
-          <p class="lamp-msg" id="lampNameMsg" role="alert"></p>
-          <button class="lamp-btn" id="lampConfirm" type="button">確認</button>
         </section>
 
-        <!-- 2. 選燈（按「否」或沒有專屬連結時才出現） -->
+        <!-- 2. 自己選燈（按「否」，或沒有建議時一打開就在） -->
         <section id="lampChooser" hidden>
           <h2>選您要點的燈</h2>
           <p class="small">可以選好幾盞。</p>
           <div id="lampGroups"></div>
           <p class="lamp-msg" id="lampPickMsg" role="alert"></p>
-          <button class="lamp-btn" id="lampSend" type="button">送出登記</button>
+          <button class="lamp-btn" id="lampNext" type="button">下一步：檢查一次</button>
         </section>
 
-        <!-- 3. 送出的結果 -->
+        <!-- 3. 自己選的：送出前檢查一次 -->
+        <section id="lampReview" hidden>
+          <h2 id="lampReviewTitle" tabindex="-1">請檢查一次</h2>
+          <ul class="lamp-review" id="lampReviewList"></ul>
+          <div class="lamp-ask-bar">
+            <button class="lamp-btn" id="lampSend" type="button">送出登記</button>
+            <button class="lamp-btn lamp-btn-quiet" id="lampBack" type="button">回去修改</button>
+          </div>
+        </section>
+
+        <!-- 4. 送出的結果 -->
         <section id="lampDone" hidden>
           <h2 id="lampDoneTitle" tabindex="-1">已登記</h2>
           <p>感謝您，樞理會為您點燈。您登記的是：</p>
@@ -91,16 +106,6 @@
           <button class="lamp-btn" id="lampRetry" type="button" hidden>再送一次</button>
         </div>
       </div>
-
-      <!-- 確認姓名後跳出的視窗 -->
-      <dialog class="lamp-ask" id="lampAsk" aria-labelledby="lampAskTitle">
-        <h2 id="lampAskTitle" tabindex="-1" autofocus>要照樞理的建議點這幾盞燈嗎？</h2>
-        <ul class="lamp-list" id="lampAskList"></ul>
-        <div class="lamp-ask-bar">
-          <button class="lamp-btn" id="lampYes" type="button">是，照建議登記</button>
-          <button class="lamp-btn lamp-btn-quiet" id="lampNo" type="button">否，我自己選</button>
-        </div>
-      </dialog>
     </main>
 
     <footer>

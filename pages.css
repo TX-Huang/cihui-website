@@ -359,30 +359,34 @@ p {
 .lamp-status p {
   margin: 16px 0 8px;
 }
-.lamp-ask {
-  width: min(92vw, 440px);
-  padding: 28px 28px 24px;
-  border: 1px solid rgba(168, 132, 74, 0.5);
-  border-radius: 16px;
-  background: var(--paper-light);
-  color: var(--text);
-  box-shadow: 0 24px 60px rgba(60, 50, 40, 0.18);
-}
-.lamp-ask::backdrop {
-  background: rgba(47, 42, 37, 0.35);
-}
-.lamp-ask h2 {
-  font-size: 20px;
-  line-height: 1.6;
-}
-.lamp-ask h2::before {
-  display: none;
+/* 「要照樞理的建議點這幾盞燈嗎？」：問句大一點，兩個按鈕就在下面 */
+.lamp-question {
+  margin: 20px 0 0;
+  font-family: var(--serif);
+  font-size: 19px;
+  letter-spacing: 0.06em;
 }
 .lamp-ask-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 24px;
+}
+.lamp-suggest .lamp-ask-bar {
+  margin-top: 12px;
+}
+/* 自己選的：送出前檢查一次 */
+.lamp-review {
+  margin: 0;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  list-style: none;
+  font-size: 18px;
+}
+.lamp-review li + li {
+  margin-top: 8px;
 }
 
 /* ── 重點一：供奉神明。主祀一張大卡、陪祀一排小卡，各配首頁的圖 ── */

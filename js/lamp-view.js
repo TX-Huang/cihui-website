@@ -1,5 +1,5 @@
 // 光明燈登記頁（lamp.html）的畫面。計算在 js/lamp.js、讀寫試算表在 js/lamp-store.js，規格在 test/lamp.test.mjs。
-// 專屬連結點進來：名字填好 → 確認 → 視窗問「要照樞理的建議嗎？」→ 是：直接登記；否：自己選燈。
+// 專屬連結點進來：名字填好，下面就問「要照樞理的建議嗎？」→ 是：直接登記；否：自己選燈 → 檢查一次 → 送出。
 // 新信眾（樞理勾的，或沒有專屬連結）：還要填農曆生日、時辰和地址。燈的名目每次打開都從試算表讀最新的。
 import { HOURS, decodeLink, buildEntry, lampLabel, lunarBirth, thisRocYear, keysOf, knownLamps } from "./lamp.js";
 import { createStore } from "./lamp-store.js";
@@ -8,7 +8,6 @@ import { lunarDate } from "./events.js";
 
 const $ = (id) => document.getElementById(id);
 const nameInput = $("lampName");
-const ask = $("lampAsk");
 const store = createStore();
 const link = decodeLink(location.hash);
 const newcomer = link ? link.newcomer : true;
@@ -56,20 +55,22 @@ function showChooser() {
 }
 
 function setBusy(busy) {
-  for (const id of ["lampYes", "lampSend", "lampRetry"]) $(id).disabled = busy;
+  for (const id of ["lampYes", "lampNo", "lampNext", "lampSend", "lampBack", "lampRetry"]) $(id).disabled = busy;
 }
 
 // 送過一次就鎖住名字和勾選（再送一次只能送原本那一筆）
 function lockForm() {
   nameInput.disabled = true;
   for (const id of NEWCOMER_FIELDS) $(id).disabled = true;
-  $("lampConfirm").disabled = true;
   for (const t of $("lampGroups").querySelectorAll("input")) t.disabled = true;
 }
 
+// 這次要送的那一筆（還沒送過就照畫面上的；送過了就是固定的那一筆）
+const entryFor = (lamps) => frozen ?? buildEntry({ name: nameInput.value, lamps, suggested, id: entryId, newcomer, birth: readBirth(), address: $("lampAddress").value, catalog });
+
 // 送到 Google 試算表（js/lamp-store.js）；試用模式不會真的送出
 async function submit(lamps) {
-  const entry = frozen ?? buildEntry({ name: nameInput.value, lamps, suggested, id: entryId, newcomer, birth: readBirth(), address: $("lampAddress").value, catalog });
+  const entry = entryFor(lamps);
   $("lampRetry").hidden = true;
   if (!entry) return say("lampStatusText", "請確認您的資料，並至少選一盞燈。");
   frozen ??= entry;
@@ -83,14 +84,14 @@ async function submit(lamps) {
     done(frozen, out.demo);
   } catch {
     say("lampStatusText", "沒有送出去（可能是網路不穩）。請按「再送一次」，不會重複登記。");
-    $("lampSend").hidden = true; // 只剩「再送一次」，送的是同一筆
+    for (const id of ["lampYes", "lampNo", "lampSend", "lampBack"]) $(id).hidden = true; // 只剩「再送一次」，送的是同一筆
     $("lampRetry").hidden = false;
     setBusy(false);
   }
 }
 
 function done(entry, demo) {
-  for (const id of ["lampNameStep", "lampChooser"]) $(id).hidden = true;
+  for (const id of ["lampNameStep", "lampChooser", "lampReview"]) $(id).hidden = true;
   fillList($("lampDoneList"), entry.lamps);
   $("lampDoneDemo").hidden = !demo;
   $("lampDone").hidden = false;
@@ -110,25 +111,38 @@ function missingField() {
   return null;
 }
 
-function confirmName() {
+// 資料沒填好：說哪裡沒填、跳過去，回傳 false
+function detailsReady() {
   nameInput.value = nameInput.value.trim();
   const missing = missingField();
-  if (missing) {
-    say("lampNameMsg", missing[0]);
-    missing[1].focus();
-    return;
-  }
-  say("lampNameMsg", "");
-  if (!suggested.length) return showChooser();
-  fillList($("lampAskList"), suggested.map(lampLabel));
-  ask.showModal(); // 鍵盤停在視窗的標題上（lamp.html 的 autofocus），不是「是」
+  say("lampNameMsg", missing ? missing[0] : "");
+  if (!missing) return true;
+  missing[1].scrollIntoView({ behavior: "smooth", block: "center" });
+  missing[1].focus({ preventScroll: true });
+  return false;
 }
 
-function sendPicked() {
+// 自己選的：送出前檢查一次（列出的就是要送的那一筆）
+function showReview() {
+  if (!detailsReady()) return;
   const picked = pickedLamps($("lampGroups"));
-  if (!frozen && !picked.length) return say("lampPickMsg", "請至少勾一盞燈。");
+  if (!picked.length) return say("lampPickMsg", "請至少勾一盞燈。");
   say("lampPickMsg", "");
-  submit(picked);
+  const entry = buildEntry({ name: nameInput.value, lamps: picked, suggested, id: entryId, newcomer, birth: readBirth(), address: $("lampAddress").value, catalog });
+  const rows = [`姓名：${entry.name}`];
+  if (entry.newcomer) rows.push(`農曆生日：${entry.birth}`, `地址：${entry.address}`);
+  rows.push(`要點的燈：${entry.lamps.join("、")}`);
+  fillList($("lampReviewList"), rows);
+  for (const id of ["lampNameStep", "lampChooser"]) $(id).hidden = true;
+  $("lampReview").hidden = false;
+  $("lampReviewTitle").focus();
+  $("lampReview").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function backToEdit() {
+  $("lampReview").hidden = true;
+  for (const id of ["lampNameStep", "lampChooser"]) $(id).hidden = false;
+  $("lampChooser").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function showLink() {
@@ -144,7 +158,6 @@ function showLink() {
 // 先讀燈的名目（試算表）；讀不到、還沒填：說清楚，不能往下
 async function start() {
   $("lampDemo").hidden = !store.demo;
-  $("lampConfirm").disabled = true;
   if (link) nameInput.value = link.name;
   say("lampNameMsg", "正在讀燈的名目…");
   try {
@@ -155,8 +168,8 @@ async function start() {
   if (!keysOf(catalog).length) return say("lampNameMsg", "樞理還沒填好燈的名目，請晚一點再來。");
   suggested = knownLamps(link?.suggested, catalog);
   say("lampNameMsg", "");
-  $("lampConfirm").disabled = false;
   showLink();
+  if (!suggested.length) showChooser(); // 沒有建議：一打開就是選燈的地方
 }
 
 fillBirthSelects();
@@ -167,23 +180,14 @@ $("lampHourUnknown").addEventListener("change", () => {
 });
 // 同一頁貼了另一個人的連結（只換 # 不會重新整理）：整頁重新讀
 addEventListener("hashchange", () => location.reload());
-$("lampConfirm").addEventListener("click", confirmName);
-nameInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !$("lampConfirm").disabled) confirmName();
-});
+// 照建議：資料齊了就直接登記
 $("lampYes").addEventListener("click", () => {
-  ask.close();
+  if (missingField()) return detailsReady();
   submit(suggested);
 });
-$("lampNo").addEventListener("click", () => {
-  ask.close();
-  showChooser();
-});
-// 按 Esc 關掉視窗：還沒登記
-ask.addEventListener("cancel", () => {
-  say("lampNameMsg", "還沒登記。請再按一次「確認」。");
-  setTimeout(() => $("lampConfirm").focus());
-});
-$("lampSend").addEventListener("click", sendPicked);
+$("lampNo").addEventListener("click", showChooser);
+$("lampNext").addEventListener("click", showReview);
+$("lampSend").addEventListener("click", () => submit(pickedLamps($("lampGroups"))));
+$("lampBack").addEventListener("click", backToEdit);
 $("lampRetry").addEventListener("click", () => submit(frozen?.lamps ?? []));
 start();
