@@ -5,7 +5,7 @@ import { lunarDate } from "./events.js";
 
 // Google 試算表的網址（Apps Script 部署成「網頁應用程式」後拿到的網址，做法在 tools/lamp-sheet.gs 最上面）。
 // 空的：試用模式（名目只存在這台裝置、密碼 1234、登記不會真的送出）
-export const SHEET_URL = "";
+export const SHEET_URL = "https://script.google.com/macros/s/AKfycbwUU_LvGeGIOM9tEiVfZMQxwVtb0frTkwzIRQnh9lk80zn1JA5xeMP-JlneTwGHk8sy3A/exec";
 export const DEMO_PASSWORD = "1234";
 
 // 燈的名目由樞理自己填（試算表的「燈的名目」分頁，或做連結的頁）。大燈、小燈各最多 6 個（使用者：「各6」）
