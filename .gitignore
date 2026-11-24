@@ -11,3 +11,6 @@ Thumbs.db
 
 # 第三方的 Claude 技能（heydamir/unslop，CC BY 4.0），只在本機用
 .claude/skills/unslop/
+
+# CodeGraph index (local only)
+.codegraph/

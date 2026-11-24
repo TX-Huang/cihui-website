@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>做光明燈專屬連結 — 慈惠道場</title>
+    <meta name="description" content="樞理用：幫每個人做光明燈登記的專屬連結。" />
+    <meta name="robots" content="noindex" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=Noto+Sans+TC:wght@400;500&family=Yuji+Boku&family=LXGW+WenKai+TC:wght@400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="pages.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <nav class="pill" aria-label="主選單">
+        <a class="brand" href="index.html">慈惠道場</a>
+        <a href="about.html">關於道場</a>
+        <a href="events.html">法會活動</a>
+        <a href="services.html">服務</a>
+        <a href="gallery.html">相簿</a>
+      </nav>
+    </header>
+
+    <main>
+      <div class="hero">
+        <div class="hero-img" aria-hidden="true"></div>
+        <div class="hero-text">
+          <p class="eyebrow">樞理用</p>
+          <h1>做光明燈專屬連結</h1>
+          <p class="lead">打名字、勾建議的燈，就有這個人專屬的登記連結</p>
+        </div>
+      </div>
+
+      <div class="content lamp">
+        <section>
+          <h2>這個人</h2>
+          <label class="lamp-label" for="makeName">姓名</label>
+          <input class="lamp-input" id="makeName" type="text" maxlength="40" autocomplete="off" />
+          <label class="lamp-pick"><input type="checkbox" id="makeNew" /> 新信眾（登記時要填農曆生日和地址）</label>
+          <h2>建議點的燈</h2>
+          <div id="lampGroups"></div>
+          <p class="lamp-msg" id="makeMsg" role="alert"></p>
+          <button class="lamp-btn" id="makeBtn" type="button">產生連結</button>
+        </section>
+
+        <section id="makeOut" hidden>
+          <h2>專屬連結</h2>
+          <p class="lamp-suggest-title" id="makeFor"></p>
+          <label class="lamp-label" for="makeUrl">連結</label>
+          <input class="lamp-input" id="makeUrl" type="text" readonly />
+          <div class="lamp-ask-bar">
+            <button class="lamp-btn" id="makeCopy" type="button">複製連結</button>
+            <a class="lamp-btn lamp-btn-quiet" id="makeLine" href="#" target="_blank" rel="noopener">用 LINE 傳</a>
+            <a class="lamp-btn lamp-btn-quiet" id="makeTry" href="#" target="_blank" rel="noopener">打開看看</a>
+          </div>
+          <p class="lamp-msg" id="makeCopied" role="status" aria-live="polite"></p>
+        </section>
+      </div>
+    </main>
+
+    <footer>
+      <p>慈惠道場 · 主祀瑤池金母，陪祀九天玄女、中壇元帥、福德正神</p>
+      <p><a href="index.html">回首頁</a></p>
+      <p class="credit">
+        首頁匾額字型：<a href="https://xiaoxue.iis.sinica.edu.tw/chongxi/" target="_blank" rel="noopener">崇羲篆體</a>（中央研究院，CC BY-ND 3.0 TW）
+      </p>
+    </footer>
+
+    <script type="module" src="js/lamp-link-view.js"></script>
+  </body>
+</html>

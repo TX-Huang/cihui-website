@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>光明燈登記 — 慈惠道場</title>
+    <meta name="description" content="慈惠道場光明燈登記。" />
+    <!-- 專屬連結帶著名字（在 # 後面），不給搜尋引擎收錄 -->
+    <meta name="robots" content="noindex" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=Noto+Sans+TC:wght@400;500&family=Yuji+Boku&family=LXGW+WenKai+TC:wght@400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="pages.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <nav class="pill" aria-label="主選單">
+        <a class="brand" href="index.html">慈惠道場</a>
+        <a href="about.html">關於道場</a>
+        <a href="events.html">法會活動</a>
+        <a href="services.html">服務</a>
+        <a href="gallery.html">相簿</a>
+      </nav>
+    </header>
+
+    <main>
+      <div class="hero">
+        <div class="hero-img" aria-hidden="true"></div>
+        <div class="hero-text">
+          <p class="eyebrow">慈惠道場</p>
+          <h1>光明燈登記</h1>
+          <p class="lead">元旦啟燈 · 依您的流年專屬點燈</p>
+        </div>
+      </div>
+
+      <div class="content lamp">
+        <!-- 1. 姓名（專屬連結點進來：已經填好） -->
+        <section id="lampNameStep">
+          <h2>您的資料</h2>
+          <p id="lampIntro">請填您的姓名、農曆生日和地址，再選要點的燈。</p>
+          <label class="lamp-label" for="lampName">姓名</label>
+          <input class="lamp-input" id="lampName" type="text" autocomplete="name" maxlength="40" />
+          <!-- 新信眾才有：農曆生日、地址（寫疏文用） -->
+          <div class="lamp-newcomer" id="lampNewcomer" hidden>
+            <fieldset class="lamp-birth">
+              <legend class="lamp-label">農曆生日</legend>
+              <div class="lamp-birth-row">
+                <select class="lamp-input" id="lampYear" aria-label="民國年"></select>
+                <select class="lamp-input" id="lampMonth" aria-label="農曆月"></select>
+                <select class="lamp-input" id="lampDay" aria-label="農曆日"></select>
+              </div>
+              <label class="lamp-pick"><input type="checkbox" id="lampLeap" /> 閏月</label>
+              <div class="lamp-hour-row">
+                <select class="lamp-input" id="lampHour" aria-label="出生的時辰"></select>
+                <label class="lamp-pick"><input type="checkbox" id="lampHourUnknown" /> 不知道</label>
+              </div>
+            </fieldset>
+            <label class="lamp-label" for="lampAddress">地址</label>
+            <input class="lamp-input" id="lampAddress" type="text" autocomplete="street-address" maxlength="120" />
+          </div>
+          <div class="lamp-suggest" id="lampSuggest" hidden>
+            <p class="lamp-suggest-title">樞理建議您點</p>
+            <ul class="lamp-list" id="lampSuggestList"></ul>
+          </div>
+          <p class="lamp-msg" id="lampNameMsg" role="alert"></p>
+          <button class="lamp-btn" id="lampConfirm" type="button">確認</button>
+        </section>
+
+        <!-- 2. 選燈（按「否」或沒有專屬連結時才出現） -->
+        <section id="lampChooser" hidden>
+          <h2>選您要點的燈</h2>
+          <p class="small">可以選好幾盞。</p>
+          <div id="lampGroups"></div>
+          <p class="lamp-msg" id="lampPickMsg" role="alert"></p>
+          <button class="lamp-btn" id="lampSend" type="button">送出登記</button>
+        </section>
+
+        <!-- 3. 送出的結果 -->
+        <section id="lampDone" hidden>
+          <h2 id="lampDoneTitle" tabindex="-1">已登記</h2>
+          <p>感謝您，樞理會為您點燈。您登記的是：</p>
+          <ul class="lamp-list" id="lampDoneList"></ul>
+        </section>
+        <div class="lamp-status" id="lampStatus" role="status" aria-live="polite">
+          <p id="lampStatusText"></p>
+          <button class="lamp-btn" id="lampRetry" type="button" hidden>再送一次</button>
+        </div>
+      </div>
+
+      <!-- 確認姓名後跳出的視窗 -->
+      <dialog class="lamp-ask" id="lampAsk" aria-labelledby="lampAskTitle">
+        <h2 id="lampAskTitle" tabindex="-1" autofocus>要照樞理的建議點這幾盞燈嗎？</h2>
+        <ul class="lamp-list" id="lampAskList"></ul>
+        <div class="lamp-ask-bar">
+          <button class="lamp-btn" id="lampYes" type="button">是，照建議登記</button>
+          <button class="lamp-btn lamp-btn-quiet" id="lampNo" type="button">否，我自己選</button>
+        </div>
+      </dialog>
+    </main>
+
+    <footer>
+      <p>慈惠道場 · 主祀瑤池金母，陪祀九天玄女、中壇元帥、福德正神</p>
+      <p><a href="index.html">回首頁</a></p>
+      <p class="credit">
+        首頁匾額字型：<a href="https://xiaoxue.iis.sinica.edu.tw/chongxi/" target="_blank" rel="noopener">崇羲篆體</a>（中央研究院，CC BY-ND 3.0 TW）
+      </p>
+    </footer>
+
+    <script type="module" src="js/lamp-view.js"></script>
+  </body>
+</html>
