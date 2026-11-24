@@ -7,17 +7,17 @@
 // 1. 樞理在 lamp-link.html 打名字、勾建議的燈，按「產生連結」，得到這個人的專屬連結（可以複製、可以直接用 LINE 傳）。
 //    名字沒打、一盞燈都沒勾：不產生，說哪裡沒填。
 // 2. 專屬連結 = lamp.html#… ：名字和建議的燈放在 # 後面（不會送到伺服器、不會進網站紀錄），中文也沒問題。
-//    連結被改壞、或寫了不存在的燈：不認得的燈丟掉；名字沒有或整個壞掉，就當作沒有連結。
-// 3. 點專屬連結進來：名字已經填好（還可以改），下面寫著樞理建議的燈。按「確認姓名」→ 跳出視窗：
+//    連結記的是燈的「大小＋名目的名字」（不是第幾格）：樞理以後改名、換順序，舊連結也不會指錯燈；
+//    連結裡的燈現在的名目已經沒有了：丟掉。名字沒有或整個壞掉，就當作沒有連結。
+// 3. 點專屬連結進來：名字已經填好（還可以改），下面寫著樞理建議的燈。按「確認」→ 跳出視窗：
 //    「要照樞理的建議點這幾盞燈嗎？」列出燈。
 //    - 按「是」：直接登記（這個人除了按兩下，什麼都不用打）。
 //    - 按「否」：視窗關掉，出現選燈的地方（大燈、小燈各自的名目），先幫他勾好樞理建議的，讓他改；至少要勾一盞才能送出。
 // 4. 沒有專屬連結的人：自己打名字，直接選燈（沒有建議，所以不跳視窗）。
-// 5. 登記送到 Google 試算表（一列一筆）：時間、姓名、照樞理建議（是／否）、登記的燈、樞理建議的燈、編號。
+// 5. 登記送到 Google 試算表（一列一筆）：時間、姓名、新信眾、農曆生日、地址、照樞理建議（是／否）、登記的燈、樞理建議的燈、編號。
 //    - 送出中按鈕不能再按；送好了說「已登記」；沒送出去說沒成功，可以再按一次（同一個編號，試算表不會多一筆）。
-//    - 試算表網址還沒設定（待填）：說「登記功能還沒開通」，不假裝送出去了。
 //    - 名字只留前 40 個字；試算表那邊把 = + - @ 開頭的字前面加 '（別人不能塞公式進試算表）。
-// 6. 燈的名目寫在 js/lamp.js 一個地方（大燈、小燈各一串）；道場還沒給的標「待填」。
+// 6. （2026-11-24 改成第 11 點：名目由樞理自己填）大燈、小燈各最多 6 個名目（使用者：「各6」）。
 // 7. 跟其他內頁一樣的選單（這頁不在選單裡，所以沒有標「現在在這頁」）、字型、頁尾。兩頁都不給搜尋引擎收錄。
 // 8. 2026-11-24 Codex 審查：
 //    - 送過一次（不管成功沒）就固定那一筆：再送一次送的是一模一樣的內容，名字、勾選都鎖住（不會「試算表存舊的、畫面說新的」）。
@@ -32,12 +32,30 @@
 //    - 新信眾：名字下面多出「農曆生日」（民國年、月、日，可以勾閏月）和「地址」，都要填才能往下（說哪裡沒填）。
 //      往年信眾：看不到這兩欄，只確認名字。
 //    - 生日寫成「民國70年 農曆閏四月初五」；年份從民國 1 年到今年，月 1～12，日 1～30；不對就不送。地址最多 120 字。
-//    - 試算表多三欄：新信眾（是／否）、農曆生日、地址（往年信眾這兩欄空白）。
 //    - 業界比較：業界的表單每個人都要填生日和地址；我們只有新信眾要填，往年信眾還是只要按兩下。
 // 10. 2026-11-24 使用者：「新信眾出生的時辰也要，可以勾不知道」。
 //    - 農曆生日下面多一個「時辰」選單（子時到亥時，旁邊寫幾點到幾點），旁邊有「不知道」可以勾（勾了選單就不能選）。
 //    - 要嘛選一個時辰、要嘛勾不知道，不然不能往下（說「請選出生的時辰，不知道就勾「不知道」」）。
 //    - 試算表的農曆生日寫成「民國70年 農曆閏四月初五 子時」或「民國70年 農曆閏四月初五 吉時」（使用者：「不知道到時候就會變成吉時」）。
+// 11. 2026-11-24 使用者：「待填不是應該要讓樞理親自填嗎」「要以樞理方便為主」→ 名目由樞理自己填，兩個地方都能改：
+//    - 名目存在 Google 試算表的「燈的名目」分頁（第一列：大燈、小燈；下面各最多 6 格）。兩頁打開時都去讀最新的。
+//    - 做連結的頁最上面有「燈的名目」：輸入密碼 →「打開編輯」→ 大燈 6 格、小燈 6 格 →「存好」。存好後下面勾燈的地方馬上換新。
+//      密碼由樞理自己在試算表的「設定」分頁 B1 打（不用碰程式）；還沒設密碼：說「請先在試算表的「設定」分頁設定密碼」。
+//      密碼連錯 10 次：10 分鐘內不能再試（擋亂猜）。
+//    - 每個名目最多 20 字；同一種燈不能有兩個一樣的名目；空的格子不算。不對的話說哪裡不對，不存。
+//    - 讀不到名目（網路、Google 一時連不上）：說「燈的名目讀不到，請重新整理再試」，不能往下。
+//      樞理還沒填任何名目：登記頁說「樞理還沒填好燈的名目」；做連結的頁說「還沒有名目，請先在上面填好」。
+//    - 試用模式：試算表還沒開通（js/lamp.js 的 SHEET_URL 是空的）時，兩頁最上面寫「試用模式」：
+//      名目只存在這台手機或電腦，密碼是 1234，登記不會真的送出（「已登記」旁邊寫「試用，沒有真的送出」）。開通後試用模式自動消失。
+// 12. 2026-11-24 Codex 審查（名目）：
+//    - 名目讀好以前不能按「打開編輯」；打開時重新讀一次最新的才放進格子（不會把空格子存回去、洗掉全部名目）。
+//    - 按「打開編輯」、「存好」的時候，按鈕和格子先鎖住，回來才放開（連按不會送好幾次、存檔中打的字不會不見）。
+//    - 存好名目後，下面已經勾的燈還在的就保持勾著。
+//    - 名目不能用 = + - @ 開頭（試算表會當成公式）。
+//    - 密碼對了，錯的次數歸零；錯 10 次以後 10 分鐘內都不能試（樞理被擋時說「請 10 分鐘後再試」）。
+//    - 登記時，試算表再檢查一次燈還在不在（樞理剛好改了名目）：不在就說「燈的名目剛剛改過，請重新整理再登記」。
+//    - 試算表只認得 register、login、setLamps 三種要求，其他的不寫。
+//    - 試用模式存不了（私密瀏覽）：說存不了，不假裝存好。
 //
 // 業界怎麼做、我們怎麼超越
 // - 業界：宮廟的線上點燈多半是一張大家都一樣的表單：自己填姓名、出生年月日、住址、自己選燈、付功德金
@@ -51,9 +69,12 @@
 //   b. 名字放在 # 後面，不放在 ?…（?… 會送到網站伺服器、留在紀錄裡）。這只是不進紀錄，不是保密：
 //      拿到連結的人都解得開、改得了，所以連結只當「幫忙填好」，不當身分證明。（業界本來就有的好習慣）
 //   c. 每筆有編號，重送不會多一筆；擋試算表公式注入。（業界本來就有的做法，很多教學沒做）
-// - 不做的：線上付款（使用者沒要，樞理自己收）；生日、住址欄位（樞理認得這個人；要的話之後加）；
-//   一個連結登記全家（先一人一個）；登入帳號（多一步，對長輩不友善）；
-//   存在伺服器、會過期的連結代碼（要自己的伺服器，這個網站沒有）；擋機器人亂送（小道場風險低；被灌了再加）。
+//   d. 名目樞理自己在做連結的頁改（也可以直接改試算表），不用找人改程式；連結記名字不記格子，改名不會指錯燈。
+//      使用者選「以樞理方便為主」。網頁上改是不是真的比改試算表方便，要等樞理用手機實際試過才算證明（Codex 的提醒）；
+//      兩邊都能改，所以她覺得試算表比較順手也可以只用試算表。
+// - 不做的：線上付款（使用者沒要，樞理自己收）；一個連結登記全家（先一人一個）；登入帳號（多一步，對長輩不友善）；
+//   存在伺服器、會過期的連結代碼（要自己的伺服器，這個網站沒有）；擋機器人亂送（小道場風險低；被灌了再加）；
+//   銀行等級的密碼（只是防路人亂改名目的小鎖）。
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
@@ -61,28 +82,44 @@ import { readFileSync, existsSync } from "node:fs";
 const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
 const exists = (f) => existsSync(new URL(`../${f}`, import.meta.url));
 const load = async () => (exists("js/lamp.js") ? import("../js/lamp.js") : {});
+const loadStore = async () => (exists("js/lamp-store.js") ? import("../js/lamp-store.js") : {});
 const page = exists("lamp.html") ? read("lamp.html") : "";
 const maker = exists("lamp-link.html") ? read("lamp-link.html") : "";
 const view = exists("js/lamp-view.js") ? read("js/lamp-view.js") : "";
 const makerView = exists("js/lamp-link-view.js") ? read("js/lamp-link-view.js") : "";
 const gs = exists("tools/lamp-sheet.gs") ? read("tools/lamp-sheet.gs") : "";
 
-test("6. lamp names live in one list: big and small lamps, each with their own names", async () => {
-  const { LAMPS, lampLabel } = await load();
-  assert.ok(LAMPS?.big?.items?.length && LAMPS?.small?.items?.length, "大燈、小燈 each have names");
-  assert.equal(LAMPS.big.label, "大燈");
-  assert.equal(LAMPS.small.label, "小燈");
-  const ids = [...LAMPS.big.items, ...LAMPS.small.items].map((i) => i.id);
-  assert.equal(new Set(ids).size, ids.length, "every lamp has its own id");
-  for (const i of LAMPS.big.items) assert.match(i.id, /^big-/);
-  for (const i of LAMPS.small.items) assert.match(i.id, /^small-/);
-  assert.equal(lampLabel(LAMPS.big.items[0].id), `大燈・${LAMPS.big.items[0].name}`);
-  assert.equal(lampLabel("nope"), null);
+const CAT = { big: ["光明", "事業"], small: ["健康", "學業"] };
+
+test("6/11. the catalogue: big and small lamps, at most 6 names each, tidy names, labels from the key", async () => {
+  const { SIZES, MAX_PER_SIZE, cleanCatalog, lampKey, lampLabel, keysOf } = await load();
+  assert.deepEqual(SIZES, { big: "大燈", small: "小燈" });
+  assert.equal(MAX_PER_SIZE, 6, "使用者：「各6」");
+  assert.deepEqual(cleanCatalog({ big: [" 光明 ", "", "光明", "事業"], small: ["健康"] }), { big: ["光明", "事業"], small: ["健康"] }, "trimmed, blanks and repeats dropped");
+  assert.equal(cleanCatalog({ big: Array.from({ length: 9 }, (_, i) => `燈${i}`), small: [] }).big.length, 6, "at most 6");
+  assert.deepEqual(cleanCatalog(null), { big: [], small: [] }, "nothing: empty lists");
+  assert.equal(cleanCatalog({ big: ["x".repeat(30)], small: [] }).big[0].length, 20, "names cut at 20");
+  assert.equal(lampKey("big", "光明"), "big:光明");
+  assert.equal(lampLabel("big:光明"), "大燈・光明");
+  assert.equal(lampLabel("small:健康"), "小燈・健康");
+  assert.equal(lampLabel("huge:光明"), null);
+  assert.equal(lampLabel("big:"), null);
+  assert.deepEqual(keysOf(CAT), ["big:光明", "big:事業", "small:健康", "small:學業"]);
+});
+
+test("11. 樞理's edit of the names is checked before it is saved", async () => {
+  const { checkCatalogEdit } = await load();
+  assert.deepEqual(checkCatalogEdit({ big: [" 光明", "", "事業"], small: ["健康"] }), { error: null, catalog: { big: ["光明", "事業"], small: ["健康"] } });
+  assert.equal(checkCatalogEdit({ big: ["光明", "光明 "], small: [] }).error, "same", "two of the same name");
+  assert.equal(checkCatalogEdit({ big: ["x".repeat(21)], small: [] }).error, "long", "longer than 20");
+  assert.equal(checkCatalogEdit({ big: Array.from({ length: 7 }, (_, i) => `燈${i}`), small: [] }).error, "many", "more than 6");
+  assert.equal(checkCatalogEdit({ big: [], small: ["健康", "健康"] }).error, "same", "small lamps too");
+  for (const bad of ["=光明", "+光明", "-光明", "@光明"]) assert.equal(checkCatalogEdit({ big: [bad], small: [] }).error, "symbol", `12. ${bad}: not like a formula`);
 });
 
 test("2. the personal link carries the name and suggestions after #, Chinese included; broken links are handled", async () => {
-  const { LAMPS, encodeLink, decodeLink } = await load();
-  const s = [LAMPS.big.items[0].id, LAMPS.small.items[0].id];
+  const { encodeLink, decodeLink, knownLamps } = await load();
+  const s = ["big:光明", "small:健康"];
   const hash = encodeLink({ name: "王小明", suggested: s });
   assert.match(hash, /^#[A-Za-z0-9_-]+$/, "safe in a URL, after #");
   assert.doesNotMatch(hash, /王/, "not readable as plain text in the link");
@@ -92,58 +129,104 @@ test("2. the personal link carries the name and suggestions after #, Chinese inc
   assert.equal(decodeLink("#"), null);
   assert.equal(decodeLink("#!!!"), null);
   assert.equal(decodeLink("#" + "a".repeat(30)), null);
-  assert.deepEqual(decodeLink(encodeLink({ name: " 林 ", suggested: [s[0], "big-999", s[0]] })), { name: "林", suggested: [s[0]], newcomer: false }, "unknown lamps dropped, no repeats, name trimmed");
+  assert.deepEqual(decodeLink(encodeLink({ name: " 林 ", suggested: ["big:光明", "huge:x", 5, "big:光明"] })), { name: "林", suggested: ["big:光明"], newcomer: false }, "bad lamps dropped, no repeats, name trimmed");
   assert.equal(decodeLink(encodeLink({ name: "   ", suggested: s })), null, "no name: no link");
   assert.equal(decodeLink(encodeLink({ name: "x".repeat(60), suggested: s })).name.length, 40, "names are cut at 40");
   assert.equal(decodeLink("#" + "A".repeat(2001)), null, "8. a huge # is treated as broken");
+  // 11. 名目改了：連結裡已經沒有的燈丟掉
+  assert.deepEqual(knownLamps(["big:光明", "big:舊名", "small:健康"], CAT), ["big:光明", "small:健康"]);
 });
 
-test("8. review fixes on the page: frozen retry, hash change, dialog focus, Esc, done focus", () => {
-  assert.match(view, /frozen \?\?= entry/, "the first sent entry is kept");
-  assert.match(view, /fetch\(SHEET_URL, \{ method: "POST", body: JSON\.stringify\(frozen\) \}\)/, "a retry sends exactly the same");
-  assert.match(view, /function lockForm\(\)[\s\S]{0,300}nameInput\.disabled = true/, "name and ticks are locked once sent");
-  assert.match(view, /addEventListener\("hashchange", \(\) => location\.reload\(\)\)/);
-  assert.match(page, /<h2 id="lampAskTitle" tabindex="-1" autofocus>/, "the window opens on its title, not on 是");
-  assert.match(view, /ask\.addEventListener\("cancel"[\s\S]{0,200}還沒登記/, "Esc says nothing was registered");
-  assert.match(view, /\$\("lampDoneTitle"\)\.focus\(\)/, "after registering, focus moves to the result");
-  assert.match(view, /suggested\.length \? "樞理已經幫您填好名字/, "only says 樞理 suggested when there is a suggestion");
-});
-
-test("8. review fixes on the link maker: no stale link", () => {
-  assert.match(makerView, /addEventListener\("input", hideOut\)/, "changing the name or ticks hides the old link");
-  assert.match(makerView, /makeFor/, "says who the link is for");
-});
-
-test("8. review fixes in the sheet script: whole-column repeat check, flush, sizes", () => {
-  assert.match(gs, /createTextFinder\(id\)\.matchEntireCell\(true\)/, "checks every id, not the last 500");
-  assert.match(gs, /SpreadsheetApp\.flush\(\)/);
-  assert.match(gs, /lamps\.length > 20/);
-});
-
-test("1. making a link: needs a name and at least one lamp, otherwise says what is missing", async () => {
-  const { LAMPS, makeLink } = await load();
-  const s = [LAMPS.big.items[0].id];
+test("1. making a link: needs a name and at least one lamp from the current names", async () => {
+  const { makeLink, decodeLink } = await load();
   const base = "https://example.test/cihui/lamp-link.html";
-  const ok = makeLink({ name: "陳大文", suggested: s, base });
+  const ok = makeLink({ name: "陳大文", suggested: ["big:光明"], base, catalog: CAT });
   assert.equal(ok.error, null);
   assert.match(ok.url, /^https:\/\/example\.test\/cihui\/lamp\.html#[A-Za-z0-9_-]+$/, "points at lamp.html next to the maker page");
   assert.match(ok.line, /^https:\/\/line\.me\/R\/msg\/text\/\?/, "can be sent with LINE");
   assert.ok(decodeURIComponent(ok.line).includes(ok.url), "the LINE message holds the link");
-  assert.equal(makeLink({ name: " ", suggested: s, base }).error, "name");
-  assert.equal(makeLink({ name: "陳大文", suggested: [], base }).error, "lamps");
+  assert.equal(makeLink({ name: " ", suggested: ["big:光明"], base, catalog: CAT }).error, "name");
+  assert.equal(makeLink({ name: "陳大文", suggested: [], base, catalog: CAT }).error, "lamps");
+  assert.equal(makeLink({ name: "陳大文", suggested: ["big:沒有這個"], base, catalog: CAT }).error, "lamps", "only current names");
+  assert.equal(decodeLink(new URL(makeLink({ name: "新", suggested: ["big:光明"], newcomer: true, base, catalog: CAT }).url).hash).newcomer, true, "9. carries 新信眾");
 });
 
 test("5. what goes to the sheet: one tidy row, retry-safe id, nothing broken", async () => {
-  const { LAMPS, buildEntry, SHEET_URL } = await load();
+  const { buildEntry, SHEET_URL } = await load();
   assert.equal(typeof SHEET_URL, "string");
-  const a = LAMPS.big.items[0].id;
-  const b = LAMPS.small.items[0].id;
-  const e = buildEntry({ name: " 王小明 ", lamps: [a, b], suggested: [a], id: "abc-1" });
-  assert.deepEqual(e, { id: "abc-1", name: "王小明", newcomer: false, birth: "", address: "", followed: false, lamps: [`大燈・${LAMPS.big.items[0].name}`, `小燈・${LAMPS.small.items[0].name}`], suggested: [`大燈・${LAMPS.big.items[0].name}`] });
-  assert.equal(buildEntry({ name: "王", lamps: [b, a], suggested: [a, b], id: "x" }).followed, true, "same lamps in another order: followed");
-  assert.equal(buildEntry({ name: "王", lamps: [a], suggested: [], id: "x" }).followed, false, "no suggestion: not 'followed'");
-  assert.equal(buildEntry({ name: "", lamps: [a], suggested: [], id: "x" }), null, "no name: nothing to send");
-  assert.equal(buildEntry({ name: "王", lamps: ["big-999"], suggested: [], id: "x" }), null, "no real lamp: nothing to send");
+  const e = buildEntry({ name: " 王小明 ", lamps: ["big:光明", "small:健康"], suggested: ["big:光明"], id: "abc-1", catalog: CAT });
+  assert.deepEqual(e, { action: "register", id: "abc-1", name: "王小明", newcomer: false, birth: "", address: "", followed: false, lamps: ["大燈・光明", "小燈・健康"], suggested: ["大燈・光明"] });
+  assert.equal(buildEntry({ name: "王", lamps: ["small:健康", "big:光明"], suggested: ["big:光明", "small:健康"], id: "x", catalog: CAT }).followed, true, "same lamps in another order: followed");
+  assert.equal(buildEntry({ name: "王", lamps: ["big:光明"], suggested: [], id: "x", catalog: CAT }).followed, false, "no suggestion: not 'followed'");
+  assert.equal(buildEntry({ name: "", lamps: ["big:光明"], suggested: [], id: "x", catalog: CAT }), null, "no name: nothing to send");
+  assert.equal(buildEntry({ name: "王", lamps: ["big:沒有"], suggested: [], id: "x", catalog: CAT }), null, "no real lamp: nothing to send");
+});
+
+test("9-10. newcomers also give their lunar birthday, hour and address; returning followers only the name", async () => {
+  const { buildEntry, lunarBirth, HOURS } = await load();
+  assert.equal(lunarBirth({ year: 70, month: 4, day: 5, leap: true, hour: 1, maxYear: 115 }), "民國70年 農曆閏四月初五 子時");
+  assert.equal(lunarBirth({ year: 115, month: 12, day: 30, leap: false, hour: 12, maxYear: 115 }), "民國115年 農曆十二月三十 亥時");
+  assert.equal(lunarBirth({ year: 70, month: 4, day: 5, hourUnknown: true, maxYear: 115 }), "民國70年 農曆四月初五 吉時");
+  for (const hour of [undefined, 0, 13, 1.5]) assert.equal(lunarBirth({ year: 70, month: 4, day: 5, hour, maxYear: 115 }), null, `10. hour ${hour}: must pick one or tick 不知道`);
+  for (const bad of [{ year: 0, month: 1, day: 1, hour: 1 }, { year: 116, month: 1, day: 1, hour: 1 }, { year: 70, month: 13, day: 1, hour: 1 }, { year: 70, month: 1, day: 31, hour: 1 }, { year: "七十", month: 1, day: 1, hour: 1 }, {}])
+    assert.equal(lunarBirth({ ...bad, maxYear: 115 }), null, JSON.stringify(bad));
+  assert.deepEqual(HOURS.map((h) => h.name), ["子時", "丑時", "寅時", "卯時", "辰時", "巳時", "午時", "未時", "申時", "酉時", "戌時", "亥時"]);
+  assert.equal(HOURS[0].time, "晚上11點～凌晨1點");
+  assert.equal(HOURS[6].time, "中午11點～下午1點");
+  const birth = { year: 70, month: 4, day: 5, leap: false, hour: 7 };
+  const base = { name: "新", lamps: ["big:光明"], suggested: [], id: "n1", catalog: CAT };
+  const n = buildEntry({ ...base, newcomer: true, birth, address: " 台北市中正區 " });
+  assert.equal(n.newcomer, true);
+  assert.equal(n.birth, "民國70年 農曆四月初五 午時");
+  assert.equal(n.address, "台北市中正區");
+  assert.equal(buildEntry({ ...base, newcomer: true, birth, address: "  " }), null, "newcomer without address: not sent");
+  assert.equal(buildEntry({ ...base, newcomer: true, birth: { year: 70, month: 13, day: 1, hour: 1 }, address: "台北" }), null, "bad birthday: not sent");
+  assert.equal(buildEntry({ ...base, newcomer: true, birth, address: "地".repeat(200) }).address.length, 120);
+  const r = buildEntry({ ...base, newcomer: false, birth, address: "台北" });
+  assert.equal(r.birth, "", "returning followers: no birthday sent");
+  assert.equal(r.address, "", "returning followers: no address sent");
+});
+
+test("11. reading and saving through the sheet, or the 試用模式 before it is set up", async () => {
+  const { createStore } = await loadStore();
+  assert.equal(typeof createStore, "function");
+  const { DEMO_PASSWORD } = await load();
+  // 試用模式：網址是空的
+  const box = new Map();
+  const storage = { getItem: (k) => box.get(k) ?? null, setItem: (k, v) => box.set(k, String(v)) };
+  const demo = createStore({ url: "", storage });
+  assert.equal(demo.demo, true);
+  const first = await demo.loadCatalog();
+  assert.equal(first.big.length, 6, "試用: six 待填 places to start");
+  assert.match(first.big[0], /待填/);
+  assert.equal(DEMO_PASSWORD, "1234");
+  assert.deepEqual(await demo.checkPassword("0000"), { ok: false, error: "password" });
+  assert.deepEqual(await demo.checkPassword("1234"), { ok: true });
+  assert.equal((await demo.saveCatalog("0000", CAT)).ok, false, "wrong password: not saved");
+  assert.deepEqual(await demo.saveCatalog("1234", CAT), { ok: true });
+  assert.deepEqual(await demo.loadCatalog(), CAT, "試用: kept on this device");
+  assert.deepEqual(await demo.register({ action: "register", id: "x" }), { ok: true, demo: true }, "試用: nothing is really sent");
+  // 12. 存不了（私密瀏覽）：不假裝存好
+  const broken = createStore({ url: "", storage: { getItem: () => null, setItem: () => { throw new Error("full"); } } });
+  assert.deepEqual(await broken.saveCatalog("1234", CAT), { ok: false, error: "storage" });
+  assert.deepEqual(await createStore({ url: "", storage: null }).saveCatalog("1234", CAT), { ok: false, error: "storage" });
+  // 開通以後：照網址跟試算表講話
+  const calls = [];
+  const fetchFn = async (url, opts = {}) => {
+    calls.push({ url, method: opts.method ?? "GET", body: opts.body ? JSON.parse(opts.body) : null });
+    const reply = url.includes("action=lamps") ? { ok: true, big: [" 光明 ", "光明"], small: ["健康"] } : { ok: true };
+    return { json: async () => reply };
+  };
+  const real = createStore({ url: "https://script.test/exec", fetchFn, storage });
+  assert.equal(real.demo, false);
+  assert.deepEqual(await real.loadCatalog(), { big: ["光明"], small: ["健康"] }, "tidied after reading");
+  assert.deepEqual(calls.at(-1), { url: "https://script.test/exec?action=lamps", method: "GET", body: null });
+  await real.checkPassword("pw");
+  assert.deepEqual(calls.at(-1).body, { action: "login", password: "pw" });
+  await real.saveCatalog("pw", CAT);
+  assert.deepEqual(calls.at(-1).body, { action: "setLamps", password: "pw", big: CAT.big, small: CAT.small });
+  await real.register({ action: "register", id: "r1" });
+  assert.deepEqual(calls.at(-1), { url: "https://script.test/exec", method: "POST", body: { action: "register", id: "r1" } });
 });
 
 test("3-4. the page: name filled from the link, a yes/no window, the lamp chooser", () => {
@@ -166,90 +249,112 @@ test("3-4. the page: name filled from the link, a yes/no window, the lamp choose
   assert.match(page, /id="lampChooser"[^>]*hidden/, "the chooser waits");
   assert.match(page, /<script type="module" src="js\/lamp-view.js"><\/script>/);
   assert.doesNotMatch(page, /師姐/, "the page says 樞理");
-  // 畫面程式
   assert.match(view, /decodeLink\(location\.hash\)/, "reads the link");
   assert.match(view, /\.showModal\(\)/, "opens the window");
   assert.match(view, /lampYes[\s\S]{0,200}submit\(/, "yes: register right away");
   assert.match(view, /lampNo[\s\S]{0,300}showChooser\(/, "no: choose lamps");
-  assert.match(view, /checked = suggested\.includes/, "the suggestion is ticked to start with");
-});
-
-test("5. sending: one press, clear result, an honest message when the sheet is not set up", () => {
-  assert.match(view, /fetch\(SHEET_URL/, "sends to the sheet");
-  assert.match(view, /\.disabled = busy/);
-  assert.match(view, /setBusy\(true\);[\s\S]{0,80}送出中/, "no double presses while sending");
-  assert.match(view, /已登記/);
-  assert.match(view, /沒有送出去/);
-  assert.match(view, /if \(!SHEET_URL\)[\s\S]{0,200}登記功能還沒開通/, "not set up yet: says so");
-  assert.match(view, /randomUUID/, "one id per registration, kept for a retry");
-});
-
-test("1. the link maker page for 樞理", () => {
-  assert.ok(maker, "lamp-link.html exists");
-  assert.match(maker, /<meta name="robots" content="noindex"/);
-  assert.match(maker, /<title>做光明燈專屬連結 — 慈惠道場<\/title>/);
-  assert.match(maker, /<script type="module" src="js\/lamp-link-view.js"><\/script>/);
-  assert.match(makerView, /makeLink\(/);
-  assert.match(makerView, /clipboard\.writeText/, "copy the link");
-  assert.doesNotMatch(maker, /師姐/);
-});
-
-test("5. the Google Sheet script: one row per registration, no repeats, no formulas", () => {
-  assert.ok(gs, "tools/lamp-sheet.gs exists");
-  assert.match(gs, /function doPost\(e\)/);
-  assert.match(gs, /LockService/, "two people at once don't overwrite each other");
-  assert.match(gs, /appendRow\(/);
-  assert.match(gs, /\^\[=\+\\-@\]/, "formula injection is blocked");
-  assert.match(gs, /createTextOutput\(JSON\.stringify/, "answers so the page knows it worked");
-});
-
-test("9. newcomers also give their lunar birthday and address; returning followers only the name", async () => {
-  const { LAMPS, encodeLink, decodeLink, makeLink, buildEntry, lunarBirth } = await load();
-  const a = LAMPS.big.items[0].id;
-  // 連結帶「新信眾」
-  assert.equal(decodeLink(encodeLink({ name: "新", suggested: [a], newcomer: true })).newcomer, true);
-  assert.equal(decodeLink(encodeLink({ name: "舊", suggested: [a] })).newcomer, false);
-  assert.equal(decodeLink(makeLink({ name: "新", suggested: [a], newcomer: true, base: "https://x.test/lamp-link.html" }).url.replace(/^[^#]*/, "")).newcomer, true);
-  // 生日的寫法
-  assert.equal(lunarBirth({ year: 70, month: 4, day: 5, leap: true, hour: 1, maxYear: 115 }), "民國70年 農曆閏四月初五 子時");
-  assert.equal(lunarBirth({ year: 115, month: 12, day: 30, leap: false, hour: 12, maxYear: 115 }), "民國115年 農曆十二月三十 亥時");
-  assert.equal(lunarBirth({ year: 70, month: 4, day: 5, hourUnknown: true, maxYear: 115 }), "民國70年 農曆四月初五 吉時");
-  for (const hour of [undefined, 0, 13, 1.5]) assert.equal(lunarBirth({ year: 70, month: 4, day: 5, hour, maxYear: 115 }), null, `10. hour ${hour}: must pick one or tick 不知道`);
-  for (const bad of [{ year: 0, month: 1, day: 1, hour: 1 }, { year: 116, month: 1, day: 1, hour: 1 }, { year: 70, month: 13, day: 1, hour: 1 }, { year: 70, month: 1, day: 31, hour: 1 }, { year: "七十", month: 1, day: 1, hour: 1 }, {}])
-    assert.equal(lunarBirth({ ...bad, maxYear: 115 }), null, JSON.stringify(bad));
-  // 送出去的一筆
-  const birth = { year: 70, month: 4, day: 5, leap: false, hour: 7 };
-  const n = buildEntry({ name: "新", lamps: [a], suggested: [], id: "n1", newcomer: true, birth, address: " 台北市中正區 " });
-  assert.equal(n.newcomer, true);
-  assert.equal(n.birth, "民國70年 農曆四月初五 午時");
-  assert.equal(n.address, "台北市中正區");
-  assert.equal(buildEntry({ name: "新", lamps: [a], suggested: [], id: "n1", newcomer: true, birth, address: "  " }), null, "newcomer without address: not sent");
-  assert.equal(buildEntry({ name: "新", lamps: [a], suggested: [], id: "n1", newcomer: true, birth: { year: 70, month: 13, day: 1 }, address: "台北" }), null, "newcomer with a bad birthday: not sent");
-  assert.equal(buildEntry({ name: "新", lamps: [a], suggested: [], id: "n1", newcomer: true, birth, address: "地".repeat(200) }).address.length, 120);
-  const r = buildEntry({ name: "舊", lamps: [a], suggested: [], id: "r1", newcomer: false, birth, address: "台北" });
-  assert.equal(r.birth, "", "returning followers: no birthday sent");
-  assert.equal(r.address, "", "returning followers: no address sent");
-  // 頁面
+  assert.match(view, /renderLampTicks\(box, catalog, suggested\)/, "the suggestion is ticked to start with");
+  assert.match(read("js/lamp-parts.js"), /tick\.checked = checked\.includes\(tick\.value\)/);
+  // 9-10. 新信眾的欄位
   assert.match(page, /<div class="lamp-newcomer" id="lampNewcomer" hidden>/, "the extra fields wait");
-  for (const id of ["lampYear", "lampMonth", "lampDay"]) assert.match(page, new RegExp(`<select[^>]*id="${id}"`), id);
+  for (const id of ["lampYear", "lampMonth", "lampDay", "lampHour"]) assert.match(page, new RegExp(`<select[^>]*id="${id}"`), id);
   assert.match(page, /<input[^>]*type="checkbox"[^>]*id="lampLeap"/, "leap month");
-  assert.match(page, /<input[^>]*id="lampAddress"[^>]*autocomplete="street-address"/);
-  // 10. 時辰
-  const { HOURS } = await load();
-  assert.deepEqual(HOURS.map((h) => h.name), ["子時", "丑時", "寅時", "卯時", "辰時", "巳時", "午時", "未時", "申時", "酉時", "戌時", "亥時"]);
-  assert.equal(HOURS[0].time, "晚上11點～凌晨1點");
-  assert.equal(HOURS[6].time, "中午11點～下午1點");
-  assert.match(page, /<select[^>]*id="lampHour"/, "a 時辰 menu");
   assert.match(page, /<input[^>]*type="checkbox"[^>]*id="lampHourUnknown"[^>]*>\s*不知道/, "a 不知道 tick");
+  assert.match(page, /<input[^>]*id="lampAddress"[^>]*autocomplete="street-address"/);
   assert.match(view, /\$\("lampHour"\)\.disabled = \$\("lampHourUnknown"\)\.checked/, "ticking 不知道 turns the menu off");
   assert.match(view, /請選出生的時辰，不知道就勾「不知道」/);
   assert.match(view, /const newcomer = link \? link\.newcomer : true;/, "no link: treated as a newcomer");
   assert.match(view, /\$\("lampNewcomer"\)\.hidden = !newcomer/);
   assert.match(view, /請填農曆生日/);
   assert.match(view, /請填地址/);
-  // 樞理的頁
-  assert.match(maker, /<input[^>]*type="checkbox"[^>]*id="makeNew"/, "樞理 can mark a newcomer");
+});
+
+test("5/8. sending: one press, frozen retry, clear result; the page's review fixes", () => {
+  assert.match(view, /store\.register\(frozen\)/, "a retry sends exactly the same");
+  assert.match(view, /frozen \?\?= entry/, "the first sent entry is kept");
+  assert.match(view, /\.disabled = busy/);
+  assert.match(view, /setBusy\(true\);[\s\S]{0,80}送出中/, "no double presses while sending");
+  assert.match(view, /已登記/);
+  assert.match(view, /沒有送出去/);
+  assert.match(view, /randomUUID/, "one id per registration, kept for a retry");
+  assert.match(view, /function lockForm\(\)[\s\S]{0,300}nameInput\.disabled = true/, "name and ticks are locked once sent");
+  assert.match(view, /addEventListener\("hashchange", \(\) => location\.reload\(\)\)/);
+  assert.match(page, /<h2 id="lampAskTitle" tabindex="-1" autofocus>/, "the window opens on its title, not on 是");
+  assert.match(view, /ask\.addEventListener\("cancel"[\s\S]{0,200}還沒登記/, "Esc says nothing was registered");
+  assert.match(view, /\$\("lampDoneTitle"\)\.focus\(\)/, "after registering, focus moves to the result");
+  assert.match(view, /suggested\.length \? "樞理已經幫您填好名字/, "only says 樞理 suggested when there is a suggestion");
+});
+
+test("11. both pages read the names from the sheet, say when they can't, and show 試用模式", () => {
+  for (const [name, html, js] of [["lamp", page, view], ["maker", maker, makerView]]) {
+    assert.match(html, /<p class="lamp-demo" id="lampDemo" hidden>[^<]*試用模式/, `${name}: a 試用模式 note`);
+    assert.match(js, /createStore\(\)/, `${name}: one place to read and save`);
+    assert.match(js, /\$\("lampDemo"\)\.hidden = !store\.demo/, `${name}: the note only in 試用模式`);
+    assert.match(js, /await store\.loadCatalog\(\)/, `${name}: reads the names first`);
+    assert.match(js, /燈的名目讀不到，請重新整理再試/, `${name}: says when it can't`);
+  }
+  assert.match(view, /樞理還沒填好燈的名目/);
+  assert.match(view, /knownLamps\(link\?\.suggested/, "old links only keep lamps that still exist");
+  assert.match(view, /試用，沒有真的送出/, "試用: says nothing was sent");
+});
+
+test("1/11. the link maker page for 樞理: names editor behind a password, then make links", () => {
+  assert.ok(maker, "lamp-link.html exists");
+  assert.match(maker, /<meta name="robots" content="noindex"/);
+  assert.match(maker, /<title>做光明燈專屬連結 — 慈惠道場<\/title>/);
+  assert.match(maker, /<script type="module" src="js\/lamp-link-view.js"><\/script>/);
+  assert.doesNotMatch(maker, /師姐/);
+  assert.match(maker, /<input[^>]*type="checkbox"[^>]*id="makeNew"/, "9. 樞理 can mark a newcomer");
+  assert.match(maker, /<input[^>]*type="password"[^>]*id="namesPassword"/, "a password box");
+  assert.match(maker, /id="namesOpen"[^>]*>打開編輯/);
+  assert.match(maker, /id="namesSave"[^>]*>存好/);
+  assert.ok(maker.indexOf('id="namesPassword"') < maker.indexOf('id="makeName"'), "the names editor is at the top");
+  assert.match(makerView, /makeLink\(/);
+  assert.match(makerView, /clipboard\.writeText/, "copy the link");
   assert.match(makerView, /newcomer: \$\("makeNew"\)\.checked/);
-  // 試算表
+  assert.match(makerView, /addEventListener\("input", hideOut\)/, "changing the name or ticks hides the old link");
+  assert.match(makerView, /makeFor/, "says who the link is for");
+  assert.match(makerView, /store\.checkPassword\(/);
+  assert.match(makerView, /checkCatalogEdit\(/, "checks the names before saving");
+  assert.match(makerView, /store\.saveCatalog\(/);
+  assert.match(makerView, /請先在試算表的「設定」分頁設定密碼/);
+  assert.match(makerView, /還沒有名目，請先在上面填好/);
+  assert.match(makerView, /renderTicks\(\)/, "after saving, the ticks show the new names");
+  // 12. Codex
+  assert.match(maker, /id="namesOpen"[^>]*disabled/, "can't open the editor before the names are read");
+  assert.match(makerView, /\$\("namesOpen"\)\.disabled = false/);
+  assert.match(makerView, /async function openEditor\(\)[\s\S]{0,300}catalog = await store\.loadCatalog\(\)/, "reads the latest names before filling the boxes");
+  assert.match(makerView, /if \(busy\) return;/, "no double presses");
+  assert.match(makerView, /function setEditorBusy\(on\)[\s\S]{0,300}input\.disabled = on/, "the boxes are locked while saving");
+  assert.match(makerView, /const keep = pickedLamps\(\$\("lampGroups"\)\)/, "ticks that still exist stay ticked");
+  assert.match(makerView, /symbol:/, "says why a name can't start with = + - @");
+  assert.match(makerView, /storage:/, "試用: says when it can't save");
+  assert.match(view, /燈的名目剛剛改過，請重新整理再登記/, "the sheet says the names changed");
+});
+
+test("5/8/11. the Google Sheet script", () => {
+  assert.ok(gs, "tools/lamp-sheet.gs exists");
+  assert.match(gs, /function doPost\(e\)/);
+  assert.match(gs, /function doGet\(e\)/, "11. the pages read the names");
+  assert.match(gs, /LockService/, "two people at once don't overwrite each other");
+  assert.match(gs, /appendRow\(/);
+  assert.match(gs, /\^\[=\+\\-@\]/, "formula injection is blocked");
+  assert.match(gs, /createTextOutput\(JSON\.stringify/, "answers so the page knows it worked");
+  assert.match(gs, /createTextFinder\(id\)\.matchEntireCell\(true\)/, "checks every id, not the last 500");
+  assert.match(gs, /SpreadsheetApp\.flush\(\)/);
+  assert.match(gs, /lamps\.length > 20/);
   assert.match(gs, /\["時間", "姓名", "新信眾", "農曆生日", "地址", "照樞理建議", "登記的燈", "樞理建議的燈", "編號"\]/);
+  // 11. 名目、密碼
+  assert.match(gs, /const NAMES = "燈的名目"/);
+  assert.match(gs, /const SETTINGS = "設定"/);
+  assert.match(gs, /getRange\("B1"\)/, "the password is in 設定!B1");
+  assert.match(gs, /action === "setLamps"/);
+  assert.match(gs, /action === "login"/);
+  assert.match(gs, /CacheService/, "10 wrong passwords: wait 10 minutes");
+  assert.match(gs, /MAX_PER_SIZE = 6/);
+  // 12. Codex
+  assert.match(gs, /cache\.remove\("bad-tries"\)/, "a correct password clears the count");
+  assert.match(gs, /if \(action === "register"\) return register\(data\);\s*return answer\(\{ ok: false, error: "unknown" \}\)/, "only three kinds of request");
+  assert.match(gs, /error: "names changed"/, "registration checks the lamps against the current names");
+  assert.match(gs, /\^\[=\+\\-@\][\s\S]{0,40}return null|startsLikeFormula/, "names can't start like a formula");
 });

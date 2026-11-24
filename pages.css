@@ -236,6 +236,27 @@ p {
 .lamp-newcomer {
   margin-top: 20px;
 }
+/* 試用模式（試算表還沒開通）：頁面最上面一條朱紅虛線框 */
+.lamp-demo {
+  margin: 24px 0 0;
+  padding: 12px 16px;
+  border: 1px dashed var(--seal);
+  border-radius: 12px;
+  color: var(--seal);
+  font-size: 15px;
+}
+/* 樞理改名目：每種燈 6 格，兩格一排 */
+.lamp-names {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.lamp-names .lamp-input {
+  font-size: 17px;
+}
+#namesEditor .lamp-btn {
+  margin-top: 8px;
+}
 .lamp-birth {
   margin: 0 0 16px;
   padding: 0;

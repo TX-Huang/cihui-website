@@ -1,18 +1,25 @@
-// 光明燈登記頁（lamp.html）的畫面。計算在 js/lamp.js，規格在 test/lamp.test.mjs。
+// 光明燈登記頁（lamp.html）的畫面。計算在 js/lamp.js、讀寫試算表在 js/lamp-store.js，規格在 test/lamp.test.mjs。
 // 專屬連結點進來：名字填好 → 確認 → 視窗問「要照樞理的建議嗎？」→ 是：直接登記；否：自己選燈。
-// 新信眾（樞理勾的，或沒有專屬連結）：還要填農曆生日和地址。
-import { LAMPS, SHEET_URL, HOURS, decodeLink, buildEntry, lampLabel, lunarBirth, thisRocYear } from "./lamp.js";
+// 新信眾（樞理勾的，或沒有專屬連結）：還要填農曆生日、時辰和地址。燈的名目每次打開都從試算表讀最新的。
+import { HOURS, decodeLink, buildEntry, lampLabel, lunarBirth, thisRocYear, keysOf, knownLamps } from "./lamp.js";
+import { createStore } from "./lamp-store.js";
+import { renderLampTicks, pickedLamps, fillList } from "./lamp-parts.js";
 import { lunarDate } from "./events.js";
 
 const $ = (id) => document.getElementById(id);
 const nameInput = $("lampName");
 const ask = $("lampAsk");
+const store = createStore();
 const link = decodeLink(location.hash);
-const suggested = link?.suggested ?? [];
 const newcomer = link ? link.newcomer : true;
 const NEWCOMER_FIELDS = ["lampYear", "lampMonth", "lampDay", "lampLeap", "lampHour", "lampHourUnknown", "lampAddress"];
+let catalog = { big: [], small: [] };
+let suggested = []; // 讀到名目以後才知道：連結裡的燈，現在還有的
+// 這次登記的編號：沒送成功再按一次，用同一個編號，試算表不會多一筆
+const entryId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+let frozen = null; // 第一次送出的那一筆：之後再送都送一模一樣的
 
-// 農曆生日的三個選單：民國年（今年往前）、月、日
+// 農曆生日的選單：民國年（今年往前）、月、日、時辰
 function option(select, value, text) {
   select.append(new Option(text, value));
 }
@@ -34,53 +41,18 @@ const readBirth = () => ({
   hour: parseInt($("lampHour").value, 10),
   hourUnknown: $("lampHourUnknown").checked
 });
-// 這次登記的編號：沒送成功再按一次，用同一個編號，試算表不會多一筆
-const entryId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-let frozen = null; // 第一次送出的那一筆：之後再送都送一模一樣的
-
-function fillList(list, texts) {
-  list.replaceChildren(
-    ...texts.map((t) => {
-      const li = document.createElement("li");
-      li.textContent = t;
-      return li;
-    })
-  );
-}
 
 function say(id, text) {
   $(id).textContent = text;
 }
 
-// 選燈的地方：大燈、小燈各一組勾選框，先勾好樞理建議的
-function buildChooser() {
-  const box = $("lampGroups");
-  if (box.childElementCount) return;
-  for (const group of Object.values(LAMPS)) {
-    const set = document.createElement("fieldset");
-    set.className = "lamp-group";
-    const legend = document.createElement("legend");
-    legend.textContent = group.label;
-    set.append(legend);
-    for (const item of group.items) {
-      const label = document.createElement("label");
-      label.className = "lamp-pick";
-      const tick = document.createElement("input");
-      tick.type = "checkbox";
-      tick.value = item.id;
-      tick.checked = suggested.includes(item.id);
-      label.append(tick, ` ${item.name}`);
-      set.append(label);
-    }
-    box.append(set);
-  }
-}
-
+// 選燈的地方：大燈、小燈各一組勾選框，先勾好樞理建議的（js/lamp-parts.js）
 function showChooser() {
-  buildChooser();
+  const box = $("lampGroups");
+  if (!box.childElementCount) renderLampTicks(box, catalog, suggested);
   $("lampChooser").hidden = false;
   $("lampChooser").scrollIntoView({ behavior: "smooth", block: "start" });
-  $("lampGroups").querySelector("input")?.focus({ preventScroll: true });
+  box.querySelector("input")?.focus({ preventScroll: true });
 }
 
 function setBusy(busy) {
@@ -95,21 +67,20 @@ function lockForm() {
   for (const t of $("lampGroups").querySelectorAll("input")) t.disabled = true;
 }
 
-// 送到 Google 試算表（tools/lamp-sheet.gs）。內容是純文字，瀏覽器不用先問一次
+// 送到 Google 試算表（js/lamp-store.js）；試用模式不會真的送出
 async function submit(lamps) {
-  const entry = frozen ?? buildEntry({ name: nameInput.value, lamps, suggested, id: entryId, newcomer, birth: readBirth(), address: $("lampAddress").value });
+  const entry = frozen ?? buildEntry({ name: nameInput.value, lamps, suggested, id: entryId, newcomer, birth: readBirth(), address: $("lampAddress").value, catalog });
   $("lampRetry").hidden = true;
   if (!entry) return say("lampStatusText", "請確認您的資料，並至少選一盞燈。");
-  if (!SHEET_URL) return say("lampStatusText", "登記功能還沒開通，請直接用 LINE 告訴樞理您要點的燈。");
   frozen ??= entry;
   lockForm();
   setBusy(true);
   say("lampStatusText", "送出中…");
   try {
-    const res = await fetch(SHEET_URL, { method: "POST", body: JSON.stringify(frozen) });
-    const out = await res.json();
+    const out = await store.register(frozen);
+    if (out?.error === "names changed") return say("lampStatusText", "燈的名目剛剛改過，請重新整理再登記。");
     if (!out?.ok) throw new Error("not saved");
-    done(frozen);
+    done(frozen, out.demo);
   } catch {
     say("lampStatusText", "沒有送出去（可能是網路不穩）。請按「再送一次」，不會重複登記。");
     $("lampSend").hidden = true; // 只剩「再送一次」，送的是同一筆
@@ -118,11 +89,12 @@ async function submit(lamps) {
   }
 }
 
-function done(entry) {
+function done(entry, demo) {
   for (const id of ["lampNameStep", "lampChooser"]) $(id).hidden = true;
   fillList($("lampDoneList"), entry.lamps);
+  $("lampDoneDemo").hidden = !demo;
   $("lampDone").hidden = false;
-  say("lampStatusText", "已登記。"); // 讀螢幕軟體也聽得到
+  say("lampStatusText", demo ? "已登記（試用，沒有真的送出）。" : "已登記。"); // 讀螢幕軟體也聽得到
   $("lampDoneTitle").focus();
   $("lampDone").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -153,10 +125,38 @@ function confirmName() {
 }
 
 function sendPicked() {
-  const picked = [...$("lampGroups").querySelectorAll("input:checked")].map((t) => t.value);
+  const picked = pickedLamps($("lampGroups"));
   if (!frozen && !picked.length) return say("lampPickMsg", "請至少勾一盞燈。");
   say("lampPickMsg", "");
   submit(picked);
+}
+
+function showLink() {
+  if (!link) return;
+  nameInput.value = link.name;
+  const more = newcomer ? "也請填農曆生日、時辰和地址。" : "";
+  say("lampIntro", (suggested.length ? "樞理已經幫您填好名字，請確認是不是您。" : "名字已經填好，請確認是不是您，再選要點的燈。") + more);
+  if (!suggested.length) return;
+  fillList($("lampSuggestList"), suggested.map(lampLabel));
+  $("lampSuggest").hidden = false;
+}
+
+// 先讀燈的名目（試算表）；讀不到、還沒填：說清楚，不能往下
+async function start() {
+  $("lampDemo").hidden = !store.demo;
+  $("lampConfirm").disabled = true;
+  if (link) nameInput.value = link.name;
+  say("lampNameMsg", "正在讀燈的名目…");
+  try {
+    catalog = await store.loadCatalog();
+  } catch {
+    return say("lampNameMsg", "燈的名目讀不到，請重新整理再試。");
+  }
+  if (!keysOf(catalog).length) return say("lampNameMsg", "樞理還沒填好燈的名目，請晚一點再來。");
+  suggested = knownLamps(link?.suggested, catalog);
+  say("lampNameMsg", "");
+  $("lampConfirm").disabled = false;
+  showLink();
 }
 
 fillBirthSelects();
@@ -165,20 +165,11 @@ $("lampNewcomer").hidden = !newcomer;
 $("lampHourUnknown").addEventListener("change", () => {
   $("lampHour").disabled = $("lampHourUnknown").checked;
 });
-if (link) {
-  nameInput.value = link.name;
-  const more = newcomer ? "也請填農曆生日和地址。" : "";
-  say("lampIntro", (suggested.length ? "樞理已經幫您填好名字，請確認是不是您。" : "名字已經填好，請確認是不是您，再選要點的燈。") + more);
-  if (suggested.length) {
-    fillList($("lampSuggestList"), suggested.map(lampLabel));
-    $("lampSuggest").hidden = false;
-  }
-}
 // 同一頁貼了另一個人的連結（只換 # 不會重新整理）：整頁重新讀
 addEventListener("hashchange", () => location.reload());
 $("lampConfirm").addEventListener("click", confirmName);
 nameInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") confirmName();
+  if (e.key === "Enter" && !$("lampConfirm").disabled) confirmName();
 });
 $("lampYes").addEventListener("click", () => {
   ask.close();
@@ -195,3 +186,4 @@ ask.addEventListener("cancel", () => {
 });
 $("lampSend").addEventListener("click", sendPicked);
 $("lampRetry").addEventListener("click", () => submit(frozen?.lamps ?? []));
+start();

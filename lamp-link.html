@@ -36,12 +36,38 @@
       </div>
 
       <div class="content lamp">
+        <p class="lamp-demo" id="lampDemo" hidden>試用模式：試算表還沒開通。名目只存在這台手機或電腦，密碼是 1234。</p>
+
+        <!-- 燈的名目：樞理自己改（也可以直接改試算表的「燈的名目」分頁） -->
+        <section>
+          <h2>燈的名目</h2>
+          <p class="small">大燈、小燈各最多 6 個。改名目要先輸入密碼。</p>
+          <label class="lamp-label" for="namesPassword">密碼</label>
+          <div class="lamp-hour-row">
+            <input class="lamp-input" type="password" id="namesPassword" autocomplete="current-password" />
+            <button class="lamp-btn lamp-btn-quiet" id="namesOpen" type="button" disabled>打開編輯</button>
+          </div>
+          <p class="lamp-msg" id="namesMsg" role="status" aria-live="polite"></p>
+          <div id="namesEditor" hidden>
+            <fieldset class="lamp-group">
+              <legend>大燈</legend>
+              <div class="lamp-names" id="namesBig"></div>
+            </fieldset>
+            <fieldset class="lamp-group">
+              <legend>小燈</legend>
+              <div class="lamp-names" id="namesSmall"></div>
+            </fieldset>
+            <button class="lamp-btn" id="namesSave" type="button">存好</button>
+          </div>
+        </section>
+
         <section>
           <h2>這個人</h2>
           <label class="lamp-label" for="makeName">姓名</label>
           <input class="lamp-input" id="makeName" type="text" maxlength="40" autocomplete="off" />
-          <label class="lamp-pick"><input type="checkbox" id="makeNew" /> 新信眾（登記時要填農曆生日和地址）</label>
+          <label class="lamp-pick"><input type="checkbox" id="makeNew" /> 新信眾（登記時要填農曆生日、時辰和地址）</label>
           <h2>建議點的燈</h2>
+          <p class="lamp-msg" id="ticksMsg" role="status"></p>
           <div id="lampGroups"></div>
           <p class="lamp-msg" id="makeMsg" role="alert"></p>
           <button class="lamp-btn" id="makeBtn" type="button">產生連結</button>
