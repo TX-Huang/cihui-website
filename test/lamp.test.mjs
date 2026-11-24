@@ -58,6 +58,13 @@
 //    - 登記時，試算表再檢查一次燈還在不在（樞理剛好改了名目）：不在就說「燈的名目剛剛改過，請重新整理再登記」。
 //    - 試算表只認得 register、login、setLamps 三種要求，其他的不寫。
 //    - 試用模式存不了（私密瀏覽）：說存不了，不假裝存好。
+// 13. 2026-11-24 使用者：
+//    - 「編輯模式按存好後，應該要縮回去」：名目存好了，編輯的格子收起來（要再改就再按「打開編輯」）。
+//    - 「農曆生日年月日最上面的選項不應該出現，直接給一個預設值就好了」：年、月、日沒有「請選」那一格，
+//      一打開就是民國60年、正月、初一（時辰還是要選，或勾不知道）。
+//    - 「時辰如果選了，但是勾不知道，優先判斷為不知道」：兩個都有的時候，寫「吉時」。
+//    - 「登記完為什麼還要有再送一次的選項？」：這是錯。「再送一次」只有沒送出去時才出現；
+//      按鈕的樣式（display: inline-block）蓋過了 hidden，所以一直看得到 → 光明燈兩頁裡 hidden 一定藏起來。
 //
 // 業界怎麼做、我們怎麼超越
 // - 業界：宮廟的線上點燈多半是一張大家都一樣的表單：自己填姓名、出生年月日、住址、自己選燈、付功德金
@@ -169,6 +176,7 @@ test("9-10. newcomers also give their lunar birthday, hour and address; returnin
   assert.equal(lunarBirth({ year: 70, month: 4, day: 5, leap: true, hour: 1, maxYear: 115 }), "民國70年 農曆閏四月初五 子時");
   assert.equal(lunarBirth({ year: 115, month: 12, day: 30, leap: false, hour: 12, maxYear: 115 }), "民國115年 農曆十二月三十 亥時");
   assert.equal(lunarBirth({ year: 70, month: 4, day: 5, hourUnknown: true, maxYear: 115 }), "民國70年 農曆四月初五 吉時");
+  assert.equal(lunarBirth({ year: 70, month: 4, day: 5, hour: 3, hourUnknown: true, maxYear: 115 }), "民國70年 農曆四月初五 吉時", "13. picked an hour but ticked 不知道: 不知道 wins");
   for (const hour of [undefined, 0, 13, 1.5]) assert.equal(lunarBirth({ year: 70, month: 4, day: 5, hour, maxYear: 115 }), null, `10. hour ${hour}: must pick one or tick 不知道`);
   for (const bad of [{ year: 0, month: 1, day: 1, hour: 1 }, { year: 116, month: 1, day: 1, hour: 1 }, { year: 70, month: 13, day: 1, hour: 1 }, { year: 70, month: 1, day: 31, hour: 1 }, { year: "七十", month: 1, day: 1, hour: 1 }, {}])
     assert.equal(lunarBirth({ ...bad, maxYear: 115 }), null, JSON.stringify(bad));
@@ -276,6 +284,11 @@ test("3-4. the page: name filled from the link, choose 照建議 or 自己選 ri
   assert.match(page, /<input[^>]*id="lampAddress"[^>]*autocomplete="street-address"/);
   assert.match(view, /\$\("lampHour"\)\.disabled = \$\("lampHourUnknown"\)\.checked/, "ticking 不知道 turns the menu off");
   assert.match(view, /請選出生的時辰，不知道就勾「不知道」/);
+  // 13. 年月日沒有「請選」那一格，一打開就有預設值；時辰還是要選
+  assert.match(view, /const BIRTH_DEFAULT = \{ year: 60, month: 1, day: 1 \};/);
+  assert.doesNotMatch(view, /"民國　年"|option\(\$\("lampMonth"\), "", |option\(\$\("lampDay"\), "", /, "no empty first choice for year, month, day");
+  assert.match(view, /option\(\$\("lampHour"\), "", "時辰"\)/, "the hour still needs picking");
+  assert.match(view, /\$\("lampYear"\)\.value = BIRTH_DEFAULT\.year/);
   assert.match(view, /const newcomer = link \? link\.newcomer : true;/, "no link: treated as a newcomer");
   assert.match(view, /\$\("lampNewcomer"\)\.hidden = !newcomer/);
   assert.match(view, /請填農曆生日/);
@@ -294,6 +307,9 @@ test("5/8. sending: one press, frozen retry, clear result; the page's review fix
   assert.match(view, /addEventListener\("hashchange", \(\) => location\.reload\(\)\)/);
   assert.match(view, /\$\("lampDoneTitle"\)\.focus\(\)/, "after registering, focus moves to the result");
   assert.match(view, /\$\("lampReviewTitle"\)\.focus\(\)/, "the review gets the focus");
+  // 13. 「再送一次」平常藏著：按鈕的 display 不能蓋過 hidden
+  assert.match(page, /<button class="lamp-btn" id="lampRetry" type="button" hidden>再送一次<\/button>/);
+  assert.match(read("pages.css"), /\.lamp \[hidden\]\s*\{\s*display:\s*none !important;/, "hidden always hides on the lamp pages");
   assert.match(view, /suggested\.length \? "樞理已經幫您填好名字/, "only says 樞理 suggested when there is a suggestion");
 });
 
@@ -332,6 +348,7 @@ test("1/11. the link maker page for 樞理: names editor behind a password, then
   assert.match(makerView, /請先在試算表的「設定」分頁設定密碼/);
   assert.match(makerView, /還沒有名目，請先在上面填好/);
   assert.match(makerView, /renderTicks\(\)/, "after saving, the ticks show the new names");
+  assert.match(makerView, /renderTicks\(\);[^\n]*\n\s*\$\("namesEditor"\)\.hidden = true;/, "13. after saving, the editor folds away");
   // 12. Codex
   assert.match(maker, /id="namesOpen"[^>]*disabled/, "can't open the editor before the names are read");
   assert.match(makerView, /\$\("namesOpen"\)\.disabled = false/);

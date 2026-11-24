@@ -18,19 +18,21 @@ let suggested = []; // 讀到名目以後才知道：連結裡的燈，現在還
 const entryId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 let frozen = null; // 第一次送出的那一筆：之後再送都送一模一樣的
 
-// 農曆生日的選單：民國年（今年往前）、月、日、時辰
+// 農曆生日的選單：民國年（今年往前）、月、日一打開就有預設值（使用者：「最上面的選項不應該出現，直接給一個預設值」）；
+// 時辰還是要選，或勾不知道
+const BIRTH_DEFAULT = { year: 60, month: 1, day: 1 };
 function option(select, value, text) {
   select.append(new Option(text, value));
 }
 function fillBirthSelects() {
-  option($("lampYear"), "", "民國　年");
   for (let y = thisRocYear(); y >= 1; y--) option($("lampYear"), y, `民國${y}年（${y + 1911}）`);
-  option($("lampMonth"), "", "月");
   for (let m = 1; m <= 12; m++) option($("lampMonth"), m, lunarDate(m, 1).slice(2, -2));
-  option($("lampDay"), "", "日");
   for (let d = 1; d <= 30; d++) option($("lampDay"), d, lunarDate(1, d).slice(4));
   option($("lampHour"), "", "時辰");
   HOURS.forEach((h, i) => option($("lampHour"), i + 1, `${h.name}（${h.time}）`));
+  $("lampYear").value = BIRTH_DEFAULT.year;
+  $("lampMonth").value = BIRTH_DEFAULT.month;
+  $("lampDay").value = BIRTH_DEFAULT.day;
 }
 const readBirth = () => ({
   year: parseInt($("lampYear").value, 10),

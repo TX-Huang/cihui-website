@@ -101,7 +101,8 @@ async function saveNames() {
     catalog = check.catalog;
     fillNameBoxes();
     renderTicks(); // 下面勾燈的地方馬上換新的名目
-    say("namesMsg", "存好了。下面「建議點的燈」已經換成新的名目。");
+    $("namesEditor").hidden = true; // 存好了就收起來（要再改再按「打開編輯」）
+    say("namesMsg", "存好了。下面「建議點的燈」已經換成新的名目。要再改，按「打開編輯」。");
   } catch {
     say("namesMsg", "沒有存好（可能是網路不穩），請再按一次。");
   } finally {

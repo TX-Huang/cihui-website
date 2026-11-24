@@ -213,6 +213,10 @@ p {
 }
 
 /* ── 光明燈登記（lamp.html、lamp-link.html）：宣紙上的一張表，金線框、深金的字，按鈕是墨色 ── */
+/* hidden 一定藏起來（.lamp-btn 的 display: inline-block 會蓋過它，「再送一次」就一直看得到） */
+.lamp [hidden] {
+  display: none !important;
+}
 .lamp .lamp-label {
   display: block;
   margin-bottom: 8px;
