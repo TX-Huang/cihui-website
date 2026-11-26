@@ -13,6 +13,12 @@
 //    貼到 js/lamp.js 的 SHEET_URL = "" 的引號中間。
 // 5. 回到試算表，在「設定」分頁的 B1 打一個密碼（樞理記得就好）。
 // 以後改了這個檔：「部署」→「管理部署作業」→ 鉛筆 →「版本」選「新版本」→ 部署（網址不變）。
+//
+// 2026-11-26 加了「一戶一個連結」（樞理匯入 Excel → 每戶核對、付款）。多三個地方（第一次用到時自己建）：
+//   「家戶」：一戶一列。「狀態」那欄可以直接用下拉選單改（待確認／已確認／已回報付款／已付款）。
+//   「家戶明細」：每戶的每個人、每盞燈、每項祭改一列。
+//   「設定」：A 欄名稱、B 欄值。第一次會自己補上：大燈價錢 3600、小燈價錢 1800、祭改價錢（空的＝另計）、
+//            銀行名稱、銀行代碼、帳號、戶名、信用卡手續費 2.8%、收款條碼圖片網址。轉帳資料請樞理自己填。
 
 const SHEET = "登記";
 const NAMES = "燈的名目";
@@ -103,6 +109,7 @@ function doGet(e) {
     const names = readNames();
     return answer({ ok: true, big: names.big, small: names.small });
   }
+  if (e && e.parameter && e.parameter.action === "household") return getHousehold(e.parameter.id);
   return answer({ ok: false, error: "unknown" });
 }
 
@@ -117,7 +124,263 @@ function doPost(e) {
   if (action === "login") return login(data);
   if (action === "setLamps") return setLamps(data);
   if (action === "register") return register(data);
+  if (action === "importHouseholds") return importHouseholds(data);
+  if (action === "listHouseholds") return listHouseholds(data);
+  if (action === "markPaid") return markPaid(data);
+  if (action === "confirmHousehold") return confirmHousehold(data);
+  if (action === "reportPayment") return reportPayment(data);
   return answer({ ok: false, error: "unknown" });
+}
+
+// ── 一戶一個連結（2026-11-26） ──
+const HOMES = "家戶";
+const HOME_HEADER = ["編號", "戶名", "地址", "人數", "光明燈合計", "祭改合計", "應付金額", "狀態", "確認時間", "付款方式", "帳號末五碼", "回報付款時間", "已收款金額", "收款時間", "備註", "建立時間"];
+const LINES = "家戶明細";
+const LINE_HEADER = ["編號", "順序", "姓名", "生日", "時辰", "生肖", "地址", "類別", "項目", "大小", "金額"];
+const STATUS = { pending: "待確認", confirmed: "已確認", reported: "已回報付款", paid: "已付款" };
+const SIZE_NAMES = { big: "大燈", small: "小燈" };
+const COL = {}; // 「家戶」每一欄是第幾欄（1 開始）
+HOME_HEADER.forEach((h, i) => (COL[h] = i + 1));
+// 設定分頁：A 欄名稱、B 欄值。沒有的自己補上（B1 原本就是密碼）
+const SETTING_DEFAULTS = [
+  ["密碼", ""],
+  ["大燈價錢", 3600],
+  ["小燈價錢", 1800],
+  ["祭改價錢", ""],
+  ["銀行名稱", ""],
+  ["銀行代碼", ""],
+  ["帳號", ""],
+  ["戶名", ""],
+  ["信用卡手續費", "2.8%"],
+  ["收款條碼圖片網址", ""]
+];
+
+function readSettings() {
+  const sheet = tab(SETTINGS, ["密碼", ""]);
+  const last = Math.max(sheet.getLastRow(), 1);
+  const rows = sheet.getRange(1, 1, last, 2).getDisplayValues();
+  const map = {};
+  rows.forEach((r) => (map[String(r[0]).trim()] = String(r[1]).trim()));
+  const missing = SETTING_DEFAULTS.filter((d) => !(d[0] in map));
+  if (missing.length) {
+    sheet.getRange(last + 1, 1, missing.length, 2).setValues(missing);
+    missing.forEach((d) => (map[d[0]] = String(d[1])));
+  }
+  return map;
+}
+
+const toNumber = (v) => {
+  const n = Number(String(v || "").replace(/[^\d.]/g, ""));
+  return isFinite(n) && n > 0 ? Math.round(n) : 0;
+};
+
+function prices(s) {
+  const fee = Number(String(s["信用卡手續費"] || "").replace(/[^\d.]/g, ""));
+  return { big: toNumber(s["大燈價錢"]), small: toNumber(s["小燈價錢"]), jigai: toNumber(s["祭改價錢"]), cardFee: isFinite(fee) ? fee / 100 : 0.028 };
+}
+
+// 給信眾看的付款資料（密碼不給）
+function publicSettings(s) {
+  return {
+    prices: prices(s),
+    bank: { name: s["銀行名稱"] || "", code: s["銀行代碼"] || "", account: s["帳號"] || "", holder: s["戶名"] || "" },
+    qr: /^https:\/\//.test(s["收款條碼圖片網址"] || "") ? s["收款條碼圖片網址"] : ""
+  };
+}
+
+function homesSheet() {
+  const sheet = tab(HOMES, HOME_HEADER);
+  // 狀態欄：下拉選單（樞理可以直接在試算表改）
+  const range = sheet.getRange(2, COL["狀態"], sheet.getMaxRows() - 1, 1);
+  if (!range.getDataValidation()) {
+    range.setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList([STATUS.pending, STATUS.confirmed, STATUS.reported, STATUS.paid], true).build());
+  }
+  return sheet;
+}
+
+// 找某一戶在第幾列；沒有：0
+function homeRow(sheet, id) {
+  if (!/^[A-Za-z0-9_-]{8,64}$/.test(String(id || ""))) return 0;
+  const last = sheet.getLastRow();
+  if (last < 2) return 0;
+  const hit = sheet.getRange(2, 1, last - 1, 1).createTextFinder(String(id)).matchEntireCell(true).findNext();
+  return hit ? hit.getRow() : 0;
+}
+
+function homeFromRow(sheet, row) {
+  return homeFromValues(sheet.getRange(row, 1, 1, HOME_HEADER.length).getDisplayValues()[0]);
+}
+
+function homeFromValues(v) {
+  const get = (h) => v[COL[h] - 1];
+  return {
+    id: get("編號"),
+    name: get("戶名"),
+    address: get("地址"),
+    people: Number(get("人數")) || 0,
+    total: toNumber(get("應付金額")),
+    status: get("狀態") || STATUS.pending,
+    method: get("付款方式"),
+    last5: get("帳號末五碼"),
+    reportedAt: get("回報付款時間"),
+    paidAt: get("收款時間")
+  };
+}
+
+function getHousehold(id) {
+  const sheet = homesSheet();
+  const row = homeRow(sheet, id);
+  if (!row) return answer({ ok: false, error: "not found" });
+  const home = homeFromRow(sheet, row);
+  const lines = tab(LINES, LINE_HEADER);
+  const last = lines.getLastRow();
+  const people = [];
+  if (last > 1) {
+    const all = lines.getRange(2, 1, last - 1, LINE_HEADER.length).getDisplayValues();
+    all
+      .filter((r) => r[0] === home.id)
+      .sort((a, b) => Number(a[1]) - Number(b[1]))
+      .forEach((r) => {
+        let p = people.find((x) => x.name === r[2]);
+        if (!p) {
+          p = { name: r[2], birth: r[3], hour: r[4], zodiac: r[5], address: r[6], lamps: [], jigai: [] };
+          people.push(p);
+        }
+        if (r[7] === "祭改") p.jigai.push(r[8]);
+        else p.lamps.push({ name: r[8], size: r[9] === "小燈" ? "small" : "big" });
+      });
+  }
+  home.people = people;
+  return answer({ ok: true, household: home, settings: publicSettings(readSettings()) });
+}
+
+// 樞理匯入（要密碼）：每戶給一個隨機編號，錢在這裡重算（不信網頁送來的金額）
+function importHouseholds(data) {
+  const homes = Array.isArray(data.households) ? data.households : [];
+  if (!homes.length || homes.length > 500) return answer({ ok: false, error: "invalid" });
+  return locked(() => {
+    const problem = passwordProblem(data.password);
+    if (problem) return answer({ ok: false, error: problem });
+    const p = prices(readSettings());
+    const homeRows = [];
+    const lineRows = [];
+    const made = [];
+    const now = new Date();
+    for (const h of homes) {
+      const people = (Array.isArray(h.people) ? h.people : []).slice(0, 60);
+      if (!people.length) return answer({ ok: false, error: "invalid" });
+      const id = Utilities.getUuid().replace(/-/g, "").slice(0, 20);
+      let lampSum = 0;
+      let jigaiSum = 0;
+      let order = 0;
+      for (const person of people) {
+        const base = [id, 0, cell(String(person.name || "").slice(0, 40)), cell(String(person.birth || "").slice(0, 40)), cell(String(person.hour || "").slice(0, 20)), cell(String(person.zodiac || "").slice(0, 10)), cell(String(person.address || "").slice(0, 120))];
+        for (const l of (Array.isArray(person.lamps) ? person.lamps : []).slice(0, 60)) {
+          if (!SIZE_NAMES[l.size]) return answer({ ok: false, error: "size" });
+          const amount = p[l.size];
+          lampSum += amount;
+          lineRows.push(base.slice(0, 1).concat([++order], base.slice(2), ["光明燈", cell(String(l.name || "").slice(0, 20)), SIZE_NAMES[l.size], amount]));
+        }
+        for (const j of (Array.isArray(person.jigai) ? person.jigai : []).slice(0, 60)) {
+          jigaiSum += p.jigai;
+          lineRows.push(base.slice(0, 1).concat([++order], base.slice(2), ["祭改", cell(String(j || "").slice(0, 20)), "", p.jigai || "另計"]));
+        }
+      }
+      const name = String(h.name || people[0].name || "").slice(0, 40);
+      const row = HOME_HEADER.map(() => "");
+      row[COL["編號"] - 1] = id;
+      row[COL["戶名"] - 1] = cell(name);
+      row[COL["地址"] - 1] = cell(String(h.address || "").slice(0, 120));
+      row[COL["人數"] - 1] = people.length;
+      row[COL["光明燈合計"] - 1] = lampSum;
+      row[COL["祭改合計"] - 1] = jigaiSum;
+      row[COL["應付金額"] - 1] = lampSum + jigaiSum;
+      row[COL["狀態"] - 1] = STATUS.pending;
+      row[COL["建立時間"] - 1] = now;
+      homeRows.push(row);
+      made.push({ id: id, name: name });
+    }
+    const homeSheet = homesSheet();
+    homeSheet.getRange(homeSheet.getLastRow() + 1, 1, homeRows.length, HOME_HEADER.length).setValues(homeRows);
+    if (lineRows.length) {
+      const lines = tab(LINES, LINE_HEADER);
+      lines.getRange(lines.getLastRow() + 1, 1, lineRows.length, LINE_HEADER.length).setValues(lineRows);
+    }
+    SpreadsheetApp.flush();
+    return answer({ ok: true, made: made });
+  });
+}
+
+// 樞理看全部的戶（要密碼）
+function listHouseholds(data) {
+  return locked(() => {
+    const problem = passwordProblem(data.password);
+    if (problem) return answer({ ok: false, error: problem });
+    const sheet = homesSheet();
+    const last = sheet.getLastRow();
+    const rows = last > 1 ? sheet.getRange(2, 1, last - 1, HOME_HEADER.length).getDisplayValues() : [];
+    return answer({ ok: true, households: rows.map(homeFromValues).filter((h) => h.id) });
+  });
+}
+
+// 樞理對好帳：已付款（paid: true）或改回去（paid: false：有回報過就回到「已回報付款」，不然「已確認」）
+function markPaid(data) {
+  return locked(() => {
+    const problem = passwordProblem(data.password);
+    if (problem) return answer({ ok: false, error: problem });
+    const sheet = homesSheet();
+    const row = homeRow(sheet, data.id);
+    if (!row) return answer({ ok: false, error: "not found" });
+    const home = homeFromRow(sheet, row);
+    if (data.paid === true) {
+      sheet.getRange(row, COL["狀態"]).setValue(STATUS.paid);
+      sheet.getRange(row, COL["已收款金額"]).setValue(home.total);
+      sheet.getRange(row, COL["收款時間"]).setValue(new Date());
+    } else {
+      sheet.getRange(row, COL["狀態"]).setValue(home.last5 ? STATUS.reported : STATUS.confirmed);
+      sheet.getRange(row, COL["已收款金額"]).setValue("");
+      sheet.getRange(row, COL["收款時間"]).setValue("");
+    }
+    SpreadsheetApp.flush();
+    return answer({ ok: true, household: homeFromRow(sheet, row) });
+  });
+}
+
+// 信眾按「資料正確，我同意」：待確認 → 已確認（已經確認過、付過：不動）
+function confirmHousehold(data) {
+  return locked(() => {
+    const sheet = homesSheet();
+    const row = homeRow(sheet, data.id);
+    if (!row) return answer({ ok: false, error: "not found" });
+    const home = homeFromRow(sheet, row);
+    if (home.status === STATUS.pending) {
+      sheet.getRange(row, COL["狀態"]).setValue(STATUS.confirmed);
+      sheet.getRange(row, COL["確認時間"]).setValue(new Date());
+      SpreadsheetApp.flush();
+    }
+    return answer({ ok: true, household: homeFromRow(sheet, row) });
+  });
+}
+
+// 信眾轉帳後回報末五碼：已確認 → 已回報付款（還沒確認不行；已付款：不動）
+function reportPayment(data) {
+  const last5 = String(data.last5 || "");
+  if (!/^\d{5}$/.test(last5)) return answer({ ok: false, error: "last5" });
+  return locked(() => {
+    const sheet = homesSheet();
+    const row = homeRow(sheet, data.id);
+    if (!row) return answer({ ok: false, error: "not found" });
+    const home = homeFromRow(sheet, row);
+    if (home.status === STATUS.pending) return answer({ ok: false, error: "not confirmed" });
+    if (home.status !== STATUS.paid) {
+      sheet.getRange(row, COL["狀態"]).setValue(STATUS.reported);
+      sheet.getRange(row, COL["付款方式"]).setValue("轉帳");
+      sheet.getRange(row, COL["帳號末五碼"]).setValue("'" + last5);
+      sheet.getRange(row, COL["回報付款時間"]).setValue(new Date());
+      SpreadsheetApp.flush();
+    }
+    return answer({ ok: true, household: homeFromRow(sheet, row) });
+  });
 }
 
 function login(data) {

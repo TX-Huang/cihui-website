@@ -393,6 +393,251 @@ p {
   margin-top: 8px;
 }
 
+/* ── 光明燈一戶一個連結（household.html、lamp-admin.html）── */
+.content.lamp-wide {
+  max-width: 1040px;
+}
+/* 信眾頁：每個人一張卡，燈一行一盞，價錢靠右 */
+.hh-person {
+  margin: 0 0 12px;
+  padding: 14px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.hh-person-name {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+.hh-facts {
+  margin: 4px 0 0;
+}
+.hh-lines {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 18px;
+}
+.hh-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-top: 1px dashed var(--line);
+}
+.hh-price {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.hh-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 16px 0 4px;
+  padding: 14px 20px;
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  font-family: var(--serif);
+  font-size: 19px;
+}
+.hh-total strong {
+  color: var(--gold-text);
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+}
+.hh-done-note {
+  margin: 16px 0 0;
+  color: var(--gold-text);
+  font-family: var(--serif);
+  font-size: 19px;
+}
+.hh-pay {
+  margin: 0 0 16px;
+  padding: 16px 20px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.hh-pay h3 {
+  margin: 0 0 12px;
+  color: var(--gold-text);
+  font-family: var(--serif);
+  font-size: 19px;
+  letter-spacing: 0.1em;
+}
+.hh-bank {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  align-items: center;
+  margin: 0;
+  font-size: 18px;
+}
+.hh-bank dt {
+  color: var(--text-soft);
+  font-size: 15px;
+}
+.hh-bank dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* 帳號、金額：整塊點一下就複製 */
+.hh-copy {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 44px;
+  padding: 6px 14px;
+  border: 1px dashed var(--gold);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text);
+  font: 600 19px/1.4 var(--serif);
+  letter-spacing: 0.06em;
+  text-align: left;
+  cursor: pointer;
+}
+.hh-copy:hover {
+  background: #fff;
+}
+.hh-copy:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.hh-copy-tag {
+  color: var(--gold-text);
+  font: 400 13px/1.4 var(--sans);
+}
+.hh-qr {
+  display: block;
+  width: min(240px, 100%);
+  margin: 8px 0 16px;
+}
+.hh-pay .lamp-label {
+  margin-top: 16px;
+}
+
+/* 樞理頁：匯入預覽（一戶一張卡，一列一行） */
+.hh-card {
+  margin: 0 0 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.hh-card-title {
+  margin: 0;
+  color: var(--gold-text);
+  font-family: var(--serif);
+  font-size: 18px;
+}
+.hh-addr {
+  margin: 2px 0 6px;
+}
+.hh-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  padding: 8px 0;
+  border-top: 1px dashed var(--line);
+  font-size: 16px;
+}
+.hh-who {
+  min-width: 10em;
+  font-family: var(--serif);
+}
+.hh-rownum {
+  margin-right: 8px;
+  color: var(--text-soft);
+  font: 13px var(--sans);
+}
+.hh-lamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  flex: 1;
+}
+.hh-lamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.lamp-input.hh-size {
+  width: auto;
+  padding: 4px 8px;
+  font-size: 15px;
+}
+.lamp-input.hh-missing {
+  border-color: var(--seal);
+  color: var(--seal);
+}
+.hh-other-addr {
+  flex-basis: 100%;
+}
+.hh-warn {
+  color: var(--seal);
+  font-size: 14px;
+}
+.lamp-btn.hh-split,
+.lamp-btn.hh-small-btn {
+  min-height: 36px;
+  padding: 4px 14px;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+.hh-split {
+  margin-left: auto;
+}
+/* 樞理頁：各戶列表 */
+.hh-table-wrap {
+  overflow-x: auto;
+}
+.hh-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.hh-table th,
+.hh-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+.hh-table th {
+  color: var(--text-soft);
+  font-weight: 500;
+}
+.hh-actions {
+  display: flex;
+  gap: 6px;
+}
+.hh-status {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 14px;
+}
+.hh-status-pending {
+  background: rgba(47, 42, 37, 0.08);
+}
+.hh-status-confirmed {
+  background: rgba(168, 132, 74, 0.18);
+}
+.hh-status-reported {
+  background: rgba(154, 51, 36, 0.14);
+  color: var(--seal);
+}
+.hh-status-paid {
+  background: rgba(80, 120, 80, 0.18);
+  color: #35603a;
+}
+
 /* ── 重點一：供奉神明。主祀一張大卡、陪祀一排小卡，各配首頁的圖 ── */
 .cards {
   display: grid;

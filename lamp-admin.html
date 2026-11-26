@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>光明燈各戶管理 — 慈惠道場</title>
+    <meta name="description" content="樞理用：匯入 Excel、做每戶的登記與付款連結、對帳。" />
+    <meta name="robots" content="noindex" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=Noto+Sans+TC:wght@400;500&family=Yuji+Boku&family=LXGW+WenKai+TC:wght@400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="pages.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <nav class="pill" aria-label="主選單">
+        <a class="brand" href="index.html">慈惠道場</a>
+        <a href="about.html">關於道場</a>
+        <a href="events.html">法會活動</a>
+        <a href="services.html">服務</a>
+        <a href="gallery.html">相簿</a>
+      </nav>
+    </header>
+
+    <main>
+      <div class="hero">
+        <div class="hero-img" aria-hidden="true"></div>
+        <div class="hero-text">
+          <p class="eyebrow">樞理用</p>
+          <h1>光明燈各戶管理</h1>
+          <p class="lead">匯入 Excel → 每戶一個連結 → 信眾核對、付款 → 對帳</p>
+        </div>
+      </div>
+
+      <div class="content lamp lamp-wide">
+        <p class="lamp-demo" id="lampDemo" hidden>試用模式：資料只存在這台手機或電腦，密碼是 1234，不會寫進試算表。</p>
+
+        <section>
+          <h2>登入</h2>
+          <label class="lamp-label" for="adminPassword">密碼（跟改燈的名目同一個）</label>
+          <div class="lamp-hour-row">
+            <input class="lamp-input" type="password" id="adminPassword" autocomplete="current-password" />
+            <button class="lamp-btn" id="adminLogin" type="button">登入</button>
+          </div>
+          <p class="lamp-msg" id="loginMsg" role="status" aria-live="polite"></p>
+        </section>
+
+        <div id="adminTools" hidden>
+          <!-- 1. 匯入 Excel -->
+          <section>
+            <h2>匯入 Excel</h2>
+            <p class="small">
+              一列一盞燈。要有「光明燈項目」和「地址」的標題列；名字在第一欄（沒有標題也可以）。同一個人的第二盞燈，名字可以空白。<br />
+              系統先猜分戶（地址換了就是下一戶），請在下面檢查：一家人地址不一樣時，按「併到上一戶」；同地址但不是一家，按「從這裡分開」。
+            </p>
+            <label class="lamp-label" for="excelFile">選 Excel 檔（.xlsx、.xls、.csv）</label>
+            <input class="lamp-input" id="excelFile" type="file" accept=".xlsx,.xls,.csv" />
+            <p class="lamp-msg" id="importMsg" role="status" aria-live="polite"></p>
+            <div id="preview" hidden>
+              <p class="lamp-suggest-title" id="previewSummary"></p>
+              <div id="previewList"></div>
+              <p class="lamp-msg" id="createMsg" role="alert"></p>
+              <button class="lamp-btn" id="createBtn" type="button">建立各戶的登記資料</button>
+            </div>
+          </section>
+
+          <!-- 2. 各戶連結和付款狀態 -->
+          <section>
+            <h2>各戶連結與付款</h2>
+            <div class="lamp-hour-row">
+              <select class="lamp-input" id="statusFilter" aria-label="只看哪種狀態">
+                <option value="">全部</option>
+                <option>待確認</option>
+                <option>已確認</option>
+                <option>已回報付款</option>
+                <option>已付款</option>
+              </select>
+              <button class="lamp-btn lamp-btn-quiet" id="refreshBtn" type="button">重新整理</button>
+            </div>
+            <p class="lamp-msg" id="listMsg" role="status" aria-live="polite"></p>
+            <p class="small" id="listCounts"></p>
+            <div class="hh-table-wrap">
+              <table class="hh-table" id="homeTable">
+                <thead>
+                  <tr><th>戶名</th><th>人數</th><th>應付</th><th>狀態</th><th>末五碼</th><th>連結</th><th>對帳</th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <p>慈惠道場 · 主祀瑤池金母，陪祀九天玄女、中壇元帥、福德正神</p>
+      <p><a href="lamp-link.html">做單人連結、改燈的名目</a> · <a href="index.html">回首頁</a></p>
+    </footer>
+
+    <script type="module" src="js/lamp-admin-view.js"></script>
+  </body>
+</html>
