@@ -25,7 +25,7 @@ const amountDue = () => home.total || householdTotal(home, settings.prices).tota
 
 function renderPeople() {
   const prices = settings.prices;
-  say("homeTitle", `${home.name} 闔家（${home.people.length} 位）`);
+  say("homeTitle", `${home.hid ? `${home.hid}　` : ""}${home.name} 闔家（${home.people.length} 位）`);
   const box = $("people");
   box.replaceChildren();
   for (const p of home.people) {

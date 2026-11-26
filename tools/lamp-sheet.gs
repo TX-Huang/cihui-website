@@ -19,6 +19,7 @@
 //   「家戶明細」：每戶的每個人、每盞燈、每項祭改一列。
 //   「設定」：A 欄名稱、B 欄值。第一次會自己補上：大燈價錢 3600、小燈價錢 1800、祭改價錢（空的＝另計）、
 //            銀行名稱、銀行代碼、帳號、戶名、信用卡手續費 2.8%、收款條碼圖片網址。轉帳資料請樞理自己填。
+//   （小燈原本寫 1800，實際是 1200：「設定」分頁如果已經自己補上 1800，請改成 1200）
 
 const SHEET = "登記";
 const NAMES = "燈的名目";
@@ -134,7 +135,8 @@ function doPost(e) {
 
 // ── 一戶一個連結（2026-11-26） ──
 const HOMES = "家戶";
-const HOME_HEADER = ["編號", "戶名", "地址", "人數", "光明燈合計", "祭改合計", "應付金額", "狀態", "確認時間", "付款方式", "帳號末五碼", "回報付款時間", "已收款金額", "收款時間", "備註", "建立時間"];
+// 編號：連結用的亂碼（信眾看不到別戶）；戶號：樞理用的 H001（一戶一個、永遠不改）
+const HOME_HEADER = ["編號", "戶號", "戶名", "地址", "人數", "光明燈合計", "祭改合計", "應付金額", "狀態", "確認時間", "付款方式", "帳號末五碼", "回報付款時間", "已收款金額", "收款時間", "備註", "建立時間"];
 const LINES = "家戶明細";
 const LINE_HEADER = ["編號", "順序", "姓名", "生日", "時辰", "生肖", "地址", "類別", "項目", "大小", "金額"];
 const STATUS = { pending: "待確認", confirmed: "已確認", reported: "已回報付款", paid: "已付款" };
@@ -145,7 +147,7 @@ HOME_HEADER.forEach((h, i) => (COL[h] = i + 1));
 const SETTING_DEFAULTS = [
   ["密碼", ""],
   ["大燈價錢", 3600],
-  ["小燈價錢", 1800],
+  ["小燈價錢", 1200],
   ["祭改價錢", ""],
   ["銀行名稱", ""],
   ["銀行代碼", ""],
@@ -215,6 +217,7 @@ function homeFromValues(v) {
   const get = (h) => v[COL[h] - 1];
   return {
     id: get("編號"),
+    hid: get("戶號"),
     name: get("戶名"),
     address: get("地址"),
     people: Number(get("人數")) || 0,
@@ -262,6 +265,15 @@ function importHouseholds(data) {
     const problem = passwordProblem(data.password);
     if (problem) return answer({ ok: false, error: problem });
     const p = prices(readSettings());
+    // 戶號：有填就要是 H001 這種；同一批不能重複；已經建過的擋下來（樞理不小心匯入兩次）
+    const hids = homes.map((h) => String(h.hid || "").trim().toUpperCase());
+    if (hids.some((x) => x && !/^H\d{3,}$/.test(x))) return answer({ ok: false, error: "invalid" });
+    if (new Set(hids.filter(Boolean)).size !== hids.filter(Boolean).length) return answer({ ok: false, error: "invalid" });
+    const sheetNow = homesSheet();
+    const lastNow = sheetNow.getLastRow();
+    const existing = lastNow > 1 ? sheetNow.getRange(2, COL["戶號"], lastNow - 1, 1).getDisplayValues().map((r) => r[0]) : [];
+    const already = hids.filter((x) => x && existing.indexOf(x) >= 0);
+    if (already.length) return answer({ ok: false, error: "exists", hids: already });
     const homeRows = [];
     const lineRows = [];
     const made = [];
@@ -289,6 +301,7 @@ function importHouseholds(data) {
       const name = String(h.name || people[0].name || "").slice(0, 40);
       const row = HOME_HEADER.map(() => "");
       row[COL["編號"] - 1] = id;
+      row[COL["戶號"] - 1] = String(h.hid || "").trim().toUpperCase();
       row[COL["戶名"] - 1] = cell(name);
       row[COL["地址"] - 1] = cell(String(h.address || "").slice(0, 120));
       row[COL["人數"] - 1] = people.length;
@@ -298,7 +311,7 @@ function importHouseholds(data) {
       row[COL["狀態"] - 1] = STATUS.pending;
       row[COL["建立時間"] - 1] = now;
       homeRows.push(row);
-      made.push({ id: id, name: name });
+      made.push({ id: id, hid: row[COL["戶號"] - 1], name: name });
     }
     const homeSheet = homesSheet();
     homeSheet.getRange(homeSheet.getLastRow() + 1, 1, homeRows.length, HOME_HEADER.length).setValues(homeRows);

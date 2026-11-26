@@ -3,7 +3,7 @@
 //   「Excel 匯入信眾與家戶資料 → 系統自動建立各戶登記資料 → 產生專屬登記與付款連結
 //    （須網頁註記，使用信用卡將自動於金流網頁上 +2.8% 手續費；轉帳可直接點擊即可複製匯款帳號）
 //    → 信眾核對資料是否正確，點選確認即為同意 → 選擇支付方式並付款 → 核對款項並更新登記狀態」
-//   價錢：大燈 3600、小燈 1800。一戶一個連結。先做轉帳，綠界之後接。祭改「也要做，但不是這次，功能可以先做好」。
+//   價錢：大燈 3600、小燈 1200（原本說 1800，看到實際資料後確認是 1200）。戶號用 H001（第 6 點）。一戶一個連結。先做轉帳，綠界之後接。祭改「也要做，但不是這次，功能可以先做好」。
 //   Excel：標題「（空白）生日 時辰 光明燈項目 生肖 祭改項目 地址 收費日 金額 總計」；一盞燈一列；
 //   「每列都寫地址，同地址就是一家，甚至有的地址不一樣，只有順序排在一起」。
 //
@@ -22,6 +22,7 @@ import {
   guessBreaks,
   guessSize,
   guessSizes,
+  hasHids,
   groupHouseholds,
   checkImport,
   householdTotal,
@@ -44,9 +45,9 @@ test("1. 找標題列：空白、全形空白不算；名字欄沒標題就是�
 });
 
 test("1. 截圖那一列讀得出來", () => {
-  const { records, error } = readRows([HEAD, row("瑋宸精密工業(股)", "生意興隆", "彰化縣埔心鄉芎蕉村鎮福街97巷136號", "3600")]);
+  const { records, error } = readRows([HEAD, row("範例工業(股)", "生意興隆", "彰化縣某鄉某某路1巷2號", "3600")]);
   assert.equal(error, null);
-  assert.equal(records[0].name, "瑋宸精密工業(股)");
+  assert.equal(records[0].name, "範例工業(股)");
   assert.deepEqual(records[0].lamps, ["生意興隆"]);
   assert.equal(records[0].amount, 3600);
   assert.equal(records[0].row, 2);
@@ -72,18 +73,20 @@ test("2. 分戶：地址換了就是下一戶，同一個人不分開，臺台�
   assert.deepEqual(guessBreaks(records), [true, false, false, true, false]);
 });
 
-test("3. 大小：名目優先，再看金額，都不知道 null", () => {
+test("3. 大小：先看金額（3600 大、1200 小），沒寫金額才照名目，都不知道 null", () => {
   const catalog = { big: ["光明"], small: ["元辰"] };
-  assert.equal(guessSize("光明", 1800, catalog), "big");
+  assert.equal(guessSize("光明", 1200, catalog), "small"); // 實際資料同一個名目有大有小：金額說了算
   assert.equal(guessSize("生意興隆", 3600, catalog), "big");
-  assert.equal(guessSize("生意興隆", 1800, catalog), "small");
+  assert.equal(guessSize("生意興隆", 1200, catalog), "small");
+  assert.equal(guessSize("光明", null, catalog), "big");
+  assert.equal(guessSize("光明", 1800, catalog), null); // 金額不認得：樞理選
   assert.equal(guessSize("生意興隆", null, catalog), null);
   // 一格寫兩盞：金額是加總的，不能拿來猜
   assert.deepEqual(guessSizes({ lamps: ["甲", "乙"], amount: 3600 }, catalog), [null, null]);
 });
 
 test("2-4. 分成一戶一戶、算錢、祭改另計", () => {
-  const { records } = readRows([HEAD, row("王大明", "光明", "台中市1號", "3600", "太歲"), row("", "元辰", "", "1800"), row("王小美", "光明", "台中市5號", "3600")]);
+  const { records } = readRows([HEAD, row("王大明", "光明", "台中市1號", "3600", "太歲"), row("", "元辰", "", "1200"), row("王小美", "光明", "台中市5號", "3600")]);
   const breaks = [true, false, false]; // 樞理把王小美併進來
   const sizes = [["big"], ["small"], ["big"]];
   const homes = groupHouseholds(records, breaks, sizes);
@@ -96,8 +99,8 @@ test("2-4. 分成一戶一戶、算錢、祭改另計", () => {
     { name: "元辰", size: "small" }
   ]);
   assert.deepEqual(homes[0].people[0].jigai, ["太歲"]);
-  assert.deepEqual(householdTotal(homes[0]), { lamps: 9000, jigai: 0, total: 9000 });
-  assert.deepEqual(householdTotal(homes[0], { big: 3600, small: 1800, jigai: 500 }), { lamps: 9000, jigai: 500, total: 9500 });
+  assert.deepEqual(householdTotal(homes[0]), { lamps: 8400, jigai: 0, total: 8400 });
+  assert.deepEqual(householdTotal(homes[0], { big: 3600, small: 1200, jigai: 500 }), { lamps: 8400, jigai: 500, total: 8900 });
   assert.equal(personLines(homes[0].people[0])[2].separate, true);
 });
 
@@ -111,8 +114,56 @@ test("3. 還有燈沒選大小：不能建立", () => {
 
 test("3. Excel 金額跟系統算的不一樣：提醒", () => {
   assert.equal(amountMismatch({ amount: 3600, jigai: [] }, ["big"]), null);
-  assert.deepEqual(amountMismatch({ amount: 3600, jigai: [] }, ["small"]), { excel: 3600, counted: 1800 });
+  assert.deepEqual(amountMismatch({ amount: 3600, jigai: [] }, ["small"]), { excel: 3600, counted: 1200 });
   assert.equal(amountMismatch({ amount: null, jigai: [] }, ["small"]), null);
+});
+
+// 6. 實際資料（2026-11-26）：A 欄「輔助A」（名字＋數字）、名字在後面沒有標題的欄；樞理加了「戶號」「分戶疑問」在最前面
+const REAL = ["戶號", "分戶疑問", "輔助A", "", "生  日  ", "時辰", "光明燈項目", "生肖", "逢九(隱藏)", "祭改項目", "", "地             址", "升學&就業", "收費日", "金額", "總計"];
+const real = (hid, name, lamp, addr, amount) => [hid, "", `${name}1`, name, "60.01.01", "子", lamp, "羊", "", "太歲當頭 安太歲", "", addr, "", "", amount, "3600"];
+
+test("6. 實際檔案：輔助A 不是名字，名字是沒有標題的那欄；戶號讀得到", () => {
+  const h = findHeader([["116年光明燈道親資料"], REAL]);
+  assert.deepEqual([h.cols.hid, h.cols.name, h.cols.lamp, h.cols.address, h.cols.amount], [0, 3, 6, 11, 14]);
+  const { records } = readRows([["116年光明燈道親資料"], REAL, real("h001", "王秀英", "家運昌隆", "彰化1號", "3600")]);
+  assert.equal(records[0].name, "王秀英");
+  assert.equal(records[0].hid, "H001");
+  // 沒有戶號欄的原始檔：A 欄輔助A、B 欄名字
+  const orig = REAL.slice(2);
+  assert.equal(findHeader([orig]).cols.name, 1);
+});
+
+test("6. 有戶號：照戶號分戶（沒排在一起也是同一戶），沒戶號的戶擋下來", () => {
+  const { records } = readRows([
+    REAL,
+    real("H001", "王秀英", "家運昌隆", "彰化1號", "3600"),
+    real("H001", "王秀英", "身體健康", "彰化1號", "1200"),
+    real("H002", "陳阿美", "元神光采", "苗栗", "1200"),
+    real("H001", "林志強", "家運康泰", "日本", "3600")
+  ]);
+  assert.equal(hasHids(records), true);
+  const sizes = records.map((r) => guessSizes(r, {}));
+  assert.deepEqual(sizes, [["big"], ["small"], ["small"], ["big"]]);
+  const homes = groupHouseholds(records, guessBreaks(records), sizes);
+  assert.deepEqual(homes.map((h) => [h.hid, h.people.map((p) => p.name), h.idx]), [
+    ["H001", ["王秀英", "林志強"], [0, 1, 3]],
+    ["H002", ["陳阿美"], [2]]
+  ]);
+  assert.equal(householdTotal(homes[0]).total, 8400);
+  // 戶名是第一位「人」，不是公司
+  const co = groupHouseholds(readRows([REAL, real("H009", "範例工業(股)公司", "生意興隆", "彰化", "3600"), real("H009", "王秀英", "家運昌隆", "彰化", "3600")]).records, [true, false], [["big"], ["big"]]);
+  assert.equal(co[0].name, "王秀英");
+  // 公司的生日、時辰是公式的 0：當作空白
+  const zero = real("H009", "某公司", "生意興隆", "彰化", "3600");
+  zero[4] = "0";
+  zero[5] = "0";
+  const z = readRows([REAL, zero]).records[0];
+  assert.deepEqual([z.birth, z.hour], ["", ""]);
+  assert.equal(checkImport(homes).error, null);
+  homes[1].hid = "";
+  assert.deepEqual(checkImport(homes), { error: "hid", at: 1 });
+  homes[1].hid = "2";
+  assert.deepEqual(checkImport(homes), { error: "hid", at: 1 });
 });
 
 test("4. 信用卡 +2.8%", () => {

@@ -7,8 +7,14 @@
 // 大燈 3600、小燈 1800；一戶一個連結；先做轉帳，綠界之後接；祭改「功能可以先做好」。
 // Excel 一列一盞燈；一家人「每列都寫地址，同地址就是一家，甚至有的地址不一樣，只有順序排在一起」
 // → 系統先猜（地址換了 = 下一戶），樞理在匯入畫面上自己合併、分開。
+// 2026-11-26 拿到實際資料以後：
+// - 戶號（使用者：「用 H001」）：一戶一個、永遠不改、不重複用，新的一戶往後加。Excel 有「戶號」欄就照戶號分戶（不用猜）。
+//   戶號只給樞理用；信眾的連結還是另外一串亂碼（H001 太好猜）。
+// - 價錢：「確認是 3600 = 大燈、1200 = 小燈」。同一個名目（例如身體健康）有時大有時小 → 大小照每一列的「金額」，不照名目。
+// - 實際的 Excel 第一欄是「輔助A」（名字＋數字），名字在後面那個沒有標題的欄。
 
-export const DEFAULT_PRICES = { big: 3600, small: 1800, jigai: 0 }; // jigai 0：祭改另計（不算進這次的錢）
+export const DEFAULT_PRICES = { big: 3600, small: 1200, jigai: 0 }; // jigai 0：祭改另計（不算進這次的錢）
+export const HID_RE = /^H\d{3,}$/; // 戶號：H001、H002…
 export const CARD_FEE_RATE = 0.028; // 信用卡：金流頁面上加 2.8%
 export const SIZE_NAMES = { big: "大燈", small: "小燈" };
 export const STATUS = { pending: "待確認", confirmed: "已確認", reported: "已回報付款", paid: "已付款" };
@@ -17,6 +23,7 @@ export const MAX_LINES = 60; // 一戶最多幾列（人×燈）
 
 // Excel 標題 → 欄位（標題裡的空白不算：「生 日」「地　址」也認得）
 const HEADERS = [
+  ["hid", /^戶號$/],
   ["name", /姓名|名字|信眾|戶名/],
   ["birth", /生日|出生/],
   ["hour", /時辰/],
@@ -44,8 +51,12 @@ export function findHeader(rows) {
     // 最上面的大標題（「115年光明燈名冊」）不算：標題列要有燈或祭改，再加至少兩個認得的欄
     if (!("lamp" in cols) && !("jigai" in cols)) continue;
     if (Object.keys(cols).length < 3) continue;
-    // 名字那欄常常沒有標題（截圖裡 A 欄是空的）：沒寫就當作第一欄
-    if (!("name" in cols)) cols.name = 0;
+    // 名字那欄常常沒有標題：用燈那欄前面第一個「沒有標題」的欄（截圖是 A 欄；實際檔案 A 欄是「輔助A」、名字在 B 欄）
+    if (!("name" in cols)) {
+      const before = cols.lamp ?? cols.jigai;
+      const blank = cells.findIndex((c, i) => i < before && !c);
+      cols.name = blank >= 0 ? blank : 0;
+    }
     return { at: r, cols };
   }
   return null;
@@ -68,7 +79,11 @@ export function readRows(rows) {
   const header = findHeader(rows);
   if (!header) return { records: [], error: "header" };
   const { at, cols } = header;
-  const get = (row, key) => (key in cols ? text(row[cols[key]]) : "");
+  // 「0」當作空白（實際檔案公司的生日、時辰是公式算出來的 0，Excel 上看起來是空的）
+  const get = (row, key) => {
+    const v = key in cols ? text(row[cols[key]]) : "";
+    return v === "0" ? "" : v;
+  };
   const records = [];
   let last = null;
   for (let r = at + 1; r < rows.length; r++) {
@@ -84,6 +99,7 @@ export function readRows(rows) {
     if (continued) name = last.name;
     const record = {
       row: r + 1, // Excel 上看到的列號
+      hid: (get(row, "hid") || (continued ? last.hid : "")).toUpperCase(),
       name: name.slice(0, 40),
       birth: get(row, "birth") || (continued ? last.birth : ""),
       hour: get(row, "hour") || (continued ? last.hour : ""),
@@ -102,23 +118,32 @@ export function readRows(rows) {
 
 const sameAddress = (a, b) => squeeze(a).replace(/臺/g, "台") === squeeze(b).replace(/臺/g, "台");
 
+// 看起來是公司、店家（不是人）
+export const isCompany = (name) => /公司|有限|企業社|行$|研坊|美容坊|事務所|調理所|造型|KTV|學院|中心|總部|店$|JWT/.test(String(name ?? ""));
+
+// Excel 有沒有填戶號（有任何一列有就算）
+export const hasHids = (records) => records.some((r) => r.hid);
+
 // 先猜哪裡是新的一戶：breaks[i] = true 表示第 i 筆是新的一戶的開頭。
-// 同一個人（名字空白接著寫、或跟上一筆同名）不會被分開；地址換了才算下一戶。樞理之後可以自己改
+// 有戶號：戶號換了就是下一戶。沒有戶號：同一個人（名字空白接著寫、或跟上一筆同名）不會被分開；地址換了才算下一戶。樞理之後可以自己改
 export function guessBreaks(records) {
+  const byHid = hasHids(records);
   return records.map((r, i) => {
     if (i === 0) return true;
     const prev = records[i - 1];
+    if (byHid) return r.hid !== prev.hid;
     if (r.continued || r.name === prev.name) return false;
     return !sameAddress(r.address, prev.address);
   });
 }
 
-// 這盞燈是大燈還是小燈：名目裡有 → 照名目；沒有 → 看 Excel 的金額（3600 大、1800 小）；都不知道：null（樞理要選）
+// 這盞燈是大燈還是小燈：先看 Excel 的金額（3600 大、1200 小；實際資料同一個名目有大有小）；
+// 沒寫金額 → 照燈的名目；都不知道：null（樞理要選）
 export function guessSize(lampName, amount, catalog, prices = DEFAULT_PRICES) {
-  if (catalog?.big?.includes(lampName)) return "big";
-  if (catalog?.small?.includes(lampName)) return "small";
   if (amount === prices.big) return "big";
   if (amount === prices.small) return "small";
+  if (amount == null && catalog?.big?.includes(lampName)) return "big";
+  if (amount == null && catalog?.small?.includes(lampName)) return "small";
   return null;
 }
 
@@ -129,12 +154,22 @@ export function guessSizes(record, catalog, prices = DEFAULT_PRICES) {
 }
 
 // 照 breaks 分成一戶一戶。sizes[i][j]：第 i 筆第 j 盞燈的大小。
-// 一戶 = { name: 第一個人的名字, address: 第一個有寫的地址, people: [{ name, birth, hour, zodiac, address, lamps: [{ name, size }], jigai: [名目] }] }
+// 一戶 = { hid: 戶號, name: 第一個人的名字, address: 第一個有寫的地址, idx: [第幾筆…],
+//         people: [{ name, birth, hour, zodiac, address, lamps: [{ name, size }], jigai: [名目] }] }
+// 有戶號：同一個戶號就是同一戶（就算 Excel 裡沒排在一起）；沒有戶號：照 breaks
 export function groupHouseholds(records, breaks, sizes) {
   const out = [];
+  const byHid = hasHids(records);
   records.forEach((r, i) => {
-    if (breaks[i] || !out.length) out.push({ name: r.name, address: "", people: [] });
-    const home = out[out.length - 1];
+    let home = byHid ? out.find((h) => h.hid === r.hid) : null;
+    if (!home && (byHid || breaks[i] || !out.length)) {
+      home = { hid: r.hid, name: r.name, address: "", idx: [], people: [] };
+      out.push(home);
+    }
+    home ??= out[out.length - 1];
+    home.idx.push(i);
+    // 戶名 = 第一位「人」（第一列常常是公司：LINE 訊息不要寫「○○公司 您好」）
+    if (isCompany(home.name) && !isCompany(r.name)) home.name = r.name;
     if (!home.address && r.address) home.address = r.address;
     let person = home.people.find((p) => p.name === r.name);
     if (!person) {
@@ -151,6 +186,11 @@ export function groupHouseholds(records, breaks, sizes) {
 export function checkImport(households) {
   if (!households.length) return { error: "empty" };
   if (households.length > MAX_HOUSEHOLDS) return { error: "many" };
+  // 有用戶號的話，每一戶都要有、而且是 H001 這種格式
+  if (households.some((h) => h.hid)) {
+    const bad = households.findIndex((h) => !HID_RE.test(h.hid ?? ""));
+    if (bad >= 0) return { error: "hid", at: bad };
+  }
   for (let h = 0; h < households.length; h++) {
     const lines = households[h].people.reduce((n, p) => n + p.lamps.length + p.jigai.length, 0);
     if (lines > MAX_LINES) return { error: "lines", at: h };

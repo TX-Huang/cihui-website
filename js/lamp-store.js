@@ -82,10 +82,12 @@ function demoHouseholds(storage, login) {
       const ok = login(password);
       if (!ok.ok) return ok;
       const list = all();
+      const already = households.map((h) => h.hid).filter((x) => x && list.some((o) => o.hid === x));
+      if (already.length) return { ok: false, error: "exists", hids: already };
       const made = households.map((h) => {
         const id = (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}${Math.random()}`).replace(/[^A-Za-z0-9]/g, "").slice(0, 20);
-        list.push({ id, name: h.name, address: h.address, people: h.people, total: householdTotal(h).total, status: STATUS.pending, method: "", last5: "" });
-        return { id, name: h.name };
+        list.push({ id, hid: h.hid ?? "", name: h.name, address: h.address, people: h.people, total: householdTotal(h).total, status: STATUS.pending, method: "", last5: "" });
+        return { id, hid: h.hid ?? "", name: h.name };
       });
       try {
         save(list);

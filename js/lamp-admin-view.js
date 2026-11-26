@@ -5,6 +5,8 @@ import {
   readRows,
   guessBreaks,
   guessSizes,
+  hasHids,
+  HID_RE,
   groupHouseholds,
   checkImport,
   householdTotal,
@@ -101,23 +103,13 @@ async function pickFile() {
     records = out.records;
     breaks = guessBreaks(records);
     sizes = records.map((r) => guessSizes(r, catalog));
-    say("importMsg", `讀到 ${records.length} 列。請檢查下面的分戶和燈的大小。`);
+    say("importMsg", hasHids(records) ? `讀到 ${records.length} 列，照 Excel 的「戶號」分戶。請檢查燈的大小。` : `讀到 ${records.length} 列。這個檔案沒有「戶號」欄，系統先照地址猜分戶，請檢查。`);
     say("createMsg", "");
     renderPreview();
     $("preview").hidden = false;
   } catch {
     say("importMsg", "讀不了這個檔案（Excel 檔壞掉、或網路連不到 Excel 讀取工具）。");
   }
-}
-
-// 每戶是哪幾列：[[0,1,2],[3],…]
-function groupsOfRows() {
-  const out = [];
-  records.forEach((_, i) => {
-    if (breaks[i] || !out.length) out.push([]);
-    out[out.length - 1].push(i);
-  });
-  return out;
 }
 
 function sizeSelect(i, j) {
@@ -135,17 +127,23 @@ function sizeSelect(i, j) {
 
 function renderPreview() {
   homes = groupHouseholds(records, breaks, sizes);
-  const groups = groupsOfRows();
+  const byHid = hasHids(records);
   const unknown = sizes.flat().filter((s) => !s).length;
-  say("previewSummary", `共 ${homes.length} 戶、${records.length} 列，合計 ${money(homes.reduce((n, h) => n + householdTotal(h).total, 0))}` + (unknown ? `；還有 ${unknown} 盞燈沒選大小` : ""));
+  const noHid = byHid ? homes.filter((h) => !HID_RE.test(h.hid)).length : 0;
+  say(
+    "previewSummary",
+    `共 ${homes.length} 戶、${records.length} 列，合計 ${money(homes.reduce((n, h) => n + householdTotal(h).total, 0))}` +
+      (unknown ? `；還有 ${unknown} 盞燈沒選大小` : "") +
+      (noHid ? `；${noHid} 戶的戶號沒填或格式不對（要像 H001）` : "")
+  );
   const list = $("previewList");
   list.replaceChildren();
-  groups.forEach((rows, h) => {
-    const home = homes[h];
+  homes.forEach((home, h) => {
     const card = el("div", { className: "hh-card" });
-    card.append(el("p", { className: "hh-card-title" }, `第 ${h + 1} 戶：${home.name}（${home.people.length} 人）· ${money(householdTotal(home).total)}`));
+    const label = byHid ? home.hid || "（沒有戶號）" : `第 ${h + 1} 戶`;
+    card.append(el("p", { className: "hh-card-title" }, `${label}：${home.name}（${home.people.length} 人）· ${money(householdTotal(home).total)}`));
     if (home.address) card.append(el("p", { className: "small hh-addr" }, home.address));
-    for (const i of rows) {
+    for (const i of home.idx) {
       const r = records[i];
       const row = el("div", { className: "hh-row" });
       const who = el("span", { className: "hh-who" }, el("span", { className: "hh-rownum" }, `第 ${r.row} 列`), r.continued ? `（${r.name}）` : r.name);
@@ -156,9 +154,9 @@ function renderPreview() {
       if (r.address && r.address !== home.address) row.append(el("span", { className: "small hh-other-addr" }, r.address));
       const off = amountMismatch(r, sizes[i]);
       if (off) row.append(el("span", { className: "hh-warn" }, `Excel 金額 ${money(off.excel)}，系統算 ${money(off.counted)}`));
-      // 分戶：每戶第一列可以併到上一戶；其他列可以從這裡分開（同一個人的第二盞燈不能跟他自己分開）
+      // 分戶（沒有戶號的檔案才有）：每戶第一列可以併到上一戶；其他列可以從這裡分開（同一個人的第二盞燈不能跟他自己分開）
       const samePerson = i > 0 && (r.continued || r.name === records[i - 1].name);
-      if (i > 0 && !samePerson) {
+      if (!byHid && i > 0 && !samePerson) {
         const merge = breaks[i];
         const btn = el("button", { className: "lamp-btn lamp-btn-quiet hh-split", type: "button" }, merge ? "併到上一戶" : "從這裡分開");
         btn.addEventListener("click", () => {
@@ -181,16 +179,22 @@ async function createHomes() {
       empty: "沒有資料。",
       many: `一次最多 ${MAX_HOUSEHOLDS} 戶，請把 Excel 分成幾個檔案。`,
       lines: `第 ${check.at + 1} 戶超過 ${MAX_LINES} 列，可能分戶分錯了。`,
-      size: `第 ${check.at + 1} 戶還有燈沒選大燈或小燈。`
+      size: `${homes[check.at]?.hid || `第 ${check.at + 1} 戶`} 還有燈沒選大燈或小燈。`,
+      hid: `${homes[check.at]?.name ?? ""} 那一戶的戶號沒填或格式不對（要像 H001）。`
     }[check.error];
     return say("createMsg", msg);
   }
-  if (!confirm(`要建立 ${homes.length} 戶的登記資料嗎？（同一份 Excel 不要建兩次，會變成兩筆）`)) return;
+  const twice = homes.some((h) => h.hid) ? "（已經建過的戶號會被擋下來，不會重複）" : "（同一份 Excel 不要建兩次，會變成兩筆）";
+  if (!confirm(`要建立 ${homes.length} 戶的登記資料嗎？${twice}`)) return;
   busy = true;
   $("createBtn").disabled = true;
   say("createMsg", "建立中…");
   try {
-    const out = await store.importHouseholds(password, homes);
+    const out = await store.importHouseholds(password, homes.map(({ idx, ...h }) => h));
+    if (out?.error === "exists") {
+      const more = out.hids.length > 10 ? ` 等 ${out.hids.length} 戶` : "";
+      return say("createMsg", `這些戶號已經建過了，請從 Excel 拿掉再匯入：${out.hids.slice(0, 10).join("、")}${more}`);
+    }
     if (!out?.ok) return say("createMsg", ERRORS[out?.error] ?? "沒有建好，請再試一次。");
     say("createMsg", "");
     say("importMsg", `建好了 ${out.made.length} 戶。下面可以複製每戶的連結，用 LINE 傳給那戶的負責人。`);
@@ -252,7 +256,8 @@ function renderList() {
   say("listCounts", listed.length ? `共 ${listed.length} 戶：` + Object.values(STATUS).map((s) => `${s} ${count(s)}`).join("、") : "還沒有任何一戶。");
   const body = $("homeTable").tBodies[0];
   body.replaceChildren();
-  for (const h of listed.filter((x) => !filter || x.status === filter)) {
+  const byHid = (a, b) => String(a.hid ?? "").localeCompare(String(b.hid ?? ""), "en", { numeric: true });
+  for (const h of listed.filter((x) => !filter || x.status === filter).sort(byHid)) {
     // ?demo=1 練習的時候，做出來的連結也要是練習的（不然信眾頁會去讀真的試算表）
     const url = householdLink(location.href, h.id).replace("#", location.search.includes("demo=1") ? "?demo=1#" : "#");
     const copy = el("button", { className: "lamp-btn lamp-btn-quiet hh-small-btn", type: "button" }, "複製");
@@ -267,6 +272,7 @@ function renderList() {
       el(
         "tr",
         {},
+        el("td", {}, h.hid || ""),
         el("td", {}, h.name),
         el("td", {}, String(h.people)),
         el("td", {}, money(h.total)),

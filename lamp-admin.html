@@ -53,8 +53,9 @@
           <section>
             <h2>匯入 Excel</h2>
             <p class="small">
-              一列一盞燈。要有「光明燈項目」和「地址」的標題列；名字在第一欄（沒有標題也可以）。同一個人的第二盞燈，名字可以空白。<br />
-              系統先猜分戶（地址換了就是下一戶），請在下面檢查：一家人地址不一樣時，按「併到上一戶」；同地址但不是一家，按「從這裡分開」。
+              一列一盞燈。要有「光明燈項目」「地址」「金額」的標題列；名字那欄沒有標題也可以。金額 3600 是大燈、1200 是小燈。<br />
+              第一欄填「戶號」（H001、H002…，一戶一個、永遠不改），系統就照戶號分戶，同一個戶號建過就不會再建一次。<br />
+              沒有戶號的檔案：系統先照地址猜分戶，一家人地址不一樣時按「併到上一戶」，同地址但不是一家按「從這裡分開」。
             </p>
             <label class="lamp-label" for="excelFile">選 Excel 檔（.xlsx、.xls、.csv）</label>
             <input class="lamp-input" id="excelFile" type="file" accept=".xlsx,.xls,.csv" />
@@ -85,7 +86,7 @@
             <div class="hh-table-wrap">
               <table class="hh-table" id="homeTable">
                 <thead>
-                  <tr><th>戶名</th><th>人數</th><th>應付</th><th>狀態</th><th>末五碼</th><th>連結</th><th>對帳</th></tr>
+                  <tr><th>戶號</th><th>戶名</th><th>人數</th><th>應付</th><th>狀態</th><th>末五碼</th><th>連結</th><th>對帳</th></tr>
                 </thead>
                 <tbody></tbody>
               </table>
