@@ -400,7 +400,7 @@ p {
 /* 信眾頁：每個人一張卡，燈一行一盞，價錢靠右 */
 .hh-person {
   margin: 0 0 12px;
-  padding: 14px 20px;
+  padding: 16px 20px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--card);
@@ -416,7 +416,7 @@ p {
   margin: 4px 0 0;
 }
 .hh-lines {
-  margin: 10px 0 0;
+  margin: 12px 0 0;
   padding: 0;
   list-style: none;
   font-size: 18px;
@@ -425,7 +425,7 @@ p {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 6px 0;
+  padding: 8px 0;
   border-top: 1px dashed var(--line);
 }
 .hh-price {
@@ -437,7 +437,7 @@ p {
   justify-content: space-between;
   align-items: baseline;
   margin: 16px 0 4px;
-  padding: 14px 20px;
+  padding: 16px 20px;
   border: 1px solid var(--gold);
   border-radius: 12px;
   font-family: var(--serif);
@@ -492,7 +492,7 @@ p {
   align-items: center;
   gap: 4px 12px;
   min-height: 44px;
-  padding: 6px 14px;
+  padding: 8px 16px;
   border: 1px dashed var(--gold);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.6);
@@ -537,13 +537,13 @@ p {
   font-size: 18px;
 }
 .hh-addr {
-  margin: 2px 0 6px;
+  margin: 2px 0 8px;
 }
 .hh-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 16px;
+  gap: 8px 16px;
   padding: 8px 0;
   border-top: 1px dashed var(--line);
   font-size: 16px;
@@ -560,13 +560,13 @@ p {
 .hh-lamps {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
+  gap: 8px 16px;
   flex: 1;
 }
 .hh-lamp {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 .lamp-input.hh-size {
   width: auto;
@@ -587,7 +587,7 @@ p {
 .lamp-btn.hh-split,
 .lamp-btn.hh-small-btn {
   min-height: 36px;
-  padding: 4px 14px;
+  padding: 4px 16px;
   font-size: 14px;
   letter-spacing: 0.04em;
 }
@@ -605,7 +605,7 @@ p {
 }
 .hh-table th,
 .hh-table td {
-  padding: 8px 10px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--line);
   text-align: left;
   white-space: nowrap;
@@ -616,10 +616,10 @@ p {
 }
 .hh-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 .hh-status {
-  padding: 2px 10px;
+  padding: 2px 12px;
   border-radius: 999px;
   font-size: 14px;
 }

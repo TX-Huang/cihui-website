@@ -383,7 +383,10 @@ test("5/8/11. the Google Sheet script", () => {
   assert.match(gs, /MAX_PER_SIZE = 6/);
   // 12. Codex
   assert.match(gs, /cache\.remove\("bad-tries"\)/, "a correct password clears the count");
-  assert.match(gs, /if \(action === "register"\) return register\(data\);\s*return answer\(\{ ok: false, error: "unknown" \}\)/, "only three kinds of request");
+  const doPost = gs.match(/function doPost[\s\S]*?\n}/)[0];
+  const kinds = [...doPost.matchAll(/action === "(\w+)"/g)].map((m) => m[1]);
+  assert.deepEqual(kinds, ["login", "setLamps", "register", "importHouseholds", "listHouseholds", "markPaid", "confirmHousehold", "reportPayment"], "only these kinds of request (household ones from test/household.test.mjs)");
+  assert.match(doPost, /return reportPayment\(data\);\s*return answer\(\{ ok: false, error: "unknown" \}\)/, "anything else is refused");
   assert.match(gs, /error: "names changed"/, "registration checks the lamps against the current names");
   assert.match(gs, /\^\[=\+\\-@\][\s\S]{0,40}return null|startsLikeFormula/, "names can't start like a formula");
 });
